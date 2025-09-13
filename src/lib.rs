@@ -1,6 +1,7 @@
+use std::collections::HashSet;
 
 mod geom;
-pub use geom::{Point, Rect};
+pub use geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Item {
@@ -118,6 +119,77 @@ impl QuadTree {
                 child.query_into(range, out);
             }
         }
+    }
+
+    pub fn nearest_neighbor(&self, point: Point) -> Option<Item> {
+        self.nearest_neighbors_within(point, 1, f64::INFINITY)
+            .into_iter()
+            .next()
+    }
+
+    pub fn nearest_neighbors(&self, point: Point, k: usize) -> Vec<Item> {
+        self.nearest_neighbors_within(point, k, f64::INFINITY)
+    }
+
+    pub fn nearest_neighbors_within(&self, point: Point, k: usize, max_distance: f64) -> Vec<Item> {
+        if k == 0 {
+            return Vec::new();
+        }
+
+        let mut picked = HashSet::<u64>::new();
+        let mut out = Vec::with_capacity(k);
+        let max_d2 = max_distance * max_distance;
+
+        for _ in 0..k {
+            // stack holds (node_ref, bbox_distance_sq)
+            let mut stack: Vec<(&QuadTree, f64)> = Vec::new();
+            stack.push((self, dist_sq_point_to_rect(&point, &self.boundary)));
+
+            let mut best: Option<Item> = None;
+            let mut best_d2 = max_d2;
+
+            while let Some((node, node_d2)) = stack.pop() {
+                // prune by bbox distance vs current best
+                if node_d2 >= best_d2 {
+                    continue;
+                }
+
+                if let Some(children) = node.children.as_ref() {
+                    // compute and sort children by bbox distance, push farthest first
+                    let mut kids: Vec<(&QuadTree, f64)> = children
+                        .iter()
+                        .map(|c| (c, dist_sq_point_to_rect(&point, &c.boundary)))
+                        .filter(|(_, d2)| *d2 < best_d2)
+                        .collect();
+
+                    kids.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
+                    for entry in kids {
+                        stack.push(entry);
+                    }
+                } else {
+                    // leaf scan
+                    for it in &node.items {
+                        if picked.contains(&it.id) {
+                            continue;
+                        }
+                        let d2 = dist_sq_points(&point, &it.point);
+                        if d2 < best_d2 {
+                            best_d2 = d2;
+                            best = Some(*it);
+                        }
+                    }
+                }
+            }
+
+            if let Some(it) = best {
+                picked.insert(it.id);
+                out.push(it);
+            } else {
+                break; // no more neighbors that beat the cap
+            }
+        }
+
+        out
     }
 
 

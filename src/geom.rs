@@ -23,3 +23,28 @@ impl Rect {
     }
 }
 
+pub fn dist_sq_point_to_rect(p: &Point, r: &Rect) -> f64 {
+    let dx = if p.x < r.min_x {
+        r.min_x - p.x
+    } else if p.x > r.max_x {
+        p.x - r.max_x
+    } else {
+        0.0
+    };
+
+    let dy = if p.y < r.min_y {
+        r.min_y - p.y
+    } else if p.y > r.max_y {
+        p.y - r.max_y
+    } else {
+        0.0
+    };
+
+    dx * dx + dy * dy
+}
+
+pub fn dist_sq_points(a: &Point, b: &Point) -> f64 {
+    let dx = a.x - b.x;
+    let dy = a.y - b.y;
+    dx * dx + dy * dy
+}
