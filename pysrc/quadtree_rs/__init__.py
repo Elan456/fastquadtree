@@ -83,6 +83,10 @@ class QuadTree:
         if id is None:
             id = self._next_id
             self._next_id += 1
+        else:
+            # make sure next_id is always ahead of any manually provided ids
+            if id >= self._next_id:
+                self._next_id = id + 1
 
         if not self._native.insert(id, xy):
             x, y = xy
