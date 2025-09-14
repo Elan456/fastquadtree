@@ -35,6 +35,7 @@ Issues = "https://github.com/Elan456/quadtree-rs/issues"
 bindings = "pyo3"
 strip = true
 python-source = "pysrc"
+module-name = "quadtree_rs._native"
 # Choose a wide wheel tag for Linux. Adjust if your build images are newer.
 # Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
 compatibility = "manylinux2014"

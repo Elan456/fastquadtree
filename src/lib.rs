@@ -60,7 +60,7 @@ impl PyQuadTree {
 }
 
 #[pymodule]
-fn quadtree_rs(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
+fn _native(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyQuadTree>()?;
     Ok(())
 }

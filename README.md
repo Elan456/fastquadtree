@@ -1,16 +1,19 @@
+Here’s a drop-in README that matches your new shim interface.
+
+````markdown
 # quadtree-rs
 
 Rust-accelerated quadtree with a simple Python API.
 
-* Python package: **`quadtree_rs`**
-* Python ≥ 3.8
-* Import path: `from quadtree_rs import QuadTree`
+- Python package: **`quadtree_rs`**
+- Python ≥ 3.8
+- Import path: `from quadtree_rs import QuadTree`
 
 ## Install
 
 ```bash
 pip install quadtree_rs
-```
+````
 
 If you are developing locally:
 
@@ -27,80 +30,130 @@ from quadtree_rs import QuadTree
 # Bounds are (min_x, min_y, max_x, max_y)
 qt = QuadTree(bounds=(0, 0, 1000, 1000), capacity=20)  # max_depth is optional
 
-# Insert points. You supply an integer id and a point (x, y)
-for i, (x, y) in enumerate([(10, 10), (200, 300), (999, 500)]):
-    ok = qt.insert(i, (x, y))
-    assert ok  # False means the point was outside the bounds
+# Insert points with auto ids
+id1 = qt.insert((10, 10))
+id2 = qt.insert((200, 300))
+id3 = qt.insert((999, 500), id=42)  # you can supply your own id
 
 # Axis-aligned rectangle query
-hits = qt.query((0, 0, 250, 350))
-# hits is a list of tuples: (id, x, y)
-print(hits)  # e.g. [(0, 10.0, 10.0), (1, 200.0, 300.0)]
+hits = qt.query((0, 0, 250, 350))  # returns [(id, x, y), ...] by default
+print(hits)  # e.g. [(1, 10.0, 10.0), (2, 200.0, 300.0)]
 
 # Nearest neighbor
-best = qt.nearest_neighbor((210, 310))
-print(best)  # e.g. (1, 200.0, 300.0)
+best = qt.nearest_neighbor((210, 310))  # -> (id, x, y) or None
+print(best)
 
 # k-nearest neighbors
 top3 = qt.nearest_neighbors((210, 310), 3)
 print(top3)  # list of up to 3 (id, x, y) tuples
 ```
 
-### Mapping your Python objects
+### Working with Python objects
 
-The quadtree stores ids and points for speed. Keep a side map in Python:
+You can keep the tree pure and manage your own id → object map, or let the wrapper manage it.
+
+**Option A: Manage your own map**
 
 ```python
 from quadtree_rs import QuadTree
 
 qt = QuadTree((0, 0, 1000, 1000), capacity=16)
-objects = {}  # id -> your object
+objects: dict[int, object] = {}
 
-def add(obj_id: int, obj):
+def add(obj) -> int:
+    obj_id = qt.insert(obj.position)  # auto id
     objects[obj_id] = obj
-    qt.insert(obj_id, obj.position)  # where obj.position is (x, y)
+    return obj_id
 
 # Later, resolve ids back to objects
 ids = [obj_id for (obj_id, x, y) in qt.query((100, 100, 300, 300))]
 selected = [objects[i] for i in ids]
 ```
 
+**Option B: Ask the wrapper to track objects**
+
+```python
+from quadtree_rs import QuadTree
+
+qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
+
+# Store the object alongside the point
+qt.insert((25, 40), obj={"name": "apple"})
+
+# Ask for Item objects so you can access .obj lazily
+items = qt.query((0, 0, 100, 100), as_items=True)
+for it in items:
+    print(it.id, it.x, it.y, it.obj)
+```
+
+You can also attach or replace an object later:
+
+```python
+qt.attach(123, my_object)  # binds object to id 123
+```
+
 ## API
 
-### `QuadTree(bounds, capacity, *, max_depth=None)`
+### `QuadTree(bounds, capacity, *, max_depth=None, track_objects=False, start_id=1)`
 
-* `bounds` – tuple `(min_x, min_y, max_x, max_y)` covering all points you will insert
-* `capacity` – max number of items kept in a leaf before a split
-* `max_depth` – optional depth cap. If omitted, the tree can grow until data distribution stops forcing splits
+* `bounds` — tuple `(min_x, min_y, max_x, max_y)` covering all points you will insert
+* `capacity` — max number of points kept in a leaf before splitting
+* `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
+* `track_objects` — if `True`, the wrapper maintains an id → object map
+* `start_id` — starting value for auto-assigned ids
 
 ### Methods
 
-* `insert(id: int, xy: tuple[float, float]) -> bool`
-  Inserts a point with your integer id. Returns `False` if the point is outside `bounds`.
+* `insert(xy: tuple[float, float], *, id: int | None = None, obj: object | None = None) -> int`
+  Insert a point. Returns the id used. Raises `ValueError` if the point is outside `bounds`.
+  If `track_objects=True` and `obj` is provided, the object is stored under that id.
 
-* `query(rect: tuple[float, float, float, float]) -> list[tuple[int, float, float]]`
-  Returns all items whose point lies inside the axis-aligned rectangle. Each item is `(id, x, y)`.
+* `insert_many_points(points: Iterable[tuple[float, float]]) -> int`
+  Bulk insert points with auto ids. Returns count inserted.
 
-* `nearest_neighbor(xy: tuple[float, float]) -> tuple[int, float, float] | None`
-  Returns the closest point to `xy`, or `None` if the tree is empty.
+* `attach(id: int, obj: object) -> None`
+  Attach or replace an object for an existing id. If `track_objects` was false, a map is created on first use.
 
-* `nearest_neighbors(xy: tuple[float, float], k: int) -> list[tuple[int, float, float]]`
-  Returns up to `k` nearest points to `xy`.
+* `query(rect: tuple[float, float, float, float], *, as_items: bool = False) -> list[(id, x, y)] | list[Item]`
+  Return all points whose coordinates lie inside the rectangle. Use `as_items=True` to get `Item` wrappers with lazy `.obj`.
+
+* `nearest_neighbor(xy: tuple[float, float], *, as_item: bool = False) -> (id, x, y) | Item | None`
+  Return the closest point to `xy`, or `None` if empty.
+
+* `nearest_neighbors(xy: tuple[float, float], k: int, *, as_items: bool = False) -> list[(id, x, y)] | list[Item]`
+  Return up to `k` nearest points.
+
+* `get(id: int) -> object | None`
+  Get the object associated with `id` if tracking is enabled.
+
+* `__len__() -> int`
+  Number of successful inserts made through this wrapper.
+
+* `NativeQuadTree`
+  Reference to the underlying Rust class `quadtree_rs._native.QuadTree` for power users.
+
+### `Item` (returned when `as_items=True`)
+
+* Attributes: `id`, `x`, `y`, and a lazy `obj` property
+* Accessing `obj` performs a dictionary lookup only if tracking is enabled
 
 ### Geometric conventions
 
 * Rectangles are `(min_x, min_y, max_x, max_y)`.
 * Containment rule is open on the min edge and closed on the max edge
   `(x > min_x and x <= max_x and y > min_y and y <= max_y)`.
-  This only matters for points exactly on edges. Decide your own tie-break if you care about boundaries.
+  This only matters for points exactly on edges.
 
-### Performance tips
+## Performance tips
 
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
-* If your data is very skewed, set a `max_depth` to prevent degenerate chains.
-* For best runtime on your local dev build install with `maturin develop --release`.
+* If your data is very skewed, set a `max_depth` to prevent long chains.
+* For fastest local runs, use `maturin develop --release`.
+* The wrapper keeps Python overhead low: raw tuple results by default, `Item` wrappers only when requested.
 
 ## Benchmarks
+
+### Library comparison
 
 Generated with `benchmarks/bench_plotly.py` in this repo.
 
@@ -110,14 +163,35 @@ Generated with `benchmarks/bench_plotly.py` in this repo.
 ![Total time](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_time.png)
 ![Throughput](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_throughput.png)
 
-Example summary (PyQtree baseline) — numbers will vary by machine:
+Example summary (PyQtree baseline). Numbers vary by machine.
 
-| Library | Build (s) | Query (s) | Total (s) |
-|---|---:|---:|---:|
-| Brute force  | - | 4.068 | 4.068 |
-| e-pyquadtree | 0.447 | 1.951 | 2.398 |
-| PyQtree      | 0.686 | 0.685 | 1.371 |
-| quadtree-rs  | 0.038 | 0.285 | 0.323 |
+| Library      | Build (s) | Query (s) | Total (s) |
+| ------------ | --------: | --------: | --------: |
+| Brute force  |         - |     4.068 |     4.068 |
+| e-pyquadtree |     0.447 |     1.951 |     2.398 |
+| PyQtree      |     0.686 |     0.685 |     1.371 |
+| quadtree-rs  |     0.038 |     0.285 |     0.323 |
+
+### Native vs shim
+
+**Setup**
+
+* Points: 100,000
+* Queries: 500
+* Repeats: 5
+
+**Timing (seconds)**
+
+| Variant           | Build | Query | Total |
+| ----------------- | ----: | ----: | ----: |
+| Native            | 0.038 | 0.317 | 0.354 |
+| Shim (no map)     | 0.051 | 0.309 | 0.360 |
+| Shim (track+objs) | 0.057 | 0.321 | 0.379 |
+
+**Overhead vs native**
+
+* No map: build 1.35x, query 0.98x, total 1.01x
+* Track + objs: build 1.53x, query 1.01x, total 1.07x
 
 ## FAQ
 
@@ -125,10 +199,10 @@ Example summary (PyQtree baseline) — numbers will vary by machine:
 Allowed. For k-nearest, duplicates are de-duplicated by id. For range queries you will see every inserted point.
 
 **Can I store rectangles or circles?**
-The core stores points. To index objects with extent, insert the representative point you choose. For rectangles, you can either insert their centers or build a separate AABB tree.
+The core stores points. To index objects with extent, insert whatever representative point you choose. For rectangles you can insert centers or build an AABB tree separately.
 
 **Threading**
-The Python wrapper is a single `QuadTree` object with interior mutability handled in Rust. Use one tree per thread if you do heavy parallel inserts from Python.
+Use one tree per thread if you need heavy parallel inserts from Python.
 
 ## License
 
@@ -143,3 +217,7 @@ MIT. See `LICENSE`.
 [e-pyquadtree]: https://pypi.org/project/e-pyquadtree/
 [PyO3]: https://pyo3.rs/
 [maturin]: https://www.maturin.rs/
+
+```
+::contentReference[oaicite:0]{index=0}
+```

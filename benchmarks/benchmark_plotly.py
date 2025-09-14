@@ -33,7 +33,7 @@ C_BASE = "#9467bd"  # Brute force (purple)
 # Data gen
 # ----------------------
 def gen_points(n, rng):
-    return [(rng.randint(0, 1000), rng.randint(0, 1000)) for _ in range(n)]
+    return [(rng.randint(0, 999), rng.randint(0, 999)) for _ in range(n)]
 
 def gen_queries(m, rng):
     qs = []
@@ -77,7 +77,7 @@ def bench_once(points, queries, max_points, max_depth):
     t0 = now()
     qt_rs = RustQuadTree(BOUNDS, max_points, max_depth=max_depth)
     for i, p in enumerate(points):
-        qt_rs.insert(i, p)
+        qt_rs.insert(p)
     t_rs_build = now() - t0
 
     t0 = now()
