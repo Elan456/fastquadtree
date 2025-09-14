@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            args: "--skip-existing --sdist"
+            args: "--skip-existing"
           - os: macos-latest
             args: "--skip-existing --target universal2-apple-darwin"
           - os: windows-latest
