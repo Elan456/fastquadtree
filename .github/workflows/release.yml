@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,15 +18,19 @@ jobs:
           - os: ubuntu-latest
             args: "--release --skip-existing -r pypi --sdist"
           - os: macos-latest
-            args: "--release --skip-existing -r pypi --sdist --target universal2-apple-darwin"
+            # use universal2 flag, no sdist here
+            args: "--release --skip-existing -r pypi --universal2"
           - os: windows-latest
-            args: "--release --skip-existing -r pypi --sdist"
+            # no sdist here either
+            args: "--release --skip-existing -r pypi"
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+
       - name: Build and publish with maturin
         uses: PyO3/maturin-action@v1
         env:
@@ -31,3 +38,4 @@ jobs:
         with:
           command: publish
           args: ${{ matrix.args }}
+          manylinux: manylinux2014   # ensure compliant Linux wheels
