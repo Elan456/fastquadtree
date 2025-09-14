@@ -16,21 +16,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            args: "--skip-existing -r pypi --sdist"
+            args: "--skip-existing --sdist"
           - os: macos-latest
-            # use universal2 flag, no sdist here
-            args: "--skip-existing -r pypi --universal2"
+            args: "--skip-existing --target universal2-apple-darwin"
           - os: windows-latest
-            # no sdist here either
-            args: "--skip-existing -r pypi"
+            args: "--skip-existing"
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
       - name: Build and publish with maturin
         uses: PyO3/maturin-action@v1
         env:
@@ -38,4 +34,4 @@ jobs:
         with:
           command: publish
           args: ${{ matrix.args }}
-          manylinux: manylinux2014   # ensure compliant Linux wheels
+          manylinux: manylinux2014
