@@ -1,0 +1,14 @@
+# Core benchmark deps
+plotly>=5.20
+tqdm>=4.66
+kaleido>=0.2
+
+# Your three baseline libs
+e-pyquadtree>=0.1.1
+Pyqtree>=1.0.0
+quadtree-rs>=0.1.0
+
+# Added libraries
+quads>=1.1.0         # pure-Python quadtree
+nontree>=1.0.5       # pure-Python PR quadtree (TreeMap mode=4)
+rtree>=1.3.0         # R-tree comparator with wheels for Win/macOS/Linux

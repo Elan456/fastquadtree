@@ -1,6 +1,6 @@
 # quadtree-rs
 
-Rust-accelerated quadtree with a simple Python API.
+Rust-optimized quadtree with a simple Python API.
 
 - Python package: **`quadtree_rs`**
 - Python ≥ 3.8
@@ -150,24 +150,37 @@ qt.attach(123, my_object)  # binds object to id 123
 
 ## Benchmarks
 
+quadtree-rs outperforms all other quadtree python packages (at least all the ones I could find and install via pip.)
+
 ### Library comparison
 
-Generated with `benchmarks/bench_plotly.py` in this repo.
+Generated with `benchmarks/benchmark_plotly.py` in this repo.
 
 * 100k points, 500 queries, capacity 20, max depth 10
 * Median over 3 runs per size
 
-![Total time](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_time.png)
-![Throughput](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_throughput.png)
+![Total time](assets/quadtree_bench_time.png)
+![Throughput](assets/quadtree_bench_throughput.png)
 
-Example summary (PyQtree baseline). Numbers vary by machine.
+### Summary (largest dataset, PyQtree baseline)
+- Points: **500,000**, Queries: **500**
+--------------------
+- Fastest total: **quadtree-rs** at **2.288 s**
+- PyQtree total: **9.717 s**
+- quadtree-rs total: **2.288 s**
+- e-pyquadtree total: **13.504 s**
+- Brute force total: **20.450 s**
+--------------------
 
-| Library      | Build (s) | Query (s) | Total (s) |
-| ------------ | --------: | --------: | --------: |
-| Brute force  |         - |     4.068 |     4.068 |
-| e-pyquadtree |     0.447 |     1.951 |     2.398 |
-| PyQtree      |     0.686 |     0.685 |     1.371 |
-| quadtree-rs  |     0.038 |     0.285 |     0.323 |
+| Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
+|---|---:|---:|---:|---:|
+| quadtree-rs  | 0.330 | 1.958 | 2.288 | 4.25× |
+| PyQtree      | 4.479 | 5.238 | 9.717 | 1.00× |
+| e-pyquadtree | 2.821 | 10.683 | 13.504 | 0.72× |
+| Brute force  | nan | 20.450 | 20.450 | 0.48× |
+| nontree-QuadTree | 1.687 | 7.803 | 9.490 | 1.02× |
+| quads        | 3.977 | 9.070 | 13.046 | 0.74× |
+| Rtree        | 1.676 | 4.805 | 6.481 | 1.50× |
 
 ### Native vs shim
 

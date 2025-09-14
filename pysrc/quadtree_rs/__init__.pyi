@@ -20,9 +20,9 @@ class QuadTree:
         bounds: Bounds,
         capacity: int,
         *,
-        max_depth: Optional[int] = ...,
-        track_objects: bool = ...,
-        start_id: int = ...,
+        max_depth: Optional[int] = None,
+        track_objects: bool = False,
+        start_id: int = 1,
     ) -> None: ...
 
     # Inserts
