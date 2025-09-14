@@ -36,6 +36,3 @@ python-source = "pysrc"
 # Choose a wide wheel tag for Linux. Adjust if your build images are newer.
 # Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
 compatibility = "manylinux2014"
-
-# If you need to pass extra cargo flags, uncomment the next line
-cargo-extra-args = ["--release"]
