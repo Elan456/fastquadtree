@@ -38,4 +38,4 @@ python-source = "pysrc"
 compatibility = "manylinux2014"
 
 # If you need to pass extra cargo flags, uncomment the next line
-# cargo-extra-args = ["--profile", "release"]
+cargo-extra-args = ["--release"]

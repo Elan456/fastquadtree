@@ -20,7 +20,7 @@ MAX_POINTS = 20          # node capacity
 MAX_DEPTH = 10           # depth cap for fairness
 N_QUERIES = 500          # per experiment
 REPEATS = 3              # median over repeats
-EXPERIMENTS = list(range(0, 110_000, 10_000))
+EXPERIMENTS = list(range(0, 120_000, 20_000))
 RNG_SEED = 42
 
 # Colors
@@ -221,21 +221,22 @@ def make_figures(results):
         subplot_titles=("Insert rate (points/sec)", "Query rate (queries/sec)"),
         horizontal_spacing=0.12
     )
+    fig_rate.update_yaxes(type="log", row=1, col=2)
 
     for name, color in [("PyQtree", C_PYQT), ("e-pyquadtree", C_EPY), ("quadtree-rs", C_RUST), ("Brute force", C_BASE)]:
         # Insert (left subplot) => shows legend
         if name in insert_rate:
             fig_rate.add_trace(go.Scatter(
                 x=EXPERIMENTS, y=insert_rate[name],
-                name=name, legendgroup=name, showlegend=True,
+                name=name, legendgroup=name, showlegend=False,
                 line=dict(color=color, width=3)
             ), row=1, col=1)
 
         # Query (right subplot) => hidden from legend but in same group
         fig_rate.add_trace(go.Scatter(
             x=EXPERIMENTS, y=query_rate[name],
-            name=f"{name} query", legendgroup=name, showlegend=False,
-            line=dict(color=color, width=3, dash="dash")
+            name=name, legendgroup=name, showlegend=True,
+            line=dict(color=color, width=3)
         ), row=1, col=2)
 
     fig_rate.update_xaxes(title_text="Number of points", row=1, col=1)
