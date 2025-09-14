@@ -217,7 +217,3 @@ MIT. See `LICENSE`.
 [e-pyquadtree]: https://pypi.org/project/e-pyquadtree/
 [PyO3]: https://pyo3.rs/
 [maturin]: https://www.maturin.rs/
-
-```
-::contentReference[oaicite:0]{index=0}
-```
