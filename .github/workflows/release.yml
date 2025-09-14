@@ -16,13 +16,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            args: "--release --skip-existing -r pypi --sdist"
+            args: "--skip-existing -r pypi --sdist"
           - os: macos-latest
             # use universal2 flag, no sdist here
-            args: "--release --skip-existing -r pypi --universal2"
+            args: "--skip-existing -r pypi --universal2"
           - os: windows-latest
             # no sdist here either
-            args: "--release --skip-existing -r pypi"
+            args: "--skip-existing -r pypi"
     steps:
       - uses: actions/checkout@v4
 
