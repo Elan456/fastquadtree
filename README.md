@@ -107,8 +107,8 @@ Generated with `benchmarks/bench_plotly.py` in this repo.
 * 100k points, 500 queries, capacity 20, max depth 10
 * Median over 3 runs per size
 
-![Total time](assets/quadtree_bench_time.png)
-![Throughput](assets/quadtree_bench_throughput.png)
+![Total time](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_time.png)
+![Throughput](https://github.com/Elan456/quadtree-rs/blob/568c65622f2c55de9c56df76af7995b3e212de0c/assets/quadtree_bench_throughput.png)
 
 Example summary (PyQtree baseline) — numbers will vary by machine:
 

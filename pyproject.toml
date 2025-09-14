@@ -6,12 +6,12 @@ build-backend = "maturin"
 name = "quadtree_rs"
 # Version comes from Cargo.toml
 dynamic = ["version"]
-description = "Fast quadtree in Rust with a Python API"
-readme = "README.md"
+description = "Rust-accelerated quadtree for Python with fast inserts, range queries, and k-NN search."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
 authors = [{ name = "Ethan Anderson" }]
-keywords = ["quadtree", "spatial-index", "geometry", "rust", "pyo3"]
+keywords = ["quadtree", "spatial-index", "geometry", "rust", "pyo3", "nearest-neighbor", "k-nn"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
@@ -19,7 +19,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Operating System :: OS Independent",
   "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Information Analysis",
   "Topic :: Software Development :: Libraries",
+  "Typing :: Typed",
   "License :: OSI Approved :: MIT License"
 ]
 
