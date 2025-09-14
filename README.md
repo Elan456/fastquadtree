@@ -1,6 +1,3 @@
-Here’s a drop-in README that matches your new shim interface.
-
-````markdown
 # quadtree-rs
 
 Rust-accelerated quadtree with a simple Python API.
