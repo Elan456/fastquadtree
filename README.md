@@ -169,8 +169,8 @@ qt.attach(123, my_object)  # binds object to id 123
 ### Geometric conventions
 
 * Rectangles are `(min_x, min_y, max_x, max_y)`.
-* Containment rule is open on the min edge and closed on the max edge
-  `(x > min_x and x <= max_x and y > min_y and y <= max_y)`.
+* Containment rule is closed on the min edge and open on the max edge
+  `(x >= min_x and x < max_x and y >= min_y and y < max_y)`.
   This only matters for points exactly on edges.
 
 ## Performance tips
