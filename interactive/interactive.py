@@ -126,6 +126,13 @@ def interactive_test():
             point_loc = (point[1] - camera_x, point[2] - camera_y)
             pygame.draw.circle(screen, (255, 0, 255), point_loc, 8, 3)
 
+        # Draw a line from the mouse to it's closest point
+        if closest_to_mouse is not None:
+            pygame.draw.line(
+                screen, (255, 255, 255), (mouse_loc[0] - camera_x, mouse_loc[1] - camera_y), 
+                (closest_to_mouse.x - camera_x, closest_to_mouse.y - camera_y), 3
+            )
+
         pygame.display.update()
         screen.fill((0, 0, 0))
         clock.tick(120)
