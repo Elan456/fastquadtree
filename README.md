@@ -214,26 +214,25 @@ Generated with `benchmarks/benchmark_plotly.py` in this repo.
 | quads        | 3.977 | 9.070 | 13.046 | 0.74× |
 | Rtree        | 1.676 | 4.805 | 6.481 | 1.50× |
 
-### Native vs shim
+### Native vs Shim
 
 **Setup**
-
-* Points: 100,000
-* Queries: 500
-* Repeats: 5
+- Points: 500,000
+- Queries: 500
+- Repeats: 5
 
 **Timing (seconds)**
 
-| Variant           | Build | Query | Total |
-| ----------------- | ----: | ----: | ----: |
-| Native            | 0.038 | 0.317 | 0.354 |
-| Shim (no map)     | 0.051 | 0.309 | 0.360 |
-| Shim (track+objs) | 0.057 | 0.321 | 0.379 |
+| Variant | Build | Query | Total |
+|---|---:|---:|---:|
+| Native | 0.483 | 4.380 | 4.863 |
+| Shim (no map) | 0.668 | 4.167 | 4.835 |
+| Shim (track+objs) | 1.153 | 4.458 | 5.610 |
 
-**Overhead vs native**
+**Overhead vs Native**
 
-* No map: build 1.35x, query 0.98x, total 1.01x
-* Track + objs: build 1.53x, query 1.01x, total 1.07x
+- No map: build 1.38x, query 0.95x, total 0.99x  
+- Track + objs: build 2.39x, query 1.02x, total 1.15x
 
 ## FAQ
 

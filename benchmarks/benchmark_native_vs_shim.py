@@ -6,6 +6,7 @@ import gc
 import random
 import statistics as stats
 from time import perf_counter as now
+from tqdm import tqdm 
 
 from quadtree_rs._native import QuadTree as NativeQuadTree
 from quadtree_rs import QuadTree as ShimQuadTree
@@ -67,7 +68,7 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
 
 def median_times(fn, points, queries, repeats: int):
     builds, queries_t = [], []
-    for _ in range(repeats):
+    for _ in tqdm(range(repeats)):
         gc.disable()
         b, q = fn(points, queries)
         gc.enable()
@@ -77,7 +78,7 @@ def median_times(fn, points, queries, repeats: int):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--points", type=int, default=100_000)
+    ap.add_argument("--points", type=int, default=500_000)
     ap.add_argument("--queries", type=int, default=500)
     ap.add_argument("--repeats", type=int, default=5)
     args = ap.parse_args()
