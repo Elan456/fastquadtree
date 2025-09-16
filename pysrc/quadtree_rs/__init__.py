@@ -193,7 +193,15 @@ class QuadTree:
         Each boundary is represented as a tuple (min_x, min_y, max_x, max_y).
         """
         rects = self._native.get_all_rectangles()
-        return [(r.min_x, r.min_y, r.max_x, r.max_y) for r in rects]
+        return rects
+    
+    def get_all_objects(self) -> List[Any]:
+        """
+        Get a list of all tracked objects in the quadtree.
+        """
+        if self._objects is None:
+            return []
+        return list(self._objects.values())
 
     def __len__(self) -> int:
         """
