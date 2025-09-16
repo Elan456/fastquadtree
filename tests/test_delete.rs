@@ -245,3 +245,107 @@ fn test_delete_multiple_items_same_location() {
     assert!(!tree.delete(20, location));
     assert!(!tree.delete(30, location));
 }
+
+#[test]
+fn merge_happens_when_grandchildren_exist() {
+    // capacity 2 makes the tree split as soon as 3 points share a node
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+
+    // Build depth: put several points in the lower-left quadrant to force grandchildren
+    let pts = [
+        Point { x: 10.0, y: 10.0 },
+        Point { x: 11.0, y: 11.0 },
+        Point { x: 12.0, y: 12.0 }, // split 1
+        Point { x: 12.5, y: 12.5 }, // deeper
+        Point { x: 12.75, y: 12.75 },
+    ];
+    for (i, p) in pts.iter().enumerate() {
+        tree.insert(Item { id: i as u64, point: *p });
+    }
+
+    // Sanity: we should have split, so there are multiple rectangles
+    let initial_rects = tree.get_all_rectangles().len();
+    assert!(initial_rects > 1);
+
+    // Delete enough to make the subtree compact again
+    assert!(tree.delete(4, pts[4]));
+    assert!(tree.delete(3, pts[3]));
+    assert!(tree.delete(2, pts[2]));
+
+    // Only two points left in that region, which fits capacity at the parent
+    // The recursive merge should collapse grandchildren, then children, possibly the root if applicable
+    let final_rects = tree.get_all_rectangles().len();
+    assert!(final_rects < initial_rects, "expected fewer rectangles after recursive merge");
+}
+
+#[test]
+fn root_collapses_when_total_items_fit_capacity() {
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+
+    // Points across different quadrants to ensure a top-level split
+    let pts = [
+        (0, Point { x: 10.0, y: 10.0 }),
+        (1, Point { x: 20.0, y: 20.0 }),
+        (2, Point { x: 80.0, y: 80.0 }),
+        (3, Point { x: 90.0, y: 90.0 }),
+    ];
+    for (id, p) in pts.iter() {
+        tree.insert(Item { id: *id, point: *p });
+    }
+
+    assert!(tree.get_all_rectangles().len() > 1);
+    // Delete two so only two remain in total, which equals capacity at the root
+    assert!(tree.delete(2, Point { x: 80.0, y: 80.0 }));
+    assert!(tree.delete(3, Point { x: 90.0, y: 90.0 }));
+
+    // With 2 items left and capacity 2, the root should collapse to a leaf
+    assert!(tree.children.is_none(), "root should have collapsed to a leaf");
+    assert_eq!(tree.get_all_rectangles().len(), 1, "only the root rectangle should remain");
+}
+
+#[test]
+fn no_merge_when_over_capacity() {
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+
+    // Force a split
+    let pts = [
+        (0, Point { x: 10.0, y: 10.0 }),
+        (1, Point { x: 20.0, y: 20.0 }),
+        (2, Point { x: 80.0, y: 80.0 }),
+    ];
+    for (id, p) in pts.iter() {
+        tree.insert(Item { id: *id, point: *p });
+    }
+    assert!(tree.get_all_rectangles().len() > 1);
+
+    // Delete one, total remains 2 across two different quadrants plus one more insert to make it 3
+    assert!(tree.delete(1, Point { x: 20.0, y: 20.0 }));
+    tree.insert(Item { id: 3, point: Point { x: 85.0, y: 85.0 }});
+    // Now total is 3, which exceeds capacity at the root, so no merge to single leaf
+    assert!(tree.children.is_some(), "should not collapse when total items exceed capacity");
+}
+
+#[test]
+fn deep_chain_collapses_to_leaf() {
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0 }, 1);
+    // Create a chain by inserting points that keep falling into the same quadrant
+    let pts = [
+        (0, Point { x: 0.1, y: 0.1 }),
+        (1, Point { x: 0.15, y: 0.15 }),
+        (2, Point { x: 0.18, y: 0.18 }),
+        (3, Point { x: 0.19, y: 0.19 }),
+    ];
+    for (id, p) in pts.iter() {
+        tree.insert(Item { id: *id, point: *p });
+    }
+
+    assert!(tree.get_all_rectangles().len() > 1);
+
+    // Delete back down to one point, which must fit in a single leaf
+    assert!(tree.delete(3, pts[3].1));
+    assert!(tree.delete(2, pts[2].1));
+    assert!(tree.delete(1, pts[1].1));
+
+    assert!(tree.children.is_none(), "deep path should have collapsed back to a single leaf");
+    assert_eq!(tree.count_items(), 1);
+}

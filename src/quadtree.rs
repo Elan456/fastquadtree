@@ -253,62 +253,55 @@ impl QuadTree {
         deleted
     }
 
-    // Internal delete method that handles the recursive deletion
     fn delete_internal(&mut self, id: u64, point: Point) -> bool {
-        // If we're a leaf node, look for the item in our items
         if self.children.is_none() {
-            // Find and remove the item by both ID and point location
-            if let Some(pos) = self.items.iter().position(|item| item.id == id && item.point.x == point.x && item.point.y == point.y) {
-                self.items.remove(pos);
+            if let Some(pos) = self.items.iter().position(|it| it.id == id && it.point.x == point.x && it.point.y == point.y) {
+                self.items.swap_remove(pos);
                 return true;
             }
             return false;
         }
 
-        // If we have children, delegate to the appropriate child
         let idx = child_index_for_point(&self.boundary, &point);
         if let Some(children) = self.children.as_mut() {
-            return children[idx].delete_internal(id, point);
+            let removed = children[idx].delete_internal(id, point);
+            if removed {
+                // Optionally merge on the way up, then return
+                self.try_merge();
+            }
+            return removed;
         }
-
         false
     }
 
-    // Attempts to merge this node's children back into this node if they have few enough items total
+
+    // Attempts to merge this node's children back into this node if possible.
+    // Recurses first, then tries to merge this level.
     fn try_merge(&mut self) {
-        if self.children.is_none() {
-            return; // Already a leaf, nothing to merge
+        // No children, nothing to do
+        let Some(children) = self.children.as_mut() else { return; };
+
+        // First, let children merge themselves
+        for child in children.iter_mut() {
+            child.try_merge();
         }
 
-        // Count total items in all children
-        let mut total_items = 0;
-        let mut all_child_items = Vec::new();
-        
-        if let Some(children) = self.children.as_ref() {
-            for child in children.iter() {
-                // Only merge if all children are leaves (no grandchildren)
-                if child.children.is_some() {
-                    // Try to merge children first
-                    return;
+        // If after recursion all children are leaves, consider merging them here
+        let all_leaves = children.iter().all(|c| c.children.is_none());
+        if all_leaves {
+            let total: usize = children.iter().map(|c| c.items.len()).sum();
+            if total <= self.capacity {
+                // Move items up without cloning
+                let mut merged = Vec::with_capacity(total);
+                for c in children.iter_mut() {
+                    merged.append(&mut c.items);
                 }
-                total_items += child.items.len();
-                all_child_items.extend(child.items.iter().cloned());
-            }
-        }
-
-        // If total items across all children is <= capacity, merge them back
-        if total_items <= self.capacity {
-            self.items = all_child_items;
-            self.children = None;
-        } else {
-            // Can't merge, but try to merge children recursively
-            if let Some(children) = self.children.as_mut() {
-                for child in children.iter_mut() {
-                    child.try_merge();
-                }
+                self.items = merged;
+                self.children = None;
             }
         }
     }
+
 
     // Returns the total number of items in this subtree
     pub fn count_items(&self) -> usize {
