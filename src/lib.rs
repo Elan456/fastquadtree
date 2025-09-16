@@ -57,6 +57,15 @@ impl PyQuadTree {
             .map(item_to_tuple)
             .collect()
     }
+
+    /// Returns all rectangle boundaries in the quadtree for visualization
+    pub fn get_all_rectangles(&self) -> Vec<(f64, f64, f64, f64)> {
+        self.inner
+            .get_all_rectangles()
+            .into_iter()
+            .map(|rect| (rect.min_x, rect.min_y, rect.max_x, rect.max_y))
+            .collect()
+    }
 }
 
 #[pymodule]

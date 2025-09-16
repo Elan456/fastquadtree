@@ -185,6 +185,15 @@ class QuadTree:
         Get the object associated with id. Returns None if not tracked or not present.
         """
         return None if self._objects is None else self._objects.get(id)
+    
+    def get_all_rectangles(self) -> List[Bounds]:
+        """
+        Get a list of all rectangle boundaries in the quadtree.
+
+        Each boundary is represented as a tuple (min_x, min_y, max_x, max_y).
+        """
+        rects = self._native.get_all_rectangles()
+        return [(r.min_x, r.min_y, r.max_x, r.max_y) for r in rects]
 
     def __len__(self) -> int:
         """

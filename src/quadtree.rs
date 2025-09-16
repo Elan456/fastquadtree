@@ -217,5 +217,25 @@ impl QuadTree {
         out
     }
 
+    // Traverses the entire quadtree and returns a list of all rectangle boundaries.
+    pub fn get_all_rectangles(&self) -> Vec<Rect> {
+        let mut rectangles = Vec::new();
+        self.collect_rectangles(&mut rectangles);
+        rectangles
+    }
+
+    // Helper method to recursively collect all rectangle boundaries
+    fn collect_rectangles(&self, rectangles: &mut Vec<Rect>) {
+        // Add this node's boundary
+        rectangles.push(self.boundary);
+        
+        // Recursively collect from children if they exist
+        if let Some(children) = self.children.as_ref() {
+            for child in children.iter() {
+                child.collect_rectangles(rectangles);
+            }
+        }
+    }
+
 
 }
