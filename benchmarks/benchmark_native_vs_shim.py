@@ -72,7 +72,8 @@ def median_times(fn, points, queries, repeats: int):
         gc.disable()
         b, q = fn(points, queries)
         gc.enable()
-        builds.append(b); queries_t.append(q)
+        builds.append(b)
+        queries_t.append(q)
     return stats.median(builds), stats.median(queries_t)
 
 
