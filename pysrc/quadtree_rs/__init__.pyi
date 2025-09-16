@@ -33,6 +33,7 @@ class QuadTree:
 
     # Deletions
     def delete(self, id: int, xy: Point) -> bool: ...
+    def delete_by_object(self, obj: Any, xy: Point) -> bool: ...
 
     # Queries
     @overload

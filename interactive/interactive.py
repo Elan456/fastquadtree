@@ -83,8 +83,7 @@ def interactive_test():
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 if closest_to_mouse:
-                    closest_id = qtree.
-                    qtree.delete()
+                    qtree.delete_by_object(closest_to_mouse.obj, (closest_to_mouse.x, closest_to_mouse.y))
 
         # If right arrow down, move the query area to the right
         if pygame.key.get_pressed()[pygame.K_RIGHT]:

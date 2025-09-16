@@ -48,6 +48,18 @@ print(top3)  # list of up to 3 (id, x, y) tuples
 deleted = qt.delete(id2, (200, 300))  # True if found and deleted
 print(f"Deleted: {deleted}")
 print(f"Remaining items: {qt.count_items()}")
+
+# For object tracking with track_objects=True
+qt_tracked = QuadTree((0, 0, 1000, 1000), capacity=4, track_objects=True)
+player1 = {"name": "Alice", "score": 100}
+player2 = {"name": "Bob", "score": 200}
+
+id1 = qt_tracked.insert((50, 50), obj=player1)
+id2 = qt_tracked.insert((150, 150), obj=player2)
+
+# Delete by object reference (O(1) lookup!)
+deleted = qt_tracked.delete_by_object(player1, (50, 50))
+print(f"Deleted player: {deleted}")  # True
 ```
 
 ### Working with Python objects
@@ -118,6 +130,9 @@ qt.attach(123, my_object)  # binds object to id 123
 
 * `delete(id: int, xy: tuple[float, float]) -> bool`
   Delete an item from the quadtree by ID and location. Returns `True` if the item was found and deleted, `False` otherwise. This allows precise deletion when multiple items exist at the same location.
+
+* `delete_by_object(obj: object, xy: tuple[float, float]) -> bool`
+  Delete an item from the quadtree by object reference and location. Returns `True` if the item was found and deleted, `False` otherwise. Requires `track_objects=True`. Uses O(1) lookup to find the ID associated with the object and delete that item.
 
 * `query(rect: tuple[float, float, float, float], *, as_items: bool = False) -> list[(id, x, y)] | list[Item]`
   Return all points whose coordinates lie inside the rectangle. Use `as_items=True` to get `Item` wrappers with lazy `.obj`.
@@ -226,7 +241,7 @@ Generated with `benchmarks/benchmark_plotly.py` in this repo.
 Allowed. For k-nearest, duplicates are de-duplicated by id. For range queries you will see every inserted point.
 
 **Can I delete items from the quadtree?**
-Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. The tree automatically merges nodes when item counts drop below capacity.
+Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `track_objects=True`, you can also use `delete_by_object(obj, xy)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
 
 **Can I store rectangles or circles?**
 The core stores points. To index objects with extent, insert whatever representative point you choose. For rectangles you can insert centers or build an AABB tree separately.

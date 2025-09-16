@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Iterable, List, Optional, Tuple
 
 # Compiled Rust module lives here thanks to tool.maturin.module-name
-from ._native import QuadTree as _RustQuadTree  # type: ignore[attr-defined]
+from ._native import QuadTree as _RustQuadTree
+from ._bimap import BiMap  # type: ignore[attr-defined]
 
 Bounds = Tuple[float, float, float, float]
 Point = Tuple[float, float]
@@ -64,7 +65,7 @@ class QuadTree:
             self._native = _RustQuadTree(bounds, capacity)
         else:
             self._native = _RustQuadTree(bounds, capacity, max_depth=max_depth)
-        self._objects: Optional[dict[int, Any]] = {} if track_objects else None
+        self._objects: Optional[BiMap] = BiMap() if track_objects else None
         self._next_id: int = int(start_id)
         self._count: int = 0
         self._bounds = bounds
@@ -95,7 +96,7 @@ class QuadTree:
 
         # Store obj only if mapping is enabled and obj was provided
         if self._objects is not None and obj is not None:
-            self._objects[id] = obj
+            self._objects.set(id, obj)
 
         self._count += 1
         return id
@@ -129,8 +130,8 @@ class QuadTree:
         If track_objects is False, a map will be created on first use.
         """
         if self._objects is None:
-            self._objects = {}
-        self._objects[id] = obj
+            self._objects = BiMap()
+        self._objects.set(id, obj)
 
     def delete(self, id: int, xy: Point) -> bool:
         """
@@ -144,9 +145,32 @@ class QuadTree:
         if deleted:
             self._count -= 1
             # Remove from objects map if tracking objects
-            if self._objects is not None and id in self._objects:
-                del self._objects[id]
+            if self._objects is not None and self._objects.contains_id(id):
+                self._objects.pop_id(id)
         return deleted
+
+    def delete_by_object(self, obj: Any, xy: Point) -> bool:
+        """
+        Delete an item from the quadtree by object reference and location.
+
+        obj: the Python object to delete (must be tracked in the quadtree)
+        xy: (x, y) coordinates of the item
+        returns: True if the item was found and deleted, False otherwise
+
+        Requires track_objects=True. Uses O(1) lookup to find the ID
+        associated with the object and delete that item.
+        """
+        if self._objects is None:
+            raise ValueError("Cannot delete by object when track_objects=False. Use delete(id, xy) instead.")
+        
+        # Fast O(1) lookup for the object's ID using bimap
+        item_id = self._objects.by_obj(obj)
+        if item_id is None:
+            # Object not found in tracking map
+            return False
+        
+        # Use the regular delete method with the found ID
+        return self.delete(item_id, xy)
 
     # ---------- queries ----------
 
@@ -162,7 +186,7 @@ class QuadTree:
             return raw
         out: List[Item] = []
         ap = out.append
-        map_get = self._objects.get if self._objects is not None else None
+        map_get = self._objects.by_id if self._objects is not None else None
         Item_ = Item
         for id_, x, y in raw:
             ap(Item_(id_, x, y, map_get))
@@ -178,7 +202,7 @@ class QuadTree:
         if t is None or not as_item:
             return t
         id_, x, y = t
-        map_get = self._objects.get if self._objects is not None else None
+        map_get = self._objects.by_id if self._objects is not None else None
         return Item(id_, x, y, map_get)
 
     def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
@@ -190,7 +214,7 @@ class QuadTree:
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:
             return raw
-        map_get = self._objects.get if self._objects is not None else None
+        map_get = self._objects.by_id if self._objects is not None else None
         Item_ = Item
         return [Item_(id_, x, y, map_get) for (id_, x, y) in raw]
 
@@ -200,7 +224,7 @@ class QuadTree:
         """
         Get the object associated with id. Returns None if not tracked or not present.
         """
-        return None if self._objects is None else self._objects.get(id)
+        return None if self._objects is None else self._objects.by_id(id)
     
     def get_all_rectangles(self) -> List[Bounds]:
         """
