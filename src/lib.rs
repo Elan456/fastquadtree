@@ -35,6 +35,11 @@ impl PyQuadTree {
         self.inner.insert(Item { id, point: Point { x, y } })
     }
 
+    pub fn delete(&mut self, id: u64, xy: (f64, f64)) -> bool {
+        let (x, y) = xy;
+        self.inner.delete(id, Point { x, y })
+    }
+
     pub fn query(&self, rect: (f64, f64, f64, f64)) -> Vec<(u64, f64, f64)> {
         let (min_x, min_y, max_x, max_y) = rect;
         self.inner
@@ -65,6 +70,11 @@ impl PyQuadTree {
             .into_iter()
             .map(|rect| (rect.min_x, rect.min_y, rect.max_x, rect.max_y))
             .collect()
+    }
+
+    /// Returns the total number of items in the quadtree
+    pub fn count_items(&self) -> usize {
+        self.inner.count_items()
     }
 }
 

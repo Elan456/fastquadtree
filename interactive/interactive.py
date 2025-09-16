@@ -81,9 +81,10 @@ def interactive_test():
                 qtree.insert((x, y), obj=Ball(x, y))
                 # print("New total number of nodes: ", len(qtree.get_all_bbox()))
 
-            # if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-            #     if closest_to_mouse:
-            #         qtree.delete(closest_to_mouse[0].item)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                if closest_to_mouse:
+                    closest_id = qtree.
+                    qtree.delete()
 
         # If right arrow down, move the query area to the right
         if pygame.key.get_pressed()[pygame.K_RIGHT]:

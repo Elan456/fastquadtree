@@ -132,6 +132,22 @@ class QuadTree:
             self._objects = {}
         self._objects[id] = obj
 
+    def delete(self, id: int, xy: Point) -> bool:
+        """
+        Delete an item from the quadtree by ID and location.
+
+        id: the integer id of the item to delete
+        xy: (x, y) coordinates of the item
+        returns: True if the item was found and deleted, False otherwise
+        """
+        deleted = self._native.delete(id, xy)
+        if deleted:
+            self._count -= 1
+            # Remove from objects map if tracking objects
+            if self._objects is not None and id in self._objects:
+                del self._objects[id]
+        return deleted
+
     # ---------- queries ----------
 
     def query(self, rect: Bounds, *, as_items: bool = False) -> List[Tuple[int, float, float]] | List[Item]:
@@ -202,6 +218,14 @@ class QuadTree:
         if self._objects is None:
             return []
         return list(self._objects.values())
+
+    def count_items(self) -> int:
+        """
+        Get the total number of items stored in the quadtree.
+        
+        This calls the native implementation to get an accurate count.
+        """
+        return self._native.count_items()
 
     def __len__(self) -> int:
         """
