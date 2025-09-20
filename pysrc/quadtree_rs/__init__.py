@@ -1,44 +1,105 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional, Tuple
+"""
+Python shim for the Rust-backed quadtree.
 
-# Compiled Rust module lives here thanks to tool.maturin.module-name
+This module exposes a small, typed API that wraps the compiled Rust engine
+for fast spatial indexing and queries in 2D.
+
+Quickstart:
+    >>> from quadtree_rs import QuadTree
+    >>> qt = QuadTree(bounds=(0.0, 0.0, 1000.0, 1000.0), capacity=8, max_depth=12, track_objects=True)
+    >>> qt.insert((10.0, 20.0), obj={"name": "A"})
+    1
+    >>> qt.insert_many_points([(100.0, 100.0), (250.0, 250.0)])
+    2
+    >>> qt.query((0.0, 0.0, 150.0, 150.0))
+    [(1, 10.0, 20.0), (2, 100.0, 100.0)]
+    >>> item = qt.nearest_neighbor((12.0, 18.0), as_item=True)
+    >>> item.id, item.x, item.y, item.obj
+    (1, 10.0, 20.0, {'name': 'A'})
+
+Notes:
+- Coordinates are floats
+- IDs are integers that you may provide or let the wrapper auto-assign
+- Object tracking is optional; enable it when you want id <-> object mapping
+"""
+
+from typing import Any, Iterable, List, Optional, Tuple, overload
+from typing import Literal
+
+# Compiled Rust module is provided by maturin (tool.maturin.module-name)
 from ._native import QuadTree as _RustQuadTree
 from ._bimap import BiMap  # type: ignore[attr-defined]
 
 Bounds = Tuple[float, float, float, float]
+"""Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
+
 Point = Tuple[float, float]
+"""2D point as (x, y)."""
+
+_IdCoord = Tuple[int, float, float]
+"""Result tuple as (id, x, y)."""
 
 
 class Item:
     """
-    Lightweight result wrapper.
+    Lightweight view of a result row.
 
-    Uses __slots__ and lazy object lookup to keep overhead low.
-    Access .obj only if you actually need the Python object.
+    Provides direct access to id, x, y and lazy lookup of the attached Python
+    object if object tracking is enabled on the owning QuadTree.
+
+    Attributes:
+        id: Integer identifier for the item.
+        x: X coordinate.
+        y: Y coordinate.
+        obj: The attached Python object if available, else None.
+
+    Notes:
+        Uses __slots__ and defers object lookup to keep overhead low.
+        Access .obj only when needed.
     """
+
     __slots__ = ("id", "x", "y", "_map_get")
 
     def __init__(self, id: int, x: float, y: float, map_get):
         self.id = id
         self.x = x
         self.y = y
-        self._map_get = map_get  # either dict.get or None
+        self._map_get = map_get  # either BiMap.by_id or None
 
     @property
     def obj(self) -> Any | None:
+        """Return the attached object for this id or None if not tracked."""
         get = self._map_get
         return None if get is None else get(self.id)
 
 
 class QuadTree:
     """
-    High-level Python wrapper over the Rust quadtree.
+    High-level Python wrapper over the Rust quadtree engine.
 
-    - Inserts are by integer id and point
-    - Tracking objects is optional. Enable it if you want id -> obj mapping
-    - Queries return raw tuples by default for speed
-    - Opt into Item wrappers via as_items=True when you need them
+    The quadtree stores points with integer IDs. You may attach an arbitrary
+    Python object per ID when object tracking is enabled.
+
+    Performance characteristics:
+        Inserts: average O(log n)
+        Rect queries: average O(log n + k) where k is matches returned
+        Nearest neighbor: average O(log n)
+
+    Thread-safety:
+        Instances are not thread-safe. Use external synchronization if you
+        mutate the same tree from multiple threads.
+
+    Args:
+        bounds: World bounds as (min_x, min_y, max_x, max_y).
+        capacity: Max number of points per node before splitting.
+        max_depth: Optional max tree depth. If omitted, engine decides.
+        track_objects: Enable id <-> object mapping inside Python.
+        start_id: Starting auto-assigned id when you omit id on insert.
+
+    Raises:
+        ValueError: If parameters are invalid or inserts are out of bounds.
     """
 
     __slots__ = ("_native", "_objects", "_next_id", "_count", "_bounds")
@@ -52,15 +113,6 @@ class QuadTree:
         track_objects: bool = False,
         start_id: int = 1,
     ):
-        """
-        Create a quadtree.
-
-        bounds: (min_x, min_y, max_x, max_y)
-        capacity: max number of points stored per node before splitting
-        max_depth: optional depth cap
-        track_objects: store an id -> obj map in Python
-        start_id: starting id used when auto-assigning ids
-        """
         if max_depth is None:
             self._native = _RustQuadTree(bounds, capacity)
         else:
@@ -74,18 +126,25 @@ class QuadTree:
 
     def insert(self, xy: Point, *, id: Optional[int] = None, obj: Any = None) -> int:
         """
-        Insert a point.
+        Insert a single point.
 
-        xy: (x, y)
-        id: optional integer id. If omitted, an auto id is assigned
-        obj: optional Python object to associate with id. Only stored if track_objects=True
-        returns: the id used
+        Args:
+            xy: Point (x, y).
+            id: Optional integer id. If None, an auto id is assigned.
+            obj: Optional Python object to associate with id. Stored only if
+                object tracking is enabled.
+
+        Returns:
+            The id used for this insert.
+
+        Raises:
+            ValueError: If the point is outside tree bounds.
         """
         if id is None:
             id = self._next_id
             self._next_id += 1
         else:
-            # make sure next_id is always ahead of any manually provided ids
+            # ensure future auto-ids do not collide
             if id >= self._next_id:
                 self._next_id = id + 1
 
@@ -94,7 +153,6 @@ class QuadTree:
             bx0, by0, bx1, by1 = self._bounds
             raise ValueError(f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})")
 
-        # Store obj only if mapping is enabled and obj was provided
         if self._objects is not None and obj is not None:
             self._objects.set(id, obj)
 
@@ -105,8 +163,14 @@ class QuadTree:
         """
         Bulk insert points with auto-assigned ids.
 
-        points: iterable of (x, y)
-        returns: number of points inserted
+        Args:
+            points: Iterable of (x, y) points.
+
+        Returns:
+            Number of points successfully inserted.
+
+        Raises:
+            ValueError: If any point is outside tree bounds.
         """
         ins = self._native.insert
         nid = self._next_id
@@ -125,9 +189,14 @@ class QuadTree:
 
     def attach(self, id: int, obj: Any) -> None:
         """
-        Attach or replace an object for an existing id.
+        Attach or replace the Python object for an existing id.
 
-        If track_objects is False, a map will be created on first use.
+        If object tracking was disabled at construction time, a BiMap is
+        created on first use.
+
+        Args:
+            id: Target id.
+            obj: Object to associate with id.
         """
         if self._objects is None:
             self._objects = BiMap()
@@ -135,51 +204,69 @@ class QuadTree:
 
     def delete(self, id: int, xy: Point) -> bool:
         """
-        Delete an item from the quadtree by ID and location.
+        Delete an item by id and exact coordinates.
 
-        id: the integer id of the item to delete
-        xy: (x, y) coordinates of the item
-        returns: True if the item was found and deleted, False otherwise
+        Args:
+            id: Integer id to remove.
+            xy: Coordinates (x, y) of the item.
+
+        Returns:
+            True if the item was found and deleted, else False.
         """
         deleted = self._native.delete(id, xy)
         if deleted:
             self._count -= 1
-            # Remove from objects map if tracking objects
             if self._objects is not None and self._objects.contains_id(id):
                 self._objects.pop_id(id)
         return deleted
 
     def delete_by_object(self, obj: Any, xy: Point) -> bool:
         """
-        Delete an item from the quadtree by object reference and location.
+        Delete an item by Python object and coordinates.
 
-        obj: the Python object to delete (must be tracked in the quadtree)
-        xy: (x, y) coordinates of the item
-        returns: True if the item was found and deleted, False otherwise
+        Requires object tracking to be enabled. Performs an O(1) reverse
+        lookup to get the id, then deletes that entry at the given location.
 
-        Requires track_objects=True. Uses O(1) lookup to find the ID
-        associated with the object and delete that item.
+        Args:
+            obj: The tracked Python object to remove.
+            xy: Coordinates (x, y) of the item.
+
+        Returns:
+            True if the item was found and deleted, else False.
+
+        Raises:
+            ValueError: If object tracking is disabled.
         """
         if self._objects is None:
             raise ValueError("Cannot delete by object when track_objects=False. Use delete(id, xy) instead.")
-        
-        # Fast O(1) lookup for the object's ID using bimap
+
         item_id = self._objects.by_obj(obj)
         if item_id is None:
-            # Object not found in tracking map
             return False
-        
-        # Use the regular delete method with the found ID
+
         return self.delete(item_id, xy)
 
     # ---------- queries ----------
 
-    def query(self, rect: Bounds, *, as_items: bool = False) -> List[Tuple[int, float, float]] | List[Item]:
-        """
-        Query points inside an axis-aligned rectangle.
+    @overload
+    def query(self, rect: Bounds, *, as_items: Literal[False] = ...) -> List[_IdCoord]:
+        ...
 
-        rect: (min_x, min_y, max_x, max_y)
-        as_items: return Item wrappers if True, else raw (id, x, y) tuples
+    @overload
+    def query(self, rect: Bounds, *, as_items: Literal[True]) -> List[Item]:
+        ...
+
+    def query(self, rect: Bounds, *, as_items: bool = False) -> List[_IdCoord] | List[Item]:
+        """
+        Return all points inside an axis-aligned rectangle.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+
+        Returns:
+            If as_items is False: list of (id, x, y) tuples.
+            If as_items is True: list of Item objects.
         """
         raw = self._native.query(rect)
         if not as_items:
@@ -192,11 +279,24 @@ class QuadTree:
             ap(Item_(id_, x, y, map_get))
         return out
 
+    @overload
+    def nearest_neighbor(self, xy: Point, *, as_item: Literal[False] = ...) -> Optional[_IdCoord]:
+        ...
+
+    @overload
+    def nearest_neighbor(self, xy: Point, *, as_item: Literal[True]) -> Optional[Item]:
+        ...
+
     def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
         """
-        Nearest neighbor to xy.
+        Return the single nearest neighbor to the query point.
 
-        as_item: return an Item if True, else a tuple (id, x, y). Returns None if empty.
+        Args:
+            xy: Query point (x, y).
+            as_item: If True, return Item. If False, return (id, x, y).
+
+        Returns:
+            The nearest neighbor or None if the tree is empty.
         """
         t = self._native.nearest_neighbor(xy)
         if t is None or not as_item:
@@ -205,11 +305,25 @@ class QuadTree:
         map_get = self._objects.by_id if self._objects is not None else None
         return Item(id_, x, y, map_get)
 
+    @overload
+    def nearest_neighbors(self, xy: Point, k: int, *, as_items: Literal[False] = ...) -> List[_IdCoord]:
+        ...
+
+    @overload
+    def nearest_neighbors(self, xy: Point, k: int, *, as_items: Literal[True]) -> List[Item]:
+        ...
+
     def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
         """
-        k nearest neighbors to xy.
+        Return the k nearest neighbors to the query point.
 
-        as_items: return Item wrappers if True, else raw tuples
+        Args:
+            xy: Query point (x, y).
+            k: Number of neighbors to return.
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+
+        Returns:
+            List of results in ascending distance order.
         """
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:
@@ -222,22 +336,28 @@ class QuadTree:
 
     def get(self, id: int) -> Any | None:
         """
-        Get the object associated with id. Returns None if not tracked or not present.
+        Return the object associated with id.
+
+        Returns:
+            The tracked object if present and tracking is enabled, else None.
         """
         return None if self._objects is None else self._objects.by_id(id)
-    
+
     def get_all_rectangles(self) -> List[Bounds]:
         """
-        Get a list of all rectangle boundaries in the quadtree.
+        Return all node rectangles in the current quadtree.
 
-        Each boundary is represented as a tuple (min_x, min_y, max_x, max_y).
+        Returns:
+            List of (min_x, min_y, max_x, max_y) for each node in the tree.
         """
-        rects = self._native.get_all_rectangles()
-        return rects
-    
+        return self._native.get_all_rectangles()
+
     def get_all_objects(self) -> List[Any]:
         """
-        Get a list of all tracked objects in the quadtree.
+        Return all tracked objects.
+
+        Returns:
+            List of objects if tracking is enabled, else an empty list.
         """
         if self._objects is None:
             return []
@@ -245,15 +365,21 @@ class QuadTree:
 
     def count_items(self) -> int:
         """
-        Get the total number of items stored in the quadtree.
-        
-        This calls the native implementation to get an accurate count.
+        Return the number of items stored in the native tree.
+
+        Notes:
+            This calls the native engine and may differ from len(self) if
+            you create multiple wrappers around the same native structure.
         """
         return self._native.count_items()
 
     def __len__(self) -> int:
         """
-        Number of successful inserts through this wrapper.
+        Return the number of successful inserts done via this wrapper.
+
+        Notes:
+            This is the Python-side counter that tracks calls that returned True.
+            use count_items() to get the authoritative native-side count.
         """
         return self._count
 
