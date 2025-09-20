@@ -188,17 +188,11 @@ quadtree-rs outperforms all other quadtree python packages (at least all the one
 
 ### Library comparison
 
-Generated with `benchmarks/benchmark_plotly.py` in this repo.
-
-* 100k points, 500 queries, capacity 20, max depth 10
-* Median over 3 runs per size
-
 ![Total time](assets/quadtree_bench_time.png)
 ![Throughput](assets/quadtree_bench_throughput.png)
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
---------------------
 - Fastest total: **quadtree-rs** at **2.207 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
