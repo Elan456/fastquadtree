@@ -1,0 +1,3 @@
+# Requirements for running the interactive quadtree demo
+pygame
+quadtree-rs

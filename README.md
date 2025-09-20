@@ -1,5 +1,7 @@
 # quadtree-rs
 
+![Interactive_V2_Screenshot](assets/interactive_v2_screenshot.png)
+
 Rust-optimized quadtree with a simple Python API.
 
 - Python package: **`quadtree_rs`**
