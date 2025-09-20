@@ -10,13 +10,13 @@ pygame.font.init()
 # ------------------------------
 # Window and world configuration
 # ------------------------------
-W, H = 1200, 800
+W, H = 1920, 1080
 screen = pygame.display.set_mode((W, H))
 pygame.display.set_caption("quadtree-rs showcase")
 clock = pygame.time.Clock()
 
-WORLD_MIN_X, WORLD_MIN_Y = -1000, -1000
-WORLD_MAX_X, WORLD_MAX_Y =  1000,  1000
+WORLD_MIN_X, WORLD_MIN_Y = -1200, -800
+WORLD_MAX_X, WORLD_MAX_Y =  1200,  800
 
 # Camera
 camera_x = -(W // 2)
@@ -61,7 +61,7 @@ COL_NN = (255, 255, 255)
 COL_TEXT = (220, 230, 240)
 COL_TRAIL = (90, 210, 180)
 
-font = pygame.font.SysFont("Consolas", 16)
+font = pygame.font.SysFont("Consolas", 12)
 
 # ------------------------------
 # Quadtree and actors
@@ -127,45 +127,28 @@ for p in initial_particles:
 trail_surf = pygame.Surface((W, H), pygame.SRCALPHA)
 node_surf = pygame.Surface((W, H), pygame.SRCALPHA)
 
-def ping_pong(t, lo, hi, speed):
-    """Triangle-wave between [lo, hi] moving at `speed` world units per second."""
-    span = hi - lo
-    if span <= 0:
-        return (lo + hi) * 0.5
-    u = (t * speed) % (2 * span)
-    if u > span:
-        u = 2 * span - u
-    return lo + u
-
 
 # ------------------------------
-# Query animations
+# Controllable rectangle
 # ------------------------------
-def animated_queries(time_s):
-    # Size "breathing" stays the same
-    rw = 450 + 220 * (math.sin(time_s * 0.9) ** 2)   # half-width
-    rh = 320 + 170 * (math.cos(time_s * 0.8) ** 2)   # half-height
+# Rectangle size (half-width and half-height)
+rect_half_width = 200.0
+rect_half_height = 150.0
+RECT_MIN_SIZE = 50.0
+RECT_MAX_SIZE = 800.0
+RECT_RESIZE_SPEED = 200.0  # pixels per second
 
-    # Allowed center range so the rect never leaves the world
-    min_cx = WORLD_MIN_X + rw
-    max_cx = WORLD_MAX_X - rw
-    min_cy = WORLD_MIN_Y + rh
-    max_cy = WORLD_MAX_Y - rh
+def screen_to_world(screen_x, screen_y):
+    """Convert screen coordinates to world coordinates"""
+    world_x = screen_x / max(zoom, 1e-6) + camera_x
+    world_y = screen_y / max(zoom, 1e-6) + camera_y
+    return world_x, world_y
 
-    # Bounce the center inside that range
-    cx = ping_pong(time_s,         min_cx, max_cx, speed=200.0)
-    cy = ping_pong(time_s + 1.37,  min_cy, max_cy, speed=160.0)
-
-    rect = (cx - rw, cy - rh, cx + rw, cy + rh)
-
-    # Circle query stays as you had it
+def get_mouse_rect():
+    """Get rectangle centered at mouse position in world coordinates"""
     mx, my = pygame.mouse.get_pos()
-    mx = mx / max(zoom, 1e-6) + camera_x
-    my = my / max(zoom, 1e-6) + camera_y
-    cr = 180 + 120 * (0.5 + 0.5 * math.sin(time_s * 1.7))
-    circ = (mx, my, cr)
-
-    return rect, circ
+    cx, cy = screen_to_world(mx, my)
+    return (cx - rect_half_width, cy - rect_half_height, cx + rect_half_width, cy + rect_half_height)
 
 
 def draw_grid():
@@ -220,13 +203,13 @@ def hud(text_lines):
     for s in text_lines:
         img = font.render(s, True, COL_TEXT)
         screen.blit(img, (10, y))
-        y += 18
+        y += 12
 
 # ------------------------------
 # Main loop
 # ------------------------------
 def main():
-    global camera_x, camera_y, zoom, zoom_target
+    global camera_x, camera_y, zoom, zoom_target, rect_half_width, rect_half_height
     running = True
     paused = False
     show_nodes = True
@@ -308,10 +291,20 @@ def main():
         camera_x = wx_anchor - mx / max(zoom, 1e-6)
         camera_y = wy_anchor - my / max(zoom, 1e-6)
 
-        # Camera pan with dt and zoom awareness
+        # Rectangle size controls with arrow keys
         keys = pygame.key.get_pressed()
-        dx = (keys[pygame.K_d] or keys[pygame.K_RIGHT]) - (keys[pygame.K_a] or keys[pygame.K_LEFT])
-        dy = (keys[pygame.K_s] or keys[pygame.K_DOWN]) - (keys[pygame.K_w] or keys[pygame.K_UP])
+        if keys[pygame.K_UP]:
+            rect_half_height = min(RECT_MAX_SIZE, rect_half_height + RECT_RESIZE_SPEED * dt)
+        if keys[pygame.K_DOWN]:
+            rect_half_height = max(RECT_MIN_SIZE, rect_half_height - RECT_RESIZE_SPEED * dt)
+        if keys[pygame.K_RIGHT]:
+            rect_half_width = min(RECT_MAX_SIZE, rect_half_width + RECT_RESIZE_SPEED * dt)
+        if keys[pygame.K_LEFT]:
+            rect_half_width = max(RECT_MIN_SIZE, rect_half_width - RECT_RESIZE_SPEED * dt)
+
+        # Camera pan with WASD only (dt and zoom awareness)
+        dx = keys[pygame.K_d] - keys[pygame.K_a]
+        dy = keys[pygame.K_s] - keys[pygame.K_w]
         if dx or dy:
             camera_x += (dx * PAN_SPEED * dt) / max(zoom, 1e-6)
             camera_y += (dy * PAN_SPEED * dt) / max(zoom, 1e-6)
@@ -324,19 +317,9 @@ def main():
                 p.update(dt)
                 qtree.insert((p.x, p.y), obj=p)
 
-        # Animated queries
-        rect_q, circ_q = animated_queries(t)
+        # Mouse-following rectangle
+        rect_q = get_mouse_rect()
         rect_hits = qtree.query(rect_q)
-
-        bb = (circ_q[0] - circ_q[2], circ_q[1] - circ_q[2], circ_q[0] + circ_q[2], circ_q[1] + circ_q[2])
-        circ_cands = qtree.query(bb)
-        circ_hits = []
-        r2 = circ_q[2] * circ_q[2]
-        for item in circ_cands:
-            x, y = item[1], item[2]
-            dx, dy = x - circ_q[0], y - circ_q[1]
-            if dx * dx + dy * dy <= r2:
-                circ_hits.append(item)
 
         # ------------ Rendering ------------
         screen.fill(COL_BG_1)
@@ -355,9 +338,6 @@ def main():
         for item in rect_hits:
             sx, sy = world_to_screen(item[1], item[2])
             pygame.draw.circle(screen, COL_QUERY_RECT, (sx, sy), max(3, int(6 * zoom)), max(1, int(2 * zoom)))
-        for item in circ_hits:
-            sx, sy = world_to_screen(item[1], item[2])
-            pygame.draw.circle(screen, COL_QUERY_CIRC, (sx, sy), max(3, int(6 * zoom)), max(1, int(2 * zoom)))
 
         # Draw particles and their trails
         for p in qtree.get_all_objects():
@@ -368,7 +348,6 @@ def main():
         # Query shapes
         blink = (pygame.time.get_ticks() // 400) % 2 == 0
         draw_query_rect(rect_q, blink)
-        draw_query_circle(circ_q[0], circ_q[1], circ_q[2], not blink)
 
         # Optional NN rays
         if show_nn:
@@ -378,9 +357,11 @@ def main():
         hud([
             f"FPS: {fps:.1f}",
             f"particles: {len(qtree.get_all_objects())}",
-            f"rect hits: {len(rect_hits)}   circ hits: {len(circ_hits)}",
+            f"rect hits: {len(rect_hits)}",
+            f"rect size: {rect_half_width*2:.0f}x{rect_half_height*2:.0f}",
             f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
-            "WASD or arrows to pan. Mouse wheel or +/- to zoom.",
+            "WASD to pan. Mouse wheel or +/- to zoom.",
+            "arrow keys to resize rectangle.",
             "1 nodes. 2 NN rays. 3 trails. SPACE pause. L-click add. R-click remove (shift to repeat)"
         ])
 
