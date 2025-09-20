@@ -199,22 +199,17 @@ Generated with `benchmarks/benchmark_plotly.py` in this repo.
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
 --------------------
-- Fastest total: **quadtree-rs** at **2.288 s**
-- PyQtree total: **9.717 s**
-- quadtree-rs total: **2.288 s**
-- e-pyquadtree total: **13.504 s**
-- Brute force total: **20.450 s**
---------------------
+- Fastest total: **quadtree-rs** at **2.207 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| quadtree-rs  | 0.330 | 1.958 | 2.288 | 4.25× |
-| PyQtree      | 4.479 | 5.238 | 9.717 | 1.00× |
-| e-pyquadtree | 2.821 | 10.683 | 13.504 | 0.72× |
-| Brute force  | nan | 20.450 | 20.450 | 0.48× |
-| nontree-QuadTree | 1.687 | 7.803 | 9.490 | 1.02× |
-| quads        | 3.977 | 9.070 | 13.046 | 0.74× |
-| Rtree        | 1.676 | 4.805 | 6.481 | 1.50× |
+| quadtree-rs  | 0.321 | 1.885 | 2.207 | 4.27× |
+| Rtree        | 1.718 | 4.376 | 6.095 | 1.55× |
+| nontree-QuadTree | 1.617 | 7.643 | 9.260 | 1.02× |
+| PyQtree      | 4.349 | 5.082 | 9.431 | 1.00× |
+| quads        | 3.874 | 9.058 | 12.932 | 0.73× |
+| e-pyquadtree | 2.732 | 10.598 | 13.330 | 0.71× |
+| Brute force  | 0.019 | 19.986 | 20.005 | 0.47× |
 
 ### Native vs Shim
 
@@ -235,6 +230,22 @@ Generated with `benchmarks/benchmark_plotly.py` in this repo.
 
 - No map: build 1.38x, query 0.95x, total 0.99x  
 - Track + objs: build 2.39x, query 1.02x, total 1.15x
+
+### Run benchmarks
+To run the benchmarks yourself, first install the dependencies:
+
+```bash
+pip install -r benchmarks/requirements.txt
+```
+
+Then run:
+
+```bash
+python benchmarks/cross_library_bench.py
+python benchmarks/benchmark_native_vs_shim.py 
+```
+
+Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
 
 ## FAQ
 
