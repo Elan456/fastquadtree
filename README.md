@@ -1,6 +1,7 @@
 # quadtree-rs
 
-![Interactive_V2_Screenshot](assets/interactive_v2_screenshot.png)
+![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/interactive_v2_screenshot.png)
+
 
 Rust-optimized quadtree with a simple Python API.
 
@@ -112,56 +113,37 @@ qt.attach(123, my_object)  # binds object to id 123
 
 ### `QuadTree(bounds, capacity, *, max_depth=None, track_objects=False, start_id=1)`
 
-* `bounds` — tuple `(min_x, min_y, max_x, max_y)` covering all points you will insert
+* `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
 * `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
-* `track_objects` — if `True`, the wrapper maintains an id → object map
+* `track_objects` — if `True`, the wrapper maintains an id → object map for convenience.
 * `start_id` — starting value for auto-assigned ids
 
-### Methods
+### Core Methods
 
-* `insert(xy: tuple[float, float], *, id: int | None = None, obj: object | None = None) -> int`
-  Insert a point. Returns the id used. Raises `ValueError` if the point is outside `bounds`.
-  If `track_objects=True` and `obj` is provided, the object is stored under that id.
+Full docs are in the docstrings of the [Python Shim](pysrc/quadtree_rs/__init__.py)
 
-* `insert_many_points(points: Iterable[tuple[float, float]]) -> int`
-  Bulk insert points with auto ids. Returns count inserted.
+- `insert(xy, *, id=None, obj=None) -> int`
 
-* `attach(id: int, obj: object) -> None`
-  Attach or replace an object for an existing id. If `track_objects` was false, a map is created on first use.
+- `insert_many_points(points) -> int`
 
-* `delete(id: int, xy: tuple[float, float]) -> bool`
-  Delete an item from the quadtree by ID and location. Returns `True` if the item was found and deleted, `False` otherwise. This allows precise deletion when multiple items exist at the same location.
+- `query(rect, *, as_items=False) -> list`
 
-* `delete_by_object(obj: object, xy: tuple[float, float]) -> bool`
-  Delete an item from the quadtree by object reference and location. Returns `True` if the item was found and deleted, `False` otherwise. Requires `track_objects=True`. Uses O(1) lookup to find the ID associated with the object and delete that item.
+- `nearest_neighbor(xy, *, as_item=False) -> (id, x, y) | Item | None`
 
-* `query(rect: tuple[float, float, float, float], *, as_items: bool = False) -> list[(id, x, y)] | list[Item]`
-  Return all points whose coordinates lie inside the rectangle. Use `as_items=True` to get `Item` wrappers with lazy `.obj`.
+- `nearest_neighbors(xy, k, *, as_items=False) -> list`
 
-* `nearest_neighbor(xy: tuple[float, float], *, as_item: bool = False) -> (id, x, y) | Item | None`
-  Return the closest point to `xy`, or `None` if empty.
+- `delete(id, xy) -> bool`
 
-* `nearest_neighbors(xy: tuple[float, float], k: int, *, as_items: bool = False) -> list[(id, x, y)] | list[Item]`
-  Return up to `k` nearest points.
+- `delete_by_object(obj, xy) -> bool (requires track_objects=True)`
 
-* `get(id: int) -> object | None`
-  Get the object associated with `id` if tracking is enabled.
+- `attach(id, obj) -> None`
 
-* `get_all_rectangles() -> list[tuple[float, float, float, float]]`
-  Get a list of all rectangle boundaries in the quadtree for visualization purposes.
+- `count_items() -> int`
 
-* `get_all_objects() -> list[object]`
-  Get a list of all tracked objects in the quadtree.
+- `get(id) -> object | None`
 
-* `count_items() -> int`
-  Get the total number of items stored in the quadtree (calls the native implementation for accurate count).
-
-* `__len__() -> int`
-  Number of successful inserts made through this wrapper.
-
-* `NativeQuadTree`
-  Reference to the underlying Rust class `quadtree_rs._native.QuadTree` for power users.
+- `get_all_rectangles() -> list[tuple] (for visualization)`
 
 ### `Item` (returned when `as_items=True`)
 
@@ -188,8 +170,8 @@ quadtree-rs outperforms all other quadtree python packages (at least all the one
 
 ### Library comparison
 
-![Total time](assets/quadtree_bench_time.png)
-![Throughput](assets/quadtree_bench_throughput.png)
+![Total time](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/quadtree_bench_time.png)
+![Throughput](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/quadtree_bench_throughput.png)
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
@@ -237,6 +219,14 @@ Then run:
 ```bash
 python benchmarks/cross_library_bench.py
 python benchmarks/benchmark_native_vs_shim.py 
+```
+
+## Run Visualizer
+A visualizer is included to help you understand how the quadtree subdivides space.
+
+```bash
+pip install -r interactive/requirements.txt
+python interactive/interactive_v2.py
 ```
 
 Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
