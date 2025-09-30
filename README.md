@@ -1,11 +1,11 @@
 # quadtree-rs
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/quadtree-rs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/quadtree-rs)
+
 ![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/interactive_v2_screenshot.png)
 
 
 Rust-optimized quadtree with a simple Python API.
-
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/quadtree-rs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/quadtree-rs)
 
 - Python package: **`quadtree_rs`**
 - Python ≥ 3.8
