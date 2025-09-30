@@ -253,10 +253,13 @@ MIT. See `LICENSE`.
 
 ## Acknowledgments
 
-* Python libraries compared: [PyQtree], [e-pyquadtree]
+* Python libraries compared: [PyQtree], [e-pyquadtree], [Rtree], [nontree], [quads]
 * Built with [PyO3] and [maturin]
 
 [PyQtree]: https://pypi.org/project/pyqtree/
 [e-pyquadtree]: https://pypi.org/project/e-pyquadtree/
 [PyO3]: https://pyo3.rs/
 [maturin]: https://www.maturin.rs/
+[Rtree]: https://pypi.org/project/Rtree/
+[nontree]: https://pypi.org/project/nontree/
+[quads]: https://pypi.org/project/quads/
