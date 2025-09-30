@@ -84,7 +84,7 @@ class Particle:
         spd = random.uniform(60.0, 160.0)
         self.vx = math.cos(ang) * spd
         self.vy = math.sin(ang) * spd
-        self.r = random.randint(2, 4)
+        self.r = random.randint(8, 16)
         self.trail = deque(maxlen=14)
 
     def update(self, dt):
@@ -319,7 +319,7 @@ def main():
 
         # Mouse-following rectangle
         rect_q = get_mouse_rect()
-        rect_hits = qtree.query(rect_q)
+        rect_hits = qtree.query(rect_q, as_items=True)
 
         # ------------ Rendering ------------
         screen.fill(COL_BG_1)
@@ -336,8 +336,11 @@ def main():
 
         # Highlight hits under queries first
         for item in rect_hits:
-            sx, sy = world_to_screen(item[1], item[2])
-            pygame.draw.circle(screen, COL_QUERY_RECT, (sx, sy), max(3, int(6 * zoom)), max(1, int(2 * zoom)))
+            if item.obj is None:
+                continue
+            sx, sy = world_to_screen(item.x, item.y)
+            radius = (item.obj.r + 8) * zoom
+            pygame.draw.circle(screen, COL_QUERY_RECT, (sx, sy), max(1, int(radius)), max(1, int(3 * zoom)))
 
         # Draw particles and their trails
         for p in qtree.get_all_objects():
