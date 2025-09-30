@@ -89,20 +89,6 @@ class BiMap:
             removed = removed or item
         return removed
 
-    # - updates -
-
-    def refresh_item(self, item: Item) -> None:
-        """
-        Call this if item.obj changed since it was added.
-        Keeps both maps consistent.
-        """
-        # Remove any old obj link that might point to this item
-        # Find any objid->item pointing to this item and drop it
-        # (cheap path: try current obj, and also clear stale by scanning ids for this item)
-        # Fast path: try to remove current id mapping, then re-add
-        self.pop_item(item)
-        self.add(item)
-
     # - convenience -
 
     def __len__(self) -> int:
