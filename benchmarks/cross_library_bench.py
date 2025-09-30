@@ -1,3 +1,3 @@
-from quadtree_bench.main import main 
+from quadtree_bench.main import main
 
 main()

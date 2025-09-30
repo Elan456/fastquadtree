@@ -94,7 +94,9 @@ class QuadTree:
         if not self._native.insert(id, xy):
             x, y = xy
             bx0, by0, bx1, by1 = self._bounds
-            raise ValueError(f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})")
+            raise ValueError(
+                f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+            )
 
         if self._items is not None:
             self._items.add(Item(id, xy[0], xy[1], obj))
@@ -124,7 +126,9 @@ class QuadTree:
             nid += 1
             if not ins(id_, xy):
                 x, y = xy
-                raise ValueError(f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})")
+                raise ValueError(
+                    f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                )
             inserted += 1
             if self._items is not None:
                 self._items.add(Item(id_, xy[0], xy[1], None))
@@ -184,7 +188,9 @@ class QuadTree:
             ValueError: If object tracking is disabled.
         """
         if self._items is None:
-            raise ValueError("Cannot delete by object when track_objects=False. Use delete(id, xy) instead.")
+            raise ValueError(
+                "Cannot delete by object when track_objects=False. Use delete(id, xy) instead."
+            )
 
         item = self._items.by_obj(obj)
         if item is None:
@@ -195,14 +201,16 @@ class QuadTree:
     # ---------- queries ----------
 
     @overload
-    def query(self, rect: Bounds, *, as_items: Literal[False] = ...) -> List[_IdCoord]:
-        ...
+    def query(
+        self, rect: Bounds, *, as_items: Literal[False] = ...
+    ) -> List[_IdCoord]: ...
 
     @overload
-    def query(self, rect: Bounds, *, as_items: Literal[True]) -> List[Item]:
-        ...
+    def query(self, rect: Bounds, *, as_items: Literal[True]) -> List[Item]: ...
 
-    def query(self, rect: Bounds, *, as_items: bool = False) -> List[_IdCoord] | List[Item]:
+    def query(
+        self, rect: Bounds, *, as_items: bool = False
+    ) -> List[_IdCoord] | List[Item]:
         """
         Return all points inside an axis-aligned rectangle.
 
@@ -217,25 +225,29 @@ class QuadTree:
         raw = self._native.query(rect)
         if not as_items:
             return raw
-        
+
         if self._items is None:
             raise ValueError("Cannot return results as items with track_objects=False")
         out: List[Item] = []
         for id_, x, y in raw:
             item = self._items.by_id(id_)
             if item is None:
-                raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
-                                   f"Ensure all inserts/deletes are done via this wrapper.")
+                raise RuntimeError(
+                    f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                    f"Ensure all inserts/deletes are done via this wrapper."
+                )
             out.append(item)
         return out
 
     @overload
-    def nearest_neighbor(self, xy: Point, *, as_item: Literal[False] = ...) -> Optional[_IdCoord]:
-        ...
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[False] = ...
+    ) -> Optional[_IdCoord]: ...
 
     @overload
-    def nearest_neighbor(self, xy: Point, *, as_item: Literal[True]) -> Optional[Item]:
-        ...
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[True]
+    ) -> Optional[Item]: ...
 
     def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
         """
@@ -251,23 +263,27 @@ class QuadTree:
         t = self._native.nearest_neighbor(xy)
         if t is None or not as_item:
             return t
-        
+
         if self._items is None:
             raise ValueError("Cannot return result as item with track_objects=False")
         id_, x, y = t
         item = self._items.by_id(id_)
         if item is None:
-            raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
-                               f"Ensure all inserts/deletes are done via this wrapper.")
+            raise RuntimeError(
+                f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                f"Ensure all inserts/deletes are done via this wrapper."
+            )
         return item
 
     @overload
-    def nearest_neighbors(self, xy: Point, k: int, *, as_items: Literal[False] = ...) -> List[_IdCoord]:
-        ...
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[False] = ...
+    ) -> List[_IdCoord]: ...
 
     @overload
-    def nearest_neighbors(self, xy: Point, k: int, *, as_items: Literal[True]) -> List[Item]:
-        ...
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[True]
+    ) -> List[Item]: ...
 
     def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
         """
@@ -286,13 +302,15 @@ class QuadTree:
             return raw
         if self._items is None:
             raise ValueError("Cannot return results as items with track_objects=False")
-        
+
         out: List[Item] = []
         for id_, _, _ in raw:
             item = self._items.by_id(id_)
             if item is None:
-                raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
-                                   f"Ensure all inserts/deletes are done via this wrapper.")
+                raise RuntimeError(
+                    f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                    f"Ensure all inserts/deletes are done via this wrapper."
+                )
             out.append(item)
         return out
 
@@ -331,7 +349,7 @@ class QuadTree:
         if self._items is None:
             raise ValueError("Cannot get objects when track_objects=False")
         return [t.obj for t in self._items.items() if t.obj is not None]
-    
+
     def get_all_items(self) -> List[Item]:
         """
         Return all tracked items.

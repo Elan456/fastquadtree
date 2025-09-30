@@ -15,7 +15,12 @@ camera_y = -500
 def draw_quadtree(tree: QuadTree):
     bboxs = tree.get_all_rectangles()
     for bbox in bboxs:
-        rect = (bbox[0] - camera_x, bbox[1] - camera_y, bbox[2] - bbox[0], bbox[3] - bbox[1])
+        rect = (
+            bbox[0] - camera_x,
+            bbox[1] - camera_y,
+            bbox[2] - bbox[0],
+            bbox[3] - bbox[1],
+        )
         pygame.draw.rect(screen, (255, 255, 255), rect, 1)
 
 
@@ -52,7 +57,9 @@ def interactive_test():
     query_area = [0, 0, 150, 150]
     query_area_speed = 4
 
-    fun_balls = [Ball(random.randint(-999, 999), random.randint(-999, 999)) for _ in range(500)]
+    fun_balls = [
+        Ball(random.randint(-999, 999), random.randint(-999, 999)) for _ in range(500)
+    ]
     for ball in fun_balls:
         qtree.insert((ball.x, ball.y), obj=ball)
 
@@ -62,7 +69,7 @@ def interactive_test():
             # qtree.delete(ball)
             # ball.update()
             n = qtree.nearest_neighbor((ball.x, ball.y), as_item=True)
-            if (n is not None):
+            if n is not None:
                 ball.neighbor = n.obj
 
         mouse_loc = pygame.mouse.get_pos()
@@ -70,7 +77,9 @@ def interactive_test():
         closest_to_mouse = qtree.nearest_neighbor(mouse_loc, as_item=True)
 
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            if event.type == pygame.QUIT or (
+                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+            ):
                 pygame.quit()
                 quit()
 
@@ -110,27 +119,36 @@ def interactive_test():
         if pygame.key.get_pressed()[pygame.K_d]:
             camera_x += 5
 
-
         # Draw the quadtree
         draw_quadtree(qtree)
 
         # Draw the query area
-        rect = (query_area[0], query_area[1], query_area[2] - query_area[0], query_area[3] - query_area[1])
+        rect = (
+            query_area[0],
+            query_area[1],
+            query_area[2] - query_area[0],
+            query_area[3] - query_area[1],
+        )
         rect_on_screen = (rect[0] - camera_x, rect[1] - camera_y, rect[2], rect[3])
         pygame.draw.rect(screen, (255, 0, 255), rect_on_screen, 1)
 
         for item in qtree.get_all_objects():
             item.draw()
 
-        for point in qtree.query((query_area[0], query_area[1], query_area[2], query_area[3])):
+        for point in qtree.query(
+            (query_area[0], query_area[1], query_area[2], query_area[3])
+        ):
             point_loc = (point[1] - camera_x, point[2] - camera_y)
             pygame.draw.circle(screen, (255, 0, 255), point_loc, 8, 3)
 
         # Draw a line from the mouse to it's closest point
         if closest_to_mouse is not None:
             pygame.draw.line(
-                screen, (255, 255, 255), (mouse_loc[0] - camera_x, mouse_loc[1] - camera_y), 
-                (closest_to_mouse.x - camera_x, closest_to_mouse.y - camera_y), 3
+                screen,
+                (255, 255, 255),
+                (mouse_loc[0] - camera_x, mouse_loc[1] - camera_y),
+                (closest_to_mouse.x - camera_x, closest_to_mouse.y - camera_y),
+                3,
             )
 
         pygame.display.update()

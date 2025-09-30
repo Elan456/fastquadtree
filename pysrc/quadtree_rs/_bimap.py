@@ -4,6 +4,7 @@ from typing import Any, Iterable, Iterator, Tuple, Optional
 
 from ._item import Item
 
+
 class BiMap:
     """
     Bidirectional map to the same Item:

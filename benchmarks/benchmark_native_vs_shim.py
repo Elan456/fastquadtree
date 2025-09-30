@@ -6,7 +6,7 @@ import gc
 import random
 import statistics as stats
 from time import perf_counter as now
-from tqdm import tqdm 
+from tqdm import tqdm
 
 from quadtree_rs._native import QuadTree as NativeQuadTree
 from quadtree_rs import QuadTree as ShimQuadTree
@@ -50,7 +50,9 @@ def bench_native(points, queries):
 def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     # track_objects controls the map. with_objs decides if we actually store objects.
     t0 = now()
-    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects)
+    qt = ShimQuadTree(
+        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
+    )
     if with_objs:
         for i, p in enumerate(points):
             qt.insert(p, id=i, obj=i)  # store a tiny object
@@ -92,17 +94,24 @@ def main():
     _ = bench_native(points[:1000], queries[:50])
     _ = bench_shim(points[:1000], queries[:50], track_objects=False, with_objs=False)
 
-    n_build, n_query = median_times(lambda pts, qs: bench_native(pts, qs), points, queries, args.repeats)
+    n_build, n_query = median_times(
+        lambda pts, qs: bench_native(pts, qs), points, queries, args.repeats
+    )
     s_build_no_map, s_query_no_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=False, with_objs=False),
-        points, queries, args.repeats
+        points,
+        queries,
+        args.repeats,
     )
     s_build_map, s_query_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=True, with_objs=True),
-        points, queries, args.repeats
+        points,
+        queries,
+        args.repeats,
     )
 
-    def fmt(x): return f"{x:.3f}"
+    def fmt(x):
+        return f"{x:.3f}"
 
     md = f"""
 ### Native vs Shim
@@ -126,6 +135,7 @@ def main():
 - Track + objs: build {s_build_map / n_build:.2f}x, query {s_query_map / n_query:.2f}x, total {(s_build_map + s_query_map) / (n_build + n_query):.2f}x
 """
     print(md.strip())
+
 
 if __name__ == "__main__":
     main()

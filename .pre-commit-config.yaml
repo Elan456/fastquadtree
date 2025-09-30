@@ -1,0 +1,46 @@
+repos:
+  # 0) Python formatter: black
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        name: black
+        language_version: python3
+        args: ["--line-length", "88"]
+
+  # Local hooks that run in sequence and do not receive file args
+  - repo: local
+    hooks:
+      # 1) Build native module for the current virtualenv
+      - id: maturin-develop
+        name: maturin develop
+        entry: bash -c "maturin develop --release"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # 2) Rust tests
+      - id: cargo-test
+        name: cargo test
+        entry: bash -c "cargo test --all --quiet"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # 3) Python tests under coverage
+      # This both runs pytest and generates .coverage data
+      - id: pytest
+        name: pytest (under coverage)
+        entry: bash -c "coverage run -m pytest -q"
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # 4) Coverage threshold check
+      # Change FAIL_UNDER to your target percent
+      - id: coverage-report
+        name: coverage report
+        entry: bash -c 'coverage report --fail-under=${FAIL_UNDER:-85}'
+        language: system
+        pass_filenames: false
+        always_run: true

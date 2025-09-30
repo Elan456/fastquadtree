@@ -5,6 +5,7 @@ from quadtree_rs import QuadTree, Item
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 
+
 def test_insert_many_seeds_items_and_query_as_items_round_trip():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     n = qt.insert_many_points([(10, 10), (20, 20), (30, 30)])
@@ -19,6 +20,7 @@ def test_insert_many_seeds_items_and_query_as_items_round_trip():
     for it in its:
         assert isinstance(it, Item)
         assert (it.x, it.y) == m_raw[it.id]
+
 
 def test_delete_returns_native_result_even_if_bimap_missing():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
@@ -43,10 +45,14 @@ def test_delete_by_object_uses_cached_coords_and_updates_counts():
     assert qt.count_items() == 0
     assert len(qt) == 0
 
+
 def test_bounds_error_message_includes_point_and_bounds():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
-    with pytest.raises(ValueError, match=r"Point \([^)]*\) is outside bounds \([^)]*\)"):
+    with pytest.raises(
+        ValueError, match=r"Point \([^)]*\) is outside bounds \([^)]*\)"
+    ):
         qt.insert((1500, -10))
+
 
 def test_nearest_neighbors_as_items_work_when_items_are_seeded():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
@@ -67,12 +73,13 @@ def test_query_as_items_does_not_mutate_bimap_when_inserts_are_wrapped():
     # Snapshot of Item object identities in the BiMap
     before = {i: qt._items.by_id(i) for i in ids}  # type: ignore[attr-defined]
     its = qt.query((0, 0, 40, 40), as_items=True)
-    after = {i: qt._items.by_id(i) for i in ids}   # type: ignore[attr-defined]
+    after = {i: qt._items.by_id(i) for i in ids}  # type: ignore[attr-defined]
     # Items are the same objects. Query did not create new Items.
     assert [it.id for it in its] == ids
     assert before == after
     for i in ids:
         assert before[i] is after[i]
+
 
 def test_nearest_neighbor_as_item_requires_seeded_items():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
@@ -82,15 +89,17 @@ def test_nearest_neighbor_as_item_requires_seeded_items():
     assert it is not None
     assert (it.id, it.x, it.y) == got
 
+
 def test_invariant_violation_raises_on_query_as_items_when_native_bypassed():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     # Bypass wrapper to simulate a bug or misuse
-    assert qt._native.insert(42, (500, 500)) # type: ignore[attr-defined]
+    assert qt._native.insert(42, (500, 500))  # type: ignore[attr-defined]
     with pytest.raises(RuntimeError):
         qt.query((400, 400, 600, 600), as_items=True)
 
+
 def test_invariant_violation_raises_on_nearest_as_item_when_native_bypassed():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    assert qt._native.insert(77, (200, 200)) # type: ignore[attr-defined]
+    assert qt._native.insert(77, (200, 200))  # type: ignore[attr-defined]
     with pytest.raises(RuntimeError):
         qt.nearest_neighbor((201, 201), as_item=True)

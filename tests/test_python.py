@@ -39,11 +39,11 @@ def test_split_and_quadrant_queries():
     qt = QuadTree((0.0, 0.0, 100.0, 100.0), 1)
 
     # one point per quadrant plus the exact center
-    assert qt.insert((10.0, 10.0))   # Q0
-    assert qt.insert((75.0, 10.0))   # Q1
-    assert qt.insert((10.0, 75.0))   # Q2
-    assert qt.insert((75.0, 75.0))   # Q3
-    assert qt.insert((50.0, 50.0))   # center -> right-top with >= rule
+    assert qt.insert((10.0, 10.0))  # Q0
+    assert qt.insert((75.0, 10.0))  # Q1
+    assert qt.insert((10.0, 75.0))  # Q2
+    assert qt.insert((75.0, 75.0))  # Q3
+    assert qt.insert((50.0, 50.0))  # center -> right-top with >= rule
 
     lb = qt.query((0.0, 0.0, 50.0, 50.0))
     assert ids(lb) == [1]
@@ -66,7 +66,7 @@ def test_half_open_edges_on_insert():
     with pytest.raises(ValueError):
         qt.insert((100.0, 0.0))
 
-    with pytest.raises(ValueError): 
+    with pytest.raises(ValueError):
         qt.insert((0.0, 100.0))
 
     with pytest.raises(ValueError):

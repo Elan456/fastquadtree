@@ -16,7 +16,7 @@ pygame.display.set_caption("quadtree-rs showcase")
 clock = pygame.time.Clock()
 
 WORLD_MIN_X, WORLD_MIN_Y = -1200, -800
-WORLD_MAX_X, WORLD_MAX_Y =  1200,  800
+WORLD_MAX_X, WORLD_MAX_Y = 1200, 800
 
 # Camera
 camera_x = -(W // 2)
@@ -24,11 +24,12 @@ camera_y = -(H // 2)
 zoom = 1.0
 zoom_target = 0.17
 ZOOM_MIN, ZOOM_MAX = 0.01, 2.5
-ZOOM_FACTOR = 1.15       # per key press or mouse wheel notch
-ZOOM_SMOOTH = 10.0       # higher = snappier smoothing
+ZOOM_FACTOR = 1.15  # per key press or mouse wheel notch
+ZOOM_SMOOTH = 10.0  # higher = snappier smoothing
 
 # Pan speed in world units per second (at zoom 1.0)
 PAN_SPEED = 1200.0
+
 
 # ------------------------------
 # Helpers for coords and drawing
@@ -36,14 +37,17 @@ PAN_SPEED = 1200.0
 def world_to_screen(x, y):
     return int((x - camera_x) * zoom), int((y - camera_y) * zoom)
 
+
 def screen_rect_from_world(b):
     # b = (min_x, min_y, max_x, max_y)
     x0, y0 = world_to_screen(b[0], b[1])
     x1, y1 = world_to_screen(b[2], b[3])
     return pygame.Rect(x0, y0, x1 - x0, y1 - y0)
 
+
 def clamp(v, lo, hi):
     return max(lo, min(hi, v))
+
 
 # ------------------------------
 # Pretty colors
@@ -70,8 +74,9 @@ qtree = QuadTree(
     (WORLD_MIN_X, WORLD_MIN_Y, WORLD_MAX_X + 1, WORLD_MAX_Y + 1),
     6,
     max_depth=12,
-    track_objects=True
+    track_objects=True,
 )
+
 
 class Particle:
     __slots__ = ("x", "y", "vx", "vy", "r", "trail")
@@ -109,16 +114,23 @@ class Particle:
                 t = i / n
                 alpha = int(50 + 180 * t)
                 col = (COL_TRAIL[0], COL_TRAIL[1], COL_TRAIL[2], alpha)
-                pygame.draw.line(trail_surf, col, pts[i - 1], pts[i], max(1, int(2 * zoom)))
+                pygame.draw.line(
+                    trail_surf, col, pts[i - 1], pts[i], max(1, int(2 * zoom))
+                )
 
         sx, sy = world_to_screen(self.x, self.y)
         pygame.draw.circle(screen, COL_POINT, (sx, sy), max(1, int(self.r * zoom)))
 
+
 # Seed particles
 random.seed(2)
-initial_particles = [Particle(random.uniform(WORLD_MIN_X * 0.9, WORLD_MAX_X * 0.9),
-                              random.uniform(WORLD_MIN_Y * 0.9, WORLD_MAX_Y * 0.9))
-                     for _ in range(60)]
+initial_particles = [
+    Particle(
+        random.uniform(WORLD_MIN_X * 0.9, WORLD_MAX_X * 0.9),
+        random.uniform(WORLD_MIN_Y * 0.9, WORLD_MAX_Y * 0.9),
+    )
+    for _ in range(60)
+]
 
 for p in initial_particles:
     qtree.insert((p.x, p.y), obj=p)
@@ -138,17 +150,24 @@ RECT_MIN_SIZE = 50.0
 RECT_MAX_SIZE = 800.0
 RECT_RESIZE_SPEED = 200.0  # pixels per second
 
+
 def screen_to_world(screen_x, screen_y):
     """Convert screen coordinates to world coordinates"""
     world_x = screen_x / max(zoom, 1e-6) + camera_x
     world_y = screen_y / max(zoom, 1e-6) + camera_y
     return world_x, world_y
 
+
 def get_mouse_rect():
     """Get rectangle centered at mouse position in world coordinates"""
     mx, my = pygame.mouse.get_pos()
     cx, cy = screen_to_world(mx, my)
-    return (cx - rect_half_width, cy - rect_half_height, cx + rect_half_width, cy + rect_half_height)
+    return (
+        cx - rect_half_width,
+        cy - rect_half_height,
+        cx + rect_half_width,
+        cy + rect_half_height,
+    )
 
 
 def draw_grid():
@@ -162,6 +181,7 @@ def draw_grid():
         pygame.draw.line(screen, COL_GRID, (x, 0), (x, H), 1)
     for y in range(oy, H, int(s)):
         pygame.draw.line(screen, COL_GRID, (0, y), (W, y), 1)
+
 
 def draw_nodes(query_rect):
     rects = qtree.get_all_rectangles()
@@ -177,16 +197,19 @@ def draw_nodes(query_rect):
         pygame.draw.rect(node_surf, (*base, fill_a), srect)
         pygame.draw.rect(node_surf, (*base, line_a), srect, lw)
 
+
 def draw_query_rect(rect, blink):
     srect = screen_rect_from_world(rect)
     w = max(2, int(2 * zoom)) if blink else max(1, int(1 * zoom))
     pygame.draw.rect(screen, COL_QUERY_RECT, srect, w)
+
 
 def draw_query_circle(cx, cy, r, blink):
     sx, sy = world_to_screen(cx, cy)
     sr = max(2, int(r * zoom))
     w = max(2, int(2 * zoom)) if blink else max(1, int(1 * zoom))
     pygame.draw.circle(screen, COL_QUERY_CIRC, (sx, sy), sr, w)
+
 
 def draw_nn_rays():
     for obj in list(qtree.get_all_objects()):
@@ -201,12 +224,14 @@ def draw_nn_rays():
         x1, y1 = world_to_screen(nn.x, nn.y)
         pygame.draw.line(screen, COL_NN, (x0, y0), (x1, y1), 2)
 
+
 def hud(text_lines):
     y = 8
     for s in text_lines:
         img = font.render(s, True, COL_TEXT)
         screen.blit(img, (10, y))
         y += 12
+
 
 # ------------------------------
 # Main loop
@@ -246,7 +271,7 @@ def main():
 
             elif ev.type == pygame.MOUSEWHEEL:
                 if ev.y != 0:
-                    factor = ZOOM_FACTOR ** ev.y
+                    factor = ZOOM_FACTOR**ev.y
                     zoom_target = clamp(zoom_target * factor, ZOOM_MIN, ZOOM_MAX)
 
             # Left click
@@ -297,13 +322,21 @@ def main():
         # Rectangle size controls with arrow keys
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP]:
-            rect_half_height = min(RECT_MAX_SIZE, rect_half_height + RECT_RESIZE_SPEED * dt)
+            rect_half_height = min(
+                RECT_MAX_SIZE, rect_half_height + RECT_RESIZE_SPEED * dt
+            )
         if keys[pygame.K_DOWN]:
-            rect_half_height = max(RECT_MIN_SIZE, rect_half_height - RECT_RESIZE_SPEED * dt)
+            rect_half_height = max(
+                RECT_MIN_SIZE, rect_half_height - RECT_RESIZE_SPEED * dt
+            )
         if keys[pygame.K_RIGHT]:
-            rect_half_width = min(RECT_MAX_SIZE, rect_half_width + RECT_RESIZE_SPEED * dt)
+            rect_half_width = min(
+                RECT_MAX_SIZE, rect_half_width + RECT_RESIZE_SPEED * dt
+            )
         if keys[pygame.K_LEFT]:
-            rect_half_width = max(RECT_MIN_SIZE, rect_half_width - RECT_RESIZE_SPEED * dt)
+            rect_half_width = max(
+                RECT_MIN_SIZE, rect_half_width - RECT_RESIZE_SPEED * dt
+            )
 
         # Camera pan with WASD only (dt and zoom awareness)
         dx = keys[pygame.K_d] - keys[pygame.K_a]
@@ -343,7 +376,13 @@ def main():
                 continue
             sx, sy = world_to_screen(item.x, item.y)
             radius = (item.obj.r + 8) * zoom
-            pygame.draw.circle(screen, COL_QUERY_RECT, (sx, sy), max(1, int(radius)), max(1, int(3 * zoom)))
+            pygame.draw.circle(
+                screen,
+                COL_QUERY_RECT,
+                (sx, sy),
+                max(1, int(radius)),
+                max(1, int(3 * zoom)),
+            )
 
         # Draw particles and their trails
         for p in qtree.get_all_objects():
@@ -360,20 +399,23 @@ def main():
             draw_nn_rays()
 
         # HUD
-        hud([
-            f"FPS: {fps:.1f}",
-            f"particles: {len(qtree.get_all_objects())}",
-            f"rect hits: {len(rect_hits)}",
-            f"rect size: {rect_half_width*2:.0f}x{rect_half_height*2:.0f}",
-            f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
-            "WASD to pan. Mouse wheel or +/- to zoom.",
-            "arrow keys to resize rectangle.",
-            "1 nodes. 2 NN rays. 3 trails. SPACE pause. L-click add. R-click remove (shift to repeat)"
-        ])
+        hud(
+            [
+                f"FPS: {fps:.1f}",
+                f"particles: {len(qtree.get_all_objects())}",
+                f"rect hits: {len(rect_hits)}",
+                f"rect size: {rect_half_width*2:.0f}x{rect_half_height*2:.0f}",
+                f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
+                "WASD to pan. Mouse wheel or +/- to zoom.",
+                "arrow keys to resize rectangle.",
+                "1 nodes. 2 NN rays. 3 trails. SPACE pause. L-click add. R-click remove (shift to repeat)",
+            ]
+        )
 
         pygame.display.flip()
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()

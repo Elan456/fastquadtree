@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Any, Callable, Optional
 
+
 class Item:
     """
     Lightweight view of an index entry.
@@ -19,13 +20,7 @@ class Item:
 
     __slots__ = ("id", "x", "y", "_obj")
 
-    def __init__(
-        self,
-        id: int,
-        x: float,
-        y: float,
-        obj: Any | None = None
-    ):
+    def __init__(self, id: int, x: float, y: float, obj: Any | None = None):
         self.id = id
         self.x = x
         self.y = y
