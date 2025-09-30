@@ -126,6 +126,8 @@ class QuadTree:
                 x, y = xy
                 raise ValueError(f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})")
             inserted += 1
+            if self._items is not None:
+                self._items.add(Item(id_, xy[0], xy[1], None))
         self._next_id = nid
         self._count += inserted
         return inserted
@@ -133,16 +135,15 @@ class QuadTree:
     def attach(self, id: int, obj: Any) -> None:
         """
         Attach or replace the Python object for an existing id.
-
-        If object tracking was disabled at construction time, a BiMap is
-        created on first use.
+        Tracking must be enabled.
 
         Args:
             id: Target id.
             obj: Object to associate with id.
         """
         if self._items is None:
-            self._items = BiMap()
+            raise ValueError("Cannot attach objects when track_objects=False")
+
         item = self._items.by_id(id)
         if item is None:
             raise KeyError(f"Id {id} not found in quadtree")
@@ -163,8 +164,7 @@ class QuadTree:
         if deleted:
             self._count -= 1
             if self._items is not None:
-                item = self._items.pop_id(id)
-                return item is not None
+                self._items.pop_id(id)  # ignore result
         return deleted
 
     def delete_by_object(self, obj: Any) -> bool:
@@ -221,10 +221,12 @@ class QuadTree:
         if self._items is None:
             raise ValueError("Cannot return results as items with track_objects=False")
         out: List[Item] = []
-        for id_, _, _ in raw:
+        for id_, x, y in raw:
             item = self._items.by_id(id_)
-            if item is not None:
-                out.append(item)
+            if item is None:
+                raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                                   f"Ensure all inserts/deletes are done via this wrapper.")
+            out.append(item)
         return out
 
     @overload
@@ -254,6 +256,9 @@ class QuadTree:
             raise ValueError("Cannot return result as item with track_objects=False")
         id_, x, y = t
         item = self._items.by_id(id_)
+        if item is None:
+            raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                               f"Ensure all inserts/deletes are done via this wrapper.")
         return item
 
     @overload
@@ -285,8 +290,10 @@ class QuadTree:
         out: List[Item] = []
         for id_, _, _ in raw:
             item = self._items.by_id(id_)
-            if item is not None:
-                out.append(item)
+            if item is None:
+                raise RuntimeError(f"Internal error: id {id_} found in native tree but missing from object tracker. "
+                                   f"Ensure all inserts/deletes are done via this wrapper.")
+            out.append(item)
         return out
 
     # ---------- misc ----------

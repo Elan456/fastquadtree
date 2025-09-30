@@ -8,8 +8,7 @@ class Item:
     id: int
     x: float
     y: float
-    @property
-    def obj(self) -> Any | None: ...
+    obj: Any | None
 
 class QuadTree:
     # Expose the raw native class for power users
