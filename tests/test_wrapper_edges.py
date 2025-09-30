@@ -103,3 +103,102 @@ def test_invariant_violation_raises_on_nearest_as_item_when_native_bypassed():
     assert qt._native.insert(77, (200, 200))  # type: ignore[attr-defined]
     with pytest.raises(RuntimeError):
         qt.nearest_neighbor((201, 201), as_item=True)
+
+def test_gets_query_items_without_tracking():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False, max_depth=4)
+    id1 = qt.insert((10, 10))
+    id2 = qt.insert((20, 20))
+
+    with pytest.raises(ValueError):
+        qt.get(id1)
+
+    with pytest.raises(ValueError):
+        qt.get(id2)
+
+    # Get all items
+    with pytest.raises(ValueError):
+        qt.get_all_items()
+
+    with pytest.raises(ValueError):
+        qt.query((0, 0, 30, 30), as_items=True)
+
+    with pytest.raises(ValueError):
+        qt.nearest_neighbor((15, 15), as_item=True)
+
+    with pytest.raises(ValueError):
+        qt.nearest_neighbors((15, 15), 2, as_items=True)
+
+    with pytest.raises(ValueError):
+        # Attach
+        qt.attach(id1, {"name": "point1"})
+
+    with pytest.raises(ValueError):
+        qt.get_all_objects()
+
+def test_out_of_bounds_insert():
+    qt = QuadTree((0, 0, 100, 100), capacity=4)
+    with pytest.raises(ValueError):
+        qt.insert((150, 50))  # x is out of bounds
+    with pytest.raises(ValueError):
+        qt.insert((50, -10))  # y is out of bounds
+    with pytest.raises(ValueError):
+        qt.insert((100, 100))  # on max edge, should be excluded
+
+    assert(len(qt.get_all_rectangles()) == 1)
+    
+    with pytest.raises(ValueError):
+        qt.get_all_objects()
+
+def test_native_insert_causes_obj_tracker_runtime_error():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    qt._native.insert(1, (10, 10))  # type: ignore[attr-defined]
+    qt.insert((20, 20), id=2)  # normal insert
+
+    # Query as items should cause runtime error
+    with pytest.raises(RuntimeError):
+        qt.query(BOUNDS, as_items=True)
+
+    # Query without items should work
+    results = qt.query(BOUNDS, as_items=False)
+    assert len(results) == 2
+
+    # KNN stuff should also raise
+    with pytest.raises(RuntimeError):
+        qt.nearest_neighbor((15, 15), as_item=True)
+
+    with pytest.raises(RuntimeError):
+        qt.nearest_neighbors((15, 15), 2, as_items=True)
+
+    # Attach should also raise
+    with pytest.raises(KeyError):
+        qt.attach(1, {"name": "point1"})
+
+    assert len(qt.get_all_objects()) == 0
+    assert len(qt.get_all_items()) == 1
+
+def test_get_all_items_returns_tracked_items():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    obj1 = {"name": "point1"}
+    obj2 = {"name": "point2"}
+    id1 = qt.insert((10, 10), obj=obj1)
+    id2 = qt.insert((20, 20), obj=obj2)
+
+    items = qt.get_all_items()
+    assert len(items) == 2
+    ids = {item.id for item in items}
+    assert ids == {id1, id2}
+    
+    for item in items:
+        if item.id == id1:
+            assert item.obj is obj1
+        elif item.id == id2:
+            assert item.obj is obj2
+        else:
+            pytest.fail(f"Unexpected item ID {item.id}")
+
+def test_insert_many_points_exception_for_out_of_bounds():
+    qt = QuadTree((0, 0, 100, 100), capacity=4)
+    points = [(10, 10), (20, 20), (150, 150)]  # Last point is out of bounds
+
+    with pytest.raises(ValueError):
+        qt.insert_many_points(points)

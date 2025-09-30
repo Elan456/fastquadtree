@@ -135,9 +135,9 @@ Full docs are in the docstrings of the [Python Shim](pysrc/quadtree_rs/__init__.
 
 - `delete(id, xy) -> bool`
 
-- `delete_by_object(obj, xy) -> bool (requires track_objects=True)`
+- `delete_by_object(obj) -> bool (requires track_objects=True)`
 
-- `attach(id, obj) -> None`
+- `attach(id, obj) -> None (requires track_objects=True)`
 
 - `count_items() -> int`
 

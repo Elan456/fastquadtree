@@ -168,17 +168,3 @@ def test_delete_by_object_edge_cases():
     qt.insert((20, 20), obj=obj2)
     result = qt.delete_by_object(obj3)
     assert result is False  # Different object identity
-
-
-if __name__ == "__main__":
-    # Run the tests
-    test_delete_by_object_basic()
-    test_delete_by_object_not_found()
-    test_delete_by_object_without_tracking()
-    test_delete_by_object_multiple_same_location()
-    test_delete_by_object_performance()
-    test_delete_by_object_with_attach()
-    test_delete_by_object_replace_then_delete()
-    test_delete_by_object_edge_cases()
-
-    print("All delete_by_object tests passed!")

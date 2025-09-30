@@ -194,7 +194,3 @@ def test_delete_multiple_items_same_location():
     assert not tree.delete(10, location)
     assert not tree.delete(20, location)
     assert not tree.delete(30, location)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__])
