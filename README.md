@@ -5,6 +5,8 @@
 
 Rust-optimized quadtree with a simple Python API.
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/quadtree-rs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/quadtree-rs)
+
 - Python package: **`quadtree_rs`**
 - Python ≥ 3.8
 - Import path: `from quadtree_rs import QuadTree`
