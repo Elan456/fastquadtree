@@ -48,7 +48,7 @@ def test_negative_region_with_object_tracking():
     assert qt.get(id3) is obj3
     
     # Test delete_by_object in negative space
-    deleted = qt.delete_by_object(obj2, (-500, -500))
+    deleted = qt.delete_by_object(obj2)
     assert deleted is True
     assert qt.count_items() == 2
     assert qt.get(id2) is None

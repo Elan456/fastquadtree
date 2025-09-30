@@ -85,7 +85,7 @@ def test_nearest_neighbor_basic():
 
 
 def test_nearest_neighbors_k():
-    qt = QuadTree((0.0, 0.0, 100.0, 100.0), 2)
+    qt = QuadTree((0.0, 0.0, 100.0, 100.0), 2, track_objects=True)
     pts = [
         (1, (10.0, 10.0)),
         (2, (20.0, 20.0)),
@@ -97,6 +97,7 @@ def test_nearest_neighbors_k():
 
     res = qt.nearest_neighbors((25.0, 25.0), 3, as_items=True)
     assert sorted([item.id for item in res]) == [1, 2, 3]
+    assert res[0].obj is None  # no objects were attached
     # check the closest is indeed (20,20) or (30,30) depending on your distance tie rules
     dists = [(item.id, math.hypot(item.x - 25.0, item.y - 25.0)) for item in res]
     assert len(dists) == 3

@@ -1,85 +1,124 @@
 # _bimap.py
 from __future__ import annotations
-from typing import Any, Iterable, Iterator, Tuple
+from typing import Any, Iterable, Iterator, Tuple, Optional
+
+from ._item import Item
 
 class BiMap:
     """
-    Strong, one-to-one bidirectional map:
-      id (int) -> object
-      object (by identity) -> id
+    Bidirectional map to the same Item:
+      id -> Item
+      obj -> Item  (uses object identity)
 
-    Notes:
-      - Objects are held strongly, so they will not be GC'd while stored here.
-      - Identity is used for object keys, so unhashable or mutable objects work.
-      - Setting a pair removes any previous associations that would violate 1-1.
+    Rules:
+      - One-to-one: an id maps to exactly one Item, and an object maps to exactly one Item.
+      - add(item): inserts or replaces both sides so they point to 'item'.
+      - If item.obj is None, only id -> Item is stored.
     """
 
-    __slots__ = ("_id_to_obj", "_objid_to_id")
+    __slots__ = ("_id_to_item", "_objid_to_item")
 
-    def __init__(self, pairs: Iterable[Tuple[int, Any]] | None = None) -> None:
-        self._id_to_obj: dict[int, Any] = {}
-        self._objid_to_id: dict[int, int] = {}
-        if pairs:
-            for k, v in pairs:
-                self.set(k, v)
+    def __init__(self, items: Iterable[Item] | None = None) -> None:
+        self._id_to_item: dict[int, Item] = {}
+        self._objid_to_item: dict[int, Item] = {}
+        if items:
+            for it in items:
+                self.add(it)
 
-    # ---- core API ----
+    # - core -
 
-    def set(self, id_: int, obj: Any) -> None:
-        """Associate id_ <-> obj, replacing any conflicting mappings."""
-        # If id_ already mapped, unlink old object
-        old_obj = self._id_to_obj.get(id_)
-        if old_obj is not None and old_obj is not obj:
-            self._objid_to_id.pop(id(old_obj), None)
+    def add(self, item: Item) -> None:
+        """
+        Insert or replace mapping for this Item.
+        Handles conflicts so that both id and obj point to this exact Item.
+        """
+        id_ = item.id
+        obj = item.obj
 
-        # If obj already mapped to a different id, unlink that id
-        oid = id(obj)
-        old_id = self._objid_to_id.get(oid)
-        if old_id is not None and old_id != id_:
-            self._id_to_obj.pop(old_id, None)
+        # Unlink any old item currently bound to this id
+        old = self._id_to_item.get(id_)
+        if old is not None and old is not item:
+            old_obj = old.obj
+            if old_obj is not None:
+                self._objid_to_item.pop(id(old_obj), None)
 
-        self._id_to_obj[id_] = obj
-        self._objid_to_id[oid] = id_
-
-    def by_id(self, id_: int) -> Any | None:
-        return self._id_to_obj.get(id_)
-
-    def by_obj(self, obj: Any) -> int | None:
-        return self._objid_to_id.get(id(obj))
-
-    def pop_id(self, id_: int) -> Any | None:
-        obj = self._id_to_obj.pop(id_, None)
+        # Unlink any old item currently bound to this obj
         if obj is not None:
-            self._objid_to_id.pop(id(obj), None)
-        return obj
+            prev = self._objid_to_item.get(id(obj))
+            if prev is not None and prev is not item:
+                self._id_to_item.pop(prev.id, None)
 
-    def pop_obj(self, obj: Any) -> int | None:
-        oid = id(obj)
-        id_ = self._objid_to_id.pop(oid, None)
-        if id_ is not None:
-            self._id_to_obj.pop(id_, None)
-        return id_
+        # Link new
+        self._id_to_item[id_] = item
+        if obj is not None:
+            self._objid_to_item[id(obj)] = item
 
-    # ---- convenience ----
+    def by_id(self, id_: int) -> Optional[Item]:
+        return self._id_to_item.get(id_)
+
+    def by_obj(self, obj: Any) -> Optional[Item]:
+        return self._objid_to_item.get(id(obj))
+
+    def pop_id(self, id_: int) -> Optional[Item]:
+        it = self._id_to_item.pop(id_, None)
+        if it is not None:
+            obj = it.obj
+            if obj is not None:
+                self._objid_to_item.pop(id(obj), None)
+        return it
+
+    def pop_obj(self, obj: Any) -> Optional[Item]:
+        it = self._objid_to_item.pop(id(obj), None)
+        if it is not None:
+            self._id_to_item.pop(it.id, None)
+        return it
+
+    def pop_item(self, item: Item) -> Optional[Item]:
+        """
+        Remove this exact Item if present on either side.
+        """
+        removed = None
+        # Remove by id first
+        if self._id_to_item.get(item.id) is item:
+            removed = self._id_to_item.pop(item.id)
+        # Remove by obj side
+        obj = item.obj
+        if obj is not None and self._objid_to_item.get(id(obj)) is item:
+            self._objid_to_item.pop(id(obj), None)
+            removed = removed or item
+        return removed
+
+    # - updates -
+
+    def refresh_item(self, item: Item) -> None:
+        """
+        Call this if item.obj changed since it was added.
+        Keeps both maps consistent.
+        """
+        # Remove any old obj link that might point to this item
+        # Find any objid->item pointing to this item and drop it
+        # (cheap path: try current obj, and also clear stale by scanning ids for this item)
+        # Fast path: try to remove current id mapping, then re-add
+        self.pop_item(item)
+        self.add(item)
+
+    # - convenience -
 
     def __len__(self) -> int:
-        return len(self._id_to_obj)
+        return len(self._id_to_item)
 
     def clear(self) -> None:
-        self._id_to_obj.clear()
-        self._objid_to_id.clear()
+        self._id_to_item.clear()
+        self._objid_to_item.clear()
 
     def contains_id(self, id_: int) -> bool:
-        return id_ in self._id_to_obj
+        return id_ in self._id_to_item
 
     def contains_obj(self, obj: Any) -> bool:
-        return id(obj) in self._objid_to_id
+        return id(obj) in self._objid_to_item
 
-    def keys(self) -> Iterator[int]:
-        return iter(self._id_to_obj.keys())
+    def items_by_id(self) -> Iterator[Tuple[int, Item]]:
+        return iter(self._id_to_item.items())
 
-    def values(self) -> Iterator[Any]:
-        return iter(self._id_to_obj.values())
-
-    def items(self) -> Iterator[Tuple[int, Any]]:
-        return iter(self._id_to_obj.items())
+    def items(self) -> Iterator[Item]:
+        return iter(self._id_to_item.values())

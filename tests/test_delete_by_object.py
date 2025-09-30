@@ -25,7 +25,7 @@ def test_delete_by_object_basic():
     assert qt.get(id3) is obj3
     
     # Delete by object
-    result = qt.delete_by_object(obj2, (20, 20))
+    result = qt.delete_by_object(obj2)
     assert result is True
     assert qt.count_items() == 2
     assert qt.get(id2) is None
@@ -45,20 +45,7 @@ def test_delete_by_object_not_found():
     qt.insert((10, 10), obj=obj1)
     
     # Try to delete object that was never inserted
-    result = qt.delete_by_object(obj2, (20, 20))
-    assert result is False
-    assert qt.count_items() == 1
-
-
-def test_delete_by_object_wrong_location():
-    """Test delete_by_object with wrong coordinates."""
-    qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True)
-    
-    obj1 = {"name": "point1"}
-    qt.insert((10, 10), obj=obj1)
-    
-    # Try to delete with wrong coordinates
-    result = qt.delete_by_object(obj1, (20, 20))
+    result = qt.delete_by_object(obj2)
     assert result is False
     assert qt.count_items() == 1
 
@@ -70,7 +57,7 @@ def test_delete_by_object_without_tracking():
     obj1 = {"name": "point1"}
     
     with pytest.raises(ValueError, match="Cannot delete by object when track_objects=False"):
-        qt.delete_by_object(obj1, (10, 10))
+        qt.delete_by_object(obj1)
 
 
 def test_delete_by_object_multiple_same_location():
@@ -89,7 +76,7 @@ def test_delete_by_object_multiple_same_location():
     assert qt.count_items() == 3
     
     # Delete specific object by reference
-    result = qt.delete_by_object(obj2, (10, 10))
+    result = qt.delete_by_object(obj2)
     assert result is True
     assert qt.count_items() == 2
     assert qt.get(id2) is None
@@ -112,7 +99,7 @@ def test_delete_by_object_performance():
     
     # Delete objects - should be fast
     target_obj = objects[500]
-    result = qt.delete_by_object(target_obj, (500 % 100, 500 // 100))
+    result = qt.delete_by_object(target_obj)
     assert result is True
     assert qt.count_items() == 999
 
@@ -130,7 +117,7 @@ def test_delete_by_object_with_attach():
     assert qt.get(id1) is obj1
     
     # Delete by object
-    result = qt.delete_by_object(obj1, (10, 10))
+    result = qt.delete_by_object(obj1)
     assert result is True
     assert qt.count_items() == 0
     assert qt.get(id1) is None
@@ -150,11 +137,11 @@ def test_delete_by_object_replace_then_delete():
     qt.attach(id1, obj2)
     
     # Original object should no longer be tracked
-    result1 = qt.delete_by_object(obj1, (10, 10))
+    result1 = qt.delete_by_object(obj1)
     assert result1 is False
     
     # New object should be deletable
-    result2 = qt.delete_by_object(obj2, (10, 10))
+    result2 = qt.delete_by_object(obj2)
     assert result2 is True
     assert qt.count_items() == 0
 
@@ -165,7 +152,7 @@ def test_delete_by_object_edge_cases():
     
     # Test with empty quadtree
     obj1 = {"name": "test"}
-    result = qt.delete_by_object(obj1, (10, 10))
+    result = qt.delete_by_object(obj1)
     assert result is False
     
     # Test inserting with None object (should not be tracked)
@@ -177,7 +164,7 @@ def test_delete_by_object_edge_cases():
     obj3 = {"name": "test"}  # Same content, different object
     
     qt.insert((20, 20), obj=obj2)
-    result = qt.delete_by_object(obj3, (20, 20))
+    result = qt.delete_by_object(obj3)
     assert result is False  # Different object identity
 
 
@@ -185,7 +172,6 @@ if __name__ == "__main__":
     # Run the tests
     test_delete_by_object_basic()
     test_delete_by_object_not_found()
-    test_delete_by_object_wrong_location()
     test_delete_by_object_without_tracking()
     test_delete_by_object_multiple_same_location()
     test_delete_by_object_performance()

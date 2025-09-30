@@ -265,7 +265,7 @@ def main():
                 wy = my / max(zoom, 1e-6) + camera_y
                 nn = qtree.nearest_neighbor((wx, wy), as_item=True)
                 if nn is not None:
-                    qtree.delete_by_object(nn.obj, (nn.x, nn.y))
+                    qtree.delete_by_object(nn.obj)
 
         # Smooth zoom toward target and keep the mouse-anchored world point fixed
         mx, my = pygame.mouse.get_pos()
@@ -286,7 +286,7 @@ def main():
             wy = my / max(zoom, 1e-6) + camera_y
             nn = qtree.nearest_neighbor((wx, wy), as_item=True)
             if nn is not None:
-                qtree.delete_by_object(nn.obj, (nn.x, nn.y))
+                qtree.delete_by_object(nn.obj)
 
         zoom += (zoom_target - zoom) * min(1.0, ZOOM_SMOOTH * dt)
         zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX)
@@ -316,7 +316,7 @@ def main():
         if not paused:
             objs = list(qtree.get_all_objects())
             for p in objs:
-                qtree.delete_by_object(p, (p.x, p.y))
+                qtree.delete_by_object(p)
                 p.update(dt)
                 qtree.insert((p.x, p.y), obj=p)
 
