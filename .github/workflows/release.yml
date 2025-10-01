@@ -36,7 +36,7 @@ jobs:
       - name: Run Python tests
         run: |
           . .venv/bin/activate
-          pytest --cov --cov-branch --cov-report=xml
+          pytest
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

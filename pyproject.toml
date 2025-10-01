@@ -39,3 +39,18 @@ module-name = "fastquadtree._native"
 # Choose a wide wheel tag for Linux. Adjust if your build images are newer.
 # Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
 compatibility = "manylinux2014"
+
+[tool.pytest.ini_options]
+addopts = "--cov=fastquadtree --cov-branch --cov-report=xml"
+testpaths = ["tests"]  # still run tests
+
+[tool.coverage.run]
+source = ["fastquadtree"]
+omit = [
+  "tests/*",
+]
+
+[tool.coverage.report]
+omit = [
+  "tests/*",
+]
