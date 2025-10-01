@@ -14,7 +14,6 @@
 [![Rust core via PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
 [![Built with maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
 [![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-2a6db2)](http://mypy-lang.org/)
 
 
 ![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
@@ -25,6 +24,29 @@ Rust-optimized quadtree with a simple Python API.
 - Python package: **`fastquadtree`**
 - Python ≥ 3.8
 - Import path: `from fastquadtree import QuadTree`
+
+## Benchmarks
+
+fastquadtree **outperforms** all other quadtree Python packages, including the Rtree spatial index.
+
+### Library comparison
+
+![Total time](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_time.png)
+![Throughput](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_throughput.png)
+
+### Summary (largest dataset, PyQtree baseline)
+- Points: **500,000**, Queries: **500**
+- Fastest total: **fastquadtree** at **2.207 s**
+
+| Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
+|---|---:|---:|---:|---:|
+| fastquadtree  | 0.321 | 1.885 | 2.207 | 4.27× |
+| Rtree        | 1.718 | 4.376 | 6.095 | 1.55× |
+| nontree-QuadTree | 1.617 | 7.643 | 9.260 | 1.02× |
+| PyQtree      | 4.349 | 5.082 | 9.431 | 1.00× |
+| quads        | 3.874 | 9.058 | 12.932 | 0.73× |
+| e-pyquadtree | 2.732 | 10.598 | 13.330 | 0.71× |
+| Brute force  | 0.019 | 19.986 | 20.005 | 0.47× |
 
 ## Install
 
@@ -86,25 +108,7 @@ print(f"Deleted player: {deleted}")  # True
 
 You can keep the tree pure and manage your own id → object map, or let the wrapper manage it.
 
-**Option A: Manage your own map**
-
-```python
-from fastquadtree import QuadTree
-
-qt = QuadTree((0, 0, 1000, 1000), capacity=16)
-objects: dict[int, object] = {}
-
-def add(obj) -> int:
-    obj_id = qt.insert(obj.position)  # auto id
-    objects[obj_id] = obj
-    return obj_id
-
-# Later, resolve ids back to objects
-ids = [obj_id for (obj_id, x, y) in qt.query((100, 100, 300, 300))]
-selected = [objects[i] for i in ids]
-```
-
-**Option B: Ask the wrapper to track objects**
+**Wrapper Managed Objects**
 
 ```python
 from fastquadtree import QuadTree
@@ -114,7 +118,7 @@ qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
 # Store the object alongside the point
 qt.insert((25, 40), obj={"name": "apple"})
 
-# Ask for Item objects so you can access .obj lazily
+# Ask for Item objects within a bounding box
 items = qt.query((0, 0, 100, 100), as_items=True)
 for it in items:
     print(it.id, it.x, it.y, it.obj)
@@ -128,7 +132,7 @@ qt.attach(123, my_object)  # binds object to id 123
 
 ## API
 
-### `QuadTree(bounds, capacity, *, max_depth=None, track_objects=False, start_id=1)`
+### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, start_id=1)`
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
@@ -181,30 +185,8 @@ Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__
 * For fastest local runs, use `maturin develop --release`.
 * The wrapper keeps Python overhead low: raw tuple results by default, `Item` wrappers only when requested.
 
-## Benchmarks
 
-fastquadtree outperforms all other quadtree python packages (at least all the ones I could find and install via pip.)
-
-### Library comparison
-
-![Total time](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_time.png)
-![Throughput](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_throughput.png)
-
-### Summary (largest dataset, PyQtree baseline)
-- Points: **500,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **2.207 s**
-
-| Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
-|---|---:|---:|---:|---:|
-| fastquadtree  | 0.321 | 1.885 | 2.207 | 4.27× |
-| Rtree        | 1.718 | 4.376 | 6.095 | 1.55× |
-| nontree-QuadTree | 1.617 | 7.643 | 9.260 | 1.02× |
-| PyQtree      | 4.349 | 5.082 | 9.431 | 1.00× |
-| quads        | 3.874 | 9.058 | 12.932 | 0.73× |
-| e-pyquadtree | 2.732 | 10.598 | 13.330 | 0.71× |
-| Brute force  | 0.019 | 19.986 | 20.005 | 0.47× |
-
-### Native vs Shim
+### Native vs Shim Benchmark
 
 **Setup**
 - Points: 500,000
@@ -254,7 +236,7 @@ Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_
 Allowed. For k-nearest, duplicates are de-duplicated by id. For range queries you will see every inserted point.
 
 **Can I delete items from the quadtree?**
-Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `track_objects=True`, you can also use `delete_by_object(obj, xy)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
+Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `track_objects=True`, you can also use `delete_by_object(obj)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
 
 **Can I store rectangles or circles?**
 The core stores points. To index objects with extent, insert whatever representative point you choose. For rectangles you can insert centers or build an AABB tree separately.
