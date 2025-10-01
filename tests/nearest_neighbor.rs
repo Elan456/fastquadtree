@@ -1,15 +1,15 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
-fn pt(x: f64, y: f64) -> Point { Point { x, y } }
+fn pt(x: f32, y: f32) -> Point { Point { x, y } }
 fn ids(v: &[Item]) -> Vec<u64> {
     let mut out: Vec<u64> = v.iter().map(|it| it.id).collect();
     out.sort_unstable();
     out
 }
-fn dist2(a: Point, b: Point) -> f64 {
+fn dist2(a: Point, b: Point) -> f32 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     dx * dx + dy * dy
@@ -69,7 +69,7 @@ fn knn_basic_ordering_no_split() {
     assert_eq!(order, vec![2, 1, 4, 3, 5]);
 
     // distances should be nondecreasing
-    let d: Vec<f64> = res.iter().map(|it| dist2(q, it.point)).collect();
+    let d: Vec<f32> = res.iter().map(|it| dist2(q, it.point)).collect();
     for w in d.windows(2) {
         assert!(w[0] <= w[1] + 1e-12);
     }
@@ -176,7 +176,7 @@ fn ordering_is_by_distance_even_after_splits() {
     let mut id = 1u64;
     for y in (4..=60).step_by(8) {
         for x in (4..=60).step_by(8) {
-            qt.insert(Item { id, point: pt(x as f64, y as f64) });
+            qt.insert(Item { id, point: pt(x as f32, y as f32) });
             id += 1;
         }
     }
@@ -185,7 +185,7 @@ fn ordering_is_by_distance_even_after_splits() {
     assert!(!res.is_empty());
 
     // distances should be nondecreasing
-    let d: Vec<f64> = res.iter().map(|it| dist2(q, it.point)).collect();
+    let d: Vec<f32> = res.iter().map(|it| dist2(q, it.point)).collect();
     for w in d.windows(2) {
         assert!(w[0] <= w[1] + 1e-12);
     }

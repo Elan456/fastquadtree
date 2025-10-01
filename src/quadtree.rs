@@ -126,32 +126,34 @@ impl QuadTree {
         stack.push(self);
 
         while let Some(node) = stack.pop() {
-            if !node.boundary.intersects(&range) {
-                continue;
-            }
             for it in &node.items {
                 if range.contains(&it.point) {
                     out.push(*it);
                 }
             }
             if let Some(children) = node.children.as_ref() {
-                stack.extend(children.iter());
+                // Push children that intersect the query range
+                for child in children.iter() {
+                    if range.intersects(&child.boundary) {
+                        stack.push(child);
+                    }
+                }
             }
         }
         out
     }
 
     pub fn nearest_neighbor(&self, point: Point) -> Option<Item> {
-        self.nearest_neighbors_within(point, 1, f64::INFINITY)
+        self.nearest_neighbors_within(point, 1, f32::INFINITY)
             .into_iter()
             .next()
     }
 
     pub fn nearest_neighbors(&self, point: Point, k: usize) -> Vec<Item> {
-        self.nearest_neighbors_within(point, k, f64::INFINITY)
+        self.nearest_neighbors_within(point, k, f32::INFINITY)
     }
 
-    pub fn nearest_neighbors_within(&self, point: Point, k: usize, max_distance: f64) -> Vec<Item> {
+    pub fn nearest_neighbors_within(&self, point: Point, k: usize, max_distance: f32) -> Vec<Item> {
         if k == 0 {
             return Vec::new();
         }
@@ -162,7 +164,7 @@ impl QuadTree {
 
         for _ in 0..k {
             // stack holds (node_ref, bbox_distance_sq)
-            let mut stack: Vec<(&QuadTree, f64)> = Vec::new();
+            let mut stack: Vec<(&QuadTree, f32)> = Vec::new();
             stack.push((self, dist_sq_point_to_rect(&point, &self.boundary)));
 
             let mut best: Option<Item> = None;
@@ -176,7 +178,7 @@ impl QuadTree {
 
                 if let Some(children) = node.children.as_ref() {
                     // compute and sort children by bbox distance, push farthest first
-                    let mut kids: Vec<(&QuadTree, f64)> = children
+                    let mut kids: Vec<(&QuadTree, f32)> = children
                         .iter()
                         .map(|c| (c, dist_sq_point_to_rect(&point, &c.boundary)))
                         .filter(|(_, d2)| *d2 < best_d2)

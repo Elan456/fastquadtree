@@ -1,14 +1,14 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
 
-fn pt(x: f64, y: f64) -> Point { 
+fn pt(x: f32, y: f32) -> Point { 
     Point { x, y } 
 }
 
-fn item(id: u64, x: f64, y: f64) -> Item {
+fn item(id: u64, x: f32, y: f32) -> Item {
     Item { id, point: pt(x, y) }
 }
 
@@ -226,8 +226,8 @@ fn stress_test_negative_coordinates() {
     let mut inserted_count = 0;
     for i in 0..50 {
         for j in 0..50 {
-            let x = -20.0 * (i as f64) - 10.0; // Range from -10 to -990
-            let y = -20.0 * (j as f64) - 10.0; // Range from -10 to -990
+            let x = -20.0 * (i as f32) - 10.0; // Range from -10 to -990
+            let y = -20.0 * (j as f32) - 10.0; // Range from -10 to -990
             let id = (i * 50 + j) as u64 + 1;
             if x >= -1000.0 && y >= -1000.0 && x < 0.0 && y < 0.0 {
                 assert!(qt.insert(item(id, x, y)));

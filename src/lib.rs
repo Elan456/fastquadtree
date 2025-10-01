@@ -8,7 +8,7 @@ pub use crate::quadtree::{Item, QuadTree};
 
 use pyo3::prelude::*;
 
-fn item_to_tuple(it: Item) -> (u64, f64, f64) {
+fn item_to_tuple(it: Item) -> (u64, f32, f32) {
     (it.id, it.point.x, it.point.y)
 }
 
@@ -20,7 +20,7 @@ pub struct PyQuadTree {
 #[pymethods]
 impl PyQuadTree {
     #[new]
-    pub fn new(bounds: (f64, f64, f64, f64), capacity: usize, max_depth: Option<usize>) -> Self {
+    pub fn new(bounds: (f32, f32, f32, f32), capacity: usize, max_depth: Option<usize>) -> Self {
         let (min_x, min_y, max_x, max_y) = bounds;
         let rect = Rect { min_x, min_y, max_x, max_y };
         let inner = match max_depth {
@@ -30,17 +30,17 @@ impl PyQuadTree {
         Self { inner }
     }
 
-    pub fn insert(&mut self, id: u64, xy: (f64, f64)) -> bool {
+    pub fn insert(&mut self, id: u64, xy: (f32, f32)) -> bool {
         let (x, y) = xy;
         self.inner.insert(Item { id, point: Point { x, y } })
     }
 
-    pub fn delete(&mut self, id: u64, xy: (f64, f64)) -> bool {
+    pub fn delete(&mut self, id: u64, xy: (f32, f32)) -> bool {
         let (x, y) = xy;
         self.inner.delete(id, Point { x, y })
     }
 
-    pub fn query(&self, rect: (f64, f64, f64, f64)) -> Vec<(u64, f64, f64)> {
+    pub fn query(&self, rect: (f32, f32, f32, f32)) -> Vec<(u64, f32, f32)> {
         let (min_x, min_y, max_x, max_y) = rect;
         self.inner
             .query(Rect { min_x, min_y, max_x, max_y })
@@ -49,12 +49,12 @@ impl PyQuadTree {
             .collect()
     }
 
-    pub fn nearest_neighbor(&self, xy: (f64, f64)) -> Option<(u64, f64, f64)> {
+    pub fn nearest_neighbor(&self, xy: (f32, f32)) -> Option<(u64, f32, f32)> {
         let (x, y) = xy;
         self.inner.nearest_neighbor(Point { x, y }).map(item_to_tuple)
     }
 
-    pub fn nearest_neighbors(&self, xy: (f64, f64), k: usize) -> Vec<(u64, f64, f64)> {
+    pub fn nearest_neighbors(&self, xy: (f32, f32), k: usize) -> Vec<(u64, f32, f32)> {
         let (x, y) = xy;
         self.inner
             .nearest_neighbors(Point { x, y }, k)
@@ -64,7 +64,7 @@ impl PyQuadTree {
     }
 
     /// Returns all rectangle boundaries in the quadtree for visualization
-    pub fn get_all_rectangles(&self) -> Vec<(f64, f64, f64, f64)> {
+    pub fn get_all_rectangles(&self) -> Vec<(f32, f32, f32, f32)> {
         self.inner
             .get_all_rectangles()
             .into_iter()

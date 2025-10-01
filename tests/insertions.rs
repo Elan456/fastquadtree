@@ -1,10 +1,10 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
 
-fn pt(x: f64, y: f64) -> Point { Point { x, y } }
+fn pt(x: f32, y: f32) -> Point { Point { x, y } }
 
 #[test]
 fn rect_contains_half_open() {
@@ -73,7 +73,7 @@ fn many_inserts_all_succeed_when_inside() {
     let mut id = 1u64;
     for x in (10..1000).step_by(100) {
         for y in (10..1000).step_by(100) {
-            if qt.insert(Item { id, point: pt(x as f64, y as f64) }) {
+            if qt.insert(Item { id, point: pt(x as f32, y as f32) }) {
                 ok += 1;
             }
             id += 1;

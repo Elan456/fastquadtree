@@ -1,15 +1,15 @@
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Point {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Rect {
-    pub min_x: f64,
-    pub min_y: f64,
-    pub max_x: f64,
-    pub max_y: f64,
+    pub min_x: f32,
+    pub min_y: f32,
+    pub max_x: f32,
+    pub max_y: f32,
 }
 
 impl Rect {
@@ -23,7 +23,7 @@ impl Rect {
     }
 }
 
-pub fn dist_sq_point_to_rect(p: &Point, r: &Rect) -> f64 {
+pub fn dist_sq_point_to_rect(p: &Point, r: &Rect) -> f32 {
     let dx = if p.x < r.min_x {
         r.min_x - p.x
     } else if p.x > r.max_x {
@@ -43,7 +43,7 @@ pub fn dist_sq_point_to_rect(p: &Point, r: &Rect) -> f64 {
     dx * dx + dy * dy
 }
 
-pub fn dist_sq_points(a: &Point, b: &Point) -> f64 {
+pub fn dist_sq_points(a: &Point, b: &Point) -> f32 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     dx * dx + dy * dy

@@ -1,9 +1,9 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
-fn pt(x: f64, y: f64) -> Point { Point { x, y } }
+fn pt(x: f32, y: f32) -> Point { Point { x, y } }
 fn ids(v: &[Item]) -> Vec<u64> {
     let mut out: Vec<u64> = v.iter().map(|it| it.id).collect();
     out.sort_unstable();
@@ -101,8 +101,8 @@ fn query_range_covering_multiple_children_returns_union() {
 fn full_range_query_returns_all_items() {
     let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 3);
     for i in 0..9 {
-        let x = 10.0 + 10.0 * (i as f64);
-        let y = 20.0 + 5.0 * (i as f64);
+        let x = 10.0 + 10.0 * (i as f32);
+        let y = 20.0 + 5.0 * (i as f32);
         assert!(qt.insert(Item { id: i + 1, point: pt(x, y) }));
     }
     let hits = qt.query(r(0.0, 0.0, 100.0, 100.0));
