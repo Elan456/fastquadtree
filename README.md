@@ -37,16 +37,16 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
 --------------------
-- Fastest total: **fastquadtree** at **5.595 s**
+- Fastest total: **fastquadtree** at **1.591 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.773 | 4.822 | 5.595 | 4.46× |
-| Rtree        | 3.457 | 6.944 | 10.400 | 2.40× |
-| nontree-QuadTree | 3.453 | 17.647 | 21.100 | 1.18× |
-| PyQtree      | 9.975 | 14.971 | 24.946 | 1.00× |
-| quads        | 7.439 | 23.001 | 30.440 | 0.82× |
-| e-pyquadtree | 6.274 | 31.298 | 37.572 | 0.66× |
+| fastquadtree | 0.165 | 1.427 | 1.591 | 5.09× |
+| Rtree        | 1.320 | 2.369 | 3.688 | 2.20× |
+| PyQtree      | 2.687 | 5.415 | 8.102 | 1.00× |
+| nontree-QuadTree | 1.284 | 9.891 | 11.175 | 0.73× |
+| quads        | 2.346 | 10.129 | 12.475 | 0.65× |
+| e-pyquadtree | 1.795 | 11.855 | 13.650 | 0.59× |
 
 ## Install
 

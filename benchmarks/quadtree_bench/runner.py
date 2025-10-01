@@ -34,7 +34,7 @@ class BenchmarkConfig:
         """Generate experiment point sizes."""
         self.experiments = [2, 4, 8, 16]
         while self.experiments[-1] < self.max_experiment_points:
-            self.experiments.append(int(self.experiments[-1] * 1.5))
+            self.experiments.append(int(self.experiments[-1] * 2))
         if self.experiments[-1] > self.max_experiment_points:
             self.experiments[-1] = self.max_experiment_points
 
