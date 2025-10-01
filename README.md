@@ -1,6 +1,21 @@
 # fastquadtree
 
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/fastquadtree)
+[![PyPI version](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
+[![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
+[![Wheels](https://img.shields.io/pypi/wheel/fastquadtree.svg)](https://pypi.org/project/fastquadtree/#files)
+[![License: MIT](https://img.shields.io/pypi/l/fastquadtree.svg)](LICENSE)
+
+[![Downloads total](https://static.pepy.tech/badge/fastquadtree)](https://pepy.tech/projects/fastquadtree)
+[![Downloads month](https://static.pepy.tech/badge/fastquadtree/month)](https://pepy.tech/projects/fastquadtree)
+
+[![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/ci.yml)
+[![Codecov](https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg)](https://codecov.io/gh/Elan456/fastquadtree)
+
+[![Rust core via PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
+[![Built with maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
+[![Code style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Type checking: mypy](https://img.shields.io/badge/type%20checking-mypy-2a6db2)](http://mypy-lang.org/)
+
 
 ![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
 
@@ -63,7 +78,7 @@ id1 = qt_tracked.insert((50, 50), obj=player1)
 id2 = qt_tracked.insert((150, 150), obj=player2)
 
 # Delete by object reference (O(1) lookup!)
-deleted = qt_tracked.delete_by_object(player1, (50, 50))
+deleted = qt_tracked.delete_by_object(player1)
 print(f"Deleted player: {deleted}")  # True
 ```
 

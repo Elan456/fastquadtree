@@ -247,7 +247,7 @@ def get_engines(
         "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
         "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
         "PyQtree": _create_pyqtree_engine(bounds, max_points, max_depth),
-        "Brute force": _create_brute_force_engine(bounds, max_points, max_depth),
+     #    "Brute force": _create_brute_force_engine(bounds, max_points, max_depth),  # Brute force doesn't scale well on the graphs so omit it from the main set
     }
 
     # Optional engines (only include if import succeeded)
