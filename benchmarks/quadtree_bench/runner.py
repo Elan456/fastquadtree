@@ -98,6 +98,36 @@ class BenchmarkRunner:
         cleaned = [x for x in vals if isinstance(x, (int, float)) and not math.isnan(x)]
         return stats.median(cleaned) if cleaned else math.nan
 
+    def _print_experiment_summary(self, n: int, results: Dict[str, Any], exp_idx: int) -> None:
+        """Print a summary of results for the current experiment."""
+        def fmt(x):
+            return f"{x:.3f}" if not math.isnan(x) else "nan"
+
+        # Get the results for this experiment (last index)
+        total = results["total"]
+        build = results["build"]
+        query = results["query"]
+        
+        # Find the fastest engine for this experiment
+        valid_engines = [(name, total[name][exp_idx]) for name in total.keys() 
+                        if not math.isnan(total[name][exp_idx])]
+        
+        if not valid_engines:
+            return
+            
+        fastest = min(valid_engines, key=lambda x: x[1])
+        
+        print(f"\n  📊 Results for {n:,} points:")
+        print(f"     Fastest: {fastest[0]} ({fmt(fastest[1])}s total)")
+        
+        # Show top 3 performers
+        sorted_engines = sorted(valid_engines, key=lambda x: x[1])[:3]
+        for rank, (name, time) in enumerate(sorted_engines, 1):
+            b = build[name][exp_idx]
+            q = query[name][exp_idx]
+            print(f"     {rank}. {name:15} build={fmt(b)}s, query={fmt(q)}s, total={fmt(time)}s")
+        print()
+
     def run_benchmark(self, engines: Dict[str, Engine]) -> Dict[str, Any]:
         """
         Run complete benchmark suite.
@@ -109,6 +139,7 @@ class BenchmarkRunner:
             Dictionary containing benchmark results
         """
         # Warmup on a small set to JIT caches, etc.
+        print("Warming up engines...")
         warmup_points = self.generate_points(2_000)
         warmup_queries = self.generate_queries(self.config.n_queries)
         for engine in engines.values():
@@ -127,9 +158,12 @@ class BenchmarkRunner:
         }
 
         # Run experiments
-        iterator = tqdm(self.config.experiments, desc="Experiments", unit="points")
-        for n in iterator:
-            iterator.set_postfix({"points": n})
+        print(f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines...")
+        experiment_bar = tqdm(self.config.experiments, desc="Experiments", unit="exp", position=0)
+        
+        for exp_idx, n in enumerate(experiment_bar):
+            experiment_bar.set_description(f"Experiment {exp_idx+1}/{len(self.config.experiments)}")
+            experiment_bar.set_postfix({"points": f"{n:,}"})
 
             # Generate data for this experiment
             exp_rng = random.Random(10_000 + n)
@@ -139,11 +173,23 @@ class BenchmarkRunner:
             # Collect results across repeats
             engine_times = {name: {"build": [], "query": []} for name in engines}
 
+            # Progress bar for engines × repeats
+            total_iterations = len(engines) * self.config.repeats
+            engine_bar = tqdm(
+                total=total_iterations, 
+                desc="  Testing engines", 
+                unit="run",
+                position=1,
+                leave=False
+            )
+
             for repeat in range(self.config.repeats):
                 gc.disable()
 
                 # Benchmark each engine
                 for name, engine in engines.items():
+                    engine_bar.set_description(f"  {name} (repeat {repeat+1}/{self.config.repeats})")
+                    
                     try:
                         build_time, query_time = self.benchmark_engine_once(
                             engine, points, queries
@@ -154,8 +200,12 @@ class BenchmarkRunner:
 
                     engine_times[name]["build"].append(build_time)
                     engine_times[name]["query"].append(query_time)
+                    
+                    engine_bar.update(1)
 
                 gc.enable()
+
+            engine_bar.close()
 
             # Calculate medians and derived metrics
             for name in engines:
@@ -184,6 +234,11 @@ class BenchmarkRunner:
                 results["insert_rate"][name].append(insert_rate)
                 results["query_rate"][name].append(query_rate)
 
+            # Print intermediate results for this experiment
+            self._print_experiment_summary(n, results, exp_idx)
+
+        experiment_bar.close()
+        
         # Add metadata to results
         results["engines"] = engines
         results["config"] = self.config
