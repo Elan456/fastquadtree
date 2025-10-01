@@ -42,7 +42,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run Rust tests
-        run: cargo test --verbose
+        run: cargo test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
