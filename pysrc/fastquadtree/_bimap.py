@@ -80,11 +80,11 @@ class BiMap:
         """
         removed = None
         # Remove by id first
-        if self._id_to_item.get(item.id) is item:
-            removed = self._id_to_item.pop(item.id)
+        removed = self._id_to_item.pop(item.id)
+
         # Remove by obj side
         obj = item.obj
-        if obj is not None and self._objid_to_item.get(id(obj)) is item:
+        if obj is not None:
             self._objid_to_item.pop(id(obj), None)
             removed = removed or item
         return removed

@@ -207,3 +207,20 @@ def test_insert_many_points_exception_for_out_of_bounds():
 
     with pytest.raises(ValueError):
         qt.insert_many_points(points)
+
+
+def test_auto_id_collision_prevention():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    id1 = qt.insert((10, 10))  # auto ID
+
+    id2 = qt.insert((20, 20), id=200)  # Large ID
+
+    # Next auto ID should be 201
+    id3 = qt.insert((30, 30))  # auto ID
+
+    assert id3 == 201
+    assert len(qt) == 3
+    assert id1 != id2 != id3
+
+    id4 = qt.insert((40, 40), id=150)  # Manual ID lower than current auto ID
+    assert id4 == 150
