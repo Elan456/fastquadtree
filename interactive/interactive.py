@@ -1,6 +1,9 @@
-from fastquadtree import QuadTree
-import pygame
 import random
+import sys
+
+import pygame
+
+from fastquadtree import QuadTree
 
 screen = pygame.display.set_mode((1000, 1000))
 
@@ -81,7 +84,7 @@ def interactive_test():
                 event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
             ):
                 pygame.quit()
-                quit()
+                sys.exit()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
@@ -90,9 +93,12 @@ def interactive_test():
                 qtree.insert((x, y), obj=Ball(x, y))
                 # print("New total number of nodes: ", len(qtree.get_all_bbox()))
 
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                if closest_to_mouse:
-                    qtree.delete_by_object(closest_to_mouse.obj)
+            if (
+                event.type == pygame.KEYDOWN
+                and event.key == pygame.K_SPACE
+                and closest_to_mouse
+            ):
+                qtree.delete_by_object(closest_to_mouse.obj)
 
         # If right arrow down, move the query area to the right
         if pygame.key.get_pressed()[pygame.K_RIGHT]:

@@ -54,3 +54,77 @@ omit = [
 omit = [
   "tests/*",
 ]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.6.0",
+  "pytest>=7.0",
+  "pytest-cov>=4.1",
+  "coverage>=7.5",
+  "mypy>=1.10",        # optional static checks
+  "build>=1.2.1",      # python -m build
+]
+
+[tool.ruff]
+# Keep line length consistent with your prior Black setting
+line-length = 88
+target-version = "py38"
+src = ["pysrc", "fastquadtree", "tests"]
+extend-exclude = [
+  "**/.venv/**",
+  "build/**",
+  "dist/**",
+]
+
+[tool.ruff.lint]
+# A solid ruleset that catches correctness, modernizations, style, and performance,
+# while avoiding very opinionated docstring or annotation rules by default.
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "W",   # pycodestyle warnings
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "B",   # bugbear
+  "BLE", # blind except
+  "A",   # builtins
+  "C4",  # comprehensions
+  "PIE", # flake8-pie
+  "PT",  # flake8-pytest-style
+  "RET", # returns
+  "SIM", # simplify
+  "PTH", # pathlib
+  "PERF",# performance
+  "PL",  # pylint (subset implemented by Ruff)
+  "RUF", # Ruff-specific rules
+]
+# Common ignores to keep noise low in mixed Py/Rust projects.
+ignore = [
+  "E203",  # whitespace before ':' (Black compatibility)
+  "E266",  # too many leading '#' for block comment
+  "E501",  # line length is handled by formatter
+  "PLR2004", # magic value comparisons (allows simple test literals)
+  "PT011", # allow use of 'pytest.raises' context manager
+  "PLW0603",
+  "PLR0915",
+  "PLR0913",
+  "PLR0912",
+]
+
+# Make pytest files less strict where asserts and fixtures are common.
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+  "S101",     # use of assert
+  "PLR2004",  # magic numbers in tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fastquadtree"]
+combine-as-imports = true
+
+[tool.ruff.format]
+# Mirror Black-like formatting
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

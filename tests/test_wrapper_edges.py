@@ -1,7 +1,6 @@
-import re
 import pytest
 
-from fastquadtree import QuadTree, Item
+from fastquadtree import Item, QuadTree
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 
@@ -19,7 +18,7 @@ def test_insert_many_seeds_items_and_query_as_items_round_trip():
     m_raw = {t[0]: (t[1], t[2]) for t in raw}
     for it in its:
         assert isinstance(it, Item)
-        assert (it.x, it.y) == m_raw[it.id]
+        assert (it.x, it.y) == m_raw[it.id_]
 
 
 def test_delete_returns_native_result_even_if_bimap_missing():
@@ -36,7 +35,7 @@ def test_delete_returns_native_result_even_if_bimap_missing():
 def test_delete_by_object_uses_cached_coords_and_updates_counts():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     obj = {"name": "slime"}
-    id_ = qt.insert((123, 456), obj=obj)
+    qt.insert((123, 456), obj=obj)
 
     assert qt.count_items() == 1
     assert len(qt) == 1
@@ -57,13 +56,13 @@ def test_bounds_error_message_includes_point_and_bounds():
 def test_nearest_neighbors_as_items_work_when_items_are_seeded():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     # Use wrapper inserts so BiMap is populated
-    ids = [qt.insert((x, x)) for x in (100, 200, 300)]
+    [qt.insert((x, x)) for x in (100, 200, 300)]
     raw = qt.nearest_neighbors((190, 190), 2, as_items=False)
     its = qt.nearest_neighbors((190, 190), 2, as_items=True)
 
     assert len(raw) == len(its) == 2
     raw_ids = [t[0] for t in raw]
-    item_ids = [it.id for it in its]
+    item_ids = [it.id_ for it in its]
     assert raw_ids == item_ids
 
 
@@ -75,7 +74,7 @@ def test_query_as_items_does_not_mutate_bimap_when_inserts_are_wrapped():
     its = qt.query((0, 0, 40, 40), as_items=True)
     after = {i: qt._items.by_id(i) for i in ids}  # type: ignore[attr-defined]
     # Items are the same objects. Query did not create new Items.
-    assert [it.id for it in its] == ids
+    assert [it.id_ for it in its] == ids
     assert before == after
     for i in ids:
         assert before[i] is after[i]
@@ -87,7 +86,7 @@ def test_nearest_neighbor_as_item_requires_seeded_items():
     got = qt.nearest_neighbor((101, 101), as_item=False)
     it = qt.nearest_neighbor((101, 101), as_item=True)
     assert it is not None
-    assert (it.id, it.x, it.y) == got
+    assert (it.id_, it.x, it.y) == got
 
 
 def test_invariant_violation_raises_on_query_as_items_when_native_bypassed():
@@ -155,7 +154,7 @@ def test_out_of_bounds_insert():
 def test_native_insert_causes_obj_tracker_runtime_error():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     qt._native.insert(1, (10, 10))  # type: ignore[attr-defined]
-    qt.insert((20, 20), id=2)  # normal insert
+    qt.insert((20, 20), id_=2)  # normal insert
 
     # Query as items should cause runtime error
     with pytest.raises(RuntimeError):
@@ -189,16 +188,16 @@ def test_get_all_items_returns_tracked_items():
 
     items = qt.get_all_items()
     assert len(items) == 2
-    ids = {item.id for item in items}
+    ids = {item.id_ for item in items}
     assert ids == {id1, id2}
 
     for item in items:
-        if item.id == id1:
+        if item.id_ == id1:
             assert item.obj is obj1
-        elif item.id == id2:
+        elif item.id_ == id2:
             assert item.obj is obj2
         else:
-            pytest.fail(f"Unexpected item ID {item.id}")
+            pytest.fail(f"Unexpected item ID {item.id_}")
 
 
 def test_insert_many_points_exception_for_out_of_bounds():
@@ -213,7 +212,7 @@ def test_auto_id_collision_prevention():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     id1 = qt.insert((10, 10))  # auto ID
 
-    id2 = qt.insert((20, 20), id=200)  # Large ID
+    id2 = qt.insert((20, 20), id_=200)  # Large ID
 
     # Next auto ID should be 201
     id3 = qt.insert((30, 30))  # auto ID
@@ -222,5 +221,5 @@ def test_auto_id_collision_prevention():
     assert len(qt) == 3
     assert id1 != id2 != id3
 
-    id4 = qt.insert((40, 40), id=150)  # Manual ID lower than current auto ID
+    id4 = qt.insert((40, 40), id_=150)  # Manual ID lower than current auto ID
     assert id4 == 150

@@ -6,14 +6,7 @@ This script can be run directly or imported as a module.
 """
 
 import sys
-from pathlib import Path
 
-# Add the benchmarks directory to Python path for imports
-benchmark_dir = Path(__file__).parent
-if str(benchmark_dir) not in sys.path:
-    sys.path.insert(0, str(benchmark_dir))
-
-# Now we can import the package
 from quadtree_bench.main import main, run_quick_benchmark
 
 if __name__ == "__main__":

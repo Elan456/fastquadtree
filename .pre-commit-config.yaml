@@ -1,12 +1,15 @@
 repos:
-  # 0) Python formatter: black
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
+  # 0) Python linter and formatter: Ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
     hooks:
-      - id: black
-        name: black
-        language_version: python3
-        args: ["--line-length", "88"]
+      # Lint + autofix. If Ruff fixes something, the hook exits nonzero to force a re-run.
+      - id: ruff
+        name: ruff (lint + fix)
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      # Code formatter (Black replacement)
+      - id: ruff-format
+        name: ruff (format)
 
   # Local hooks that run in sequence and do not receive file args
   - repo: local
@@ -28,7 +31,6 @@ repos:
         always_run: true
 
       # 3) Python tests under coverage
-      # This both runs pytest and generates .coverage data
       - id: pytest
         name: pytest (under coverage)
         entry: pytest

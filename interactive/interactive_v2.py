@@ -1,7 +1,9 @@
 import math
 import random
-import pygame
 from collections import deque
+
+import pygame
+
 from fastquadtree import QuadTree
 
 pygame.init()
@@ -79,7 +81,7 @@ qtree = QuadTree(
 
 
 class Particle:
-    __slots__ = ("x", "y", "vx", "vy", "r", "trail")
+    __slots__ = ("r", "trail", "vx", "vy", "x", "y")
 
     def __init__(self, x, y):
         self.x = float(x)
@@ -234,6 +236,109 @@ def hud(text_lines):
 
 
 # ------------------------------
+# Event and input handling
+# ------------------------------
+def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target):
+    """Handle discrete events like key presses and mouse clicks."""
+    for ev in pygame.event.get():
+        if ev.type == pygame.QUIT:
+            running = False
+        elif ev.type == pygame.KEYDOWN:
+            if ev.key == pygame.K_ESCAPE:
+                running = False
+            elif ev.key == pygame.K_SPACE:
+                paused = not paused
+            elif ev.key == pygame.K_1:
+                show_nodes = not show_nodes
+            elif ev.key == pygame.K_2:
+                show_nn = not show_nn
+            elif ev.key == pygame.K_3:
+                show_trails = not show_trails
+            elif ev.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
+                zoom_target = clamp(zoom_target * ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
+            elif ev.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                zoom_target = clamp(zoom_target / ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
+
+        elif ev.type == pygame.MOUSEWHEEL:
+            if ev.y != 0:
+                factor = ZOOM_FACTOR**ev.y
+                zoom_target = clamp(zoom_target * factor, ZOOM_MIN, ZOOM_MAX)
+
+        # Left click
+        elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+            mx, my = ev.pos
+            wx = mx / max(zoom, 1e-6) + camera_x
+            wy = my / max(zoom, 1e-6) + camera_y
+            if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
+                p = Particle(wx, wy)
+                qtree.insert((p.x, p.y), obj=p)
+
+        # Right click
+        elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
+            mx, my = ev.pos
+            wx = mx / max(zoom, 1e-6) + camera_x
+            wy = my / max(zoom, 1e-6) + camera_y
+            nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+            if nn is not None:
+                qtree.delete_by_object(nn.obj)
+
+    return running, paused, show_nodes, show_nn, show_trails, zoom_target
+
+
+def handle_continuous_input(
+    dt, zoom, zoom_target, camera_x, camera_y, rect_half_width, rect_half_height
+):
+    """Handle continuous input like held keys and mouse buttons."""
+    mx, my = pygame.mouse.get_pos()
+
+    # Smooth zoom toward target and keep the mouse-anchored world point fixed
+    wx_anchor = camera_x + mx / max(zoom, 1e-6)
+    wy_anchor = camera_y + my / max(zoom, 1e-6)
+
+    # Add a point instantly with left mouse button held + shift
+    if pygame.mouse.get_pressed(3)[0] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+        wx = mx / max(zoom, 1e-6) + camera_x
+        wy = my / max(zoom, 1e-6) + camera_y
+        if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
+            p = Particle(wx, wy)
+            qtree.insert((p.x, p.y), obj=p)
+
+    # Remove nearest point with right click
+    if pygame.mouse.get_pressed(3)[2] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+        wx = mx / max(zoom, 1e-6) + camera_x
+        wy = my / max(zoom, 1e-6) + camera_y
+        nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+        if nn is not None:
+            qtree.delete_by_object(nn.obj)
+
+    zoom += (zoom_target - zoom) * min(1.0, ZOOM_SMOOTH * dt)
+    zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX)
+
+    camera_x = wx_anchor - mx / max(zoom, 1e-6)
+    camera_y = wy_anchor - my / max(zoom, 1e-6)
+
+    # Rectangle size controls with arrow keys
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP]:
+        rect_half_height = min(RECT_MAX_SIZE, rect_half_height + RECT_RESIZE_SPEED * dt)
+    if keys[pygame.K_DOWN]:
+        rect_half_height = max(RECT_MIN_SIZE, rect_half_height - RECT_RESIZE_SPEED * dt)
+    if keys[pygame.K_RIGHT]:
+        rect_half_width = min(RECT_MAX_SIZE, rect_half_width + RECT_RESIZE_SPEED * dt)
+    if keys[pygame.K_LEFT]:
+        rect_half_width = max(RECT_MIN_SIZE, rect_half_width - RECT_RESIZE_SPEED * dt)
+
+    # Camera pan with WASD only (dt and zoom awareness)
+    dx = keys[pygame.K_d] - keys[pygame.K_a]
+    dy = keys[pygame.K_s] - keys[pygame.K_w]
+    if dx or dy:
+        camera_x += (dx * PAN_SPEED * dt) / max(zoom, 1e-6)
+        camera_y += (dy * PAN_SPEED * dt) / max(zoom, 1e-6)
+
+    return zoom, camera_x, camera_y, rect_half_width, rect_half_height
+
+
+# ------------------------------
 # Main loop
 # ------------------------------
 def main():
@@ -250,100 +355,23 @@ def main():
         fps = clock.get_fps()
         t += dt
 
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
-                running = False
-            elif ev.type == pygame.KEYDOWN:
-                if ev.key == pygame.K_ESCAPE:
-                    running = False
-                elif ev.key == pygame.K_SPACE:
-                    paused = not paused
-                elif ev.key == pygame.K_1:
-                    show_nodes = not show_nodes
-                elif ev.key == pygame.K_2:
-                    show_nn = not show_nn
-                elif ev.key == pygame.K_3:
-                    show_trails = not show_trails
-                elif ev.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
-                    zoom_target = clamp(zoom_target * ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
-                elif ev.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
-                    zoom_target = clamp(zoom_target / ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
+        # Handle discrete events
+        running, paused, show_nodes, show_nn, show_trails, zoom_target = handle_events(
+            running, paused, show_nodes, show_nn, show_trails, zoom_target
+        )
 
-            elif ev.type == pygame.MOUSEWHEEL:
-                if ev.y != 0:
-                    factor = ZOOM_FACTOR**ev.y
-                    zoom_target = clamp(zoom_target * factor, ZOOM_MIN, ZOOM_MAX)
-
-            # Left click
-            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
-                mx, my = ev.pos
-                wx = mx / max(zoom, 1e-6) + camera_x
-                wy = my / max(zoom, 1e-6) + camera_y
-                if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
-                    p = Particle(wx, wy)
-                    qtree.insert((p.x, p.y), obj=p)
-
-            # Right click
-            elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
-                mx, my = ev.pos
-                wx = mx / max(zoom, 1e-6) + camera_x
-                wy = my / max(zoom, 1e-6) + camera_y
-                nn = qtree.nearest_neighbor((wx, wy), as_item=True)
-                if nn is not None:
-                    qtree.delete_by_object(nn.obj)
-
-        # Smooth zoom toward target and keep the mouse-anchored world point fixed
-        mx, my = pygame.mouse.get_pos()
-        wx_anchor = camera_x + mx / max(zoom, 1e-6)
-        wy_anchor = camera_y + my / max(zoom, 1e-6)
-
-        # Add a point instantly with left mouse button held + shift
-        if pygame.mouse.get_pressed(3)[0] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            wx = mx / max(zoom, 1e-6) + camera_x
-            wy = my / max(zoom, 1e-6) + camera_y
-            if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
-                p = Particle(wx, wy)
-                qtree.insert((p.x, p.y), obj=p)
-
-        # Remove nearest point with right click
-        if pygame.mouse.get_pressed(3)[2] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            wx = mx / max(zoom, 1e-6) + camera_x
-            wy = my / max(zoom, 1e-6) + camera_y
-            nn = qtree.nearest_neighbor((wx, wy), as_item=True)
-            if nn is not None:
-                qtree.delete_by_object(nn.obj)
-
-        zoom += (zoom_target - zoom) * min(1.0, ZOOM_SMOOTH * dt)
-        zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX)
-
-        camera_x = wx_anchor - mx / max(zoom, 1e-6)
-        camera_y = wy_anchor - my / max(zoom, 1e-6)
-
-        # Rectangle size controls with arrow keys
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_UP]:
-            rect_half_height = min(
-                RECT_MAX_SIZE, rect_half_height + RECT_RESIZE_SPEED * dt
+        # Handle continuous input
+        zoom, camera_x, camera_y, rect_half_width, rect_half_height = (
+            handle_continuous_input(
+                dt,
+                zoom,
+                zoom_target,
+                camera_x,
+                camera_y,
+                rect_half_width,
+                rect_half_height,
             )
-        if keys[pygame.K_DOWN]:
-            rect_half_height = max(
-                RECT_MIN_SIZE, rect_half_height - RECT_RESIZE_SPEED * dt
-            )
-        if keys[pygame.K_RIGHT]:
-            rect_half_width = min(
-                RECT_MAX_SIZE, rect_half_width + RECT_RESIZE_SPEED * dt
-            )
-        if keys[pygame.K_LEFT]:
-            rect_half_width = max(
-                RECT_MIN_SIZE, rect_half_width - RECT_RESIZE_SPEED * dt
-            )
-
-        # Camera pan with WASD only (dt and zoom awareness)
-        dx = keys[pygame.K_d] - keys[pygame.K_a]
-        dy = keys[pygame.K_s] - keys[pygame.K_w]
-        if dx or dy:
-            camera_x += (dx * PAN_SPEED * dt) / max(zoom, 1e-6)
-            camera_y += (dy * PAN_SPEED * dt) / max(zoom, 1e-6)
+        )
 
         # Update particles and quadtree
         if not paused:
@@ -404,7 +432,7 @@ def main():
                 f"FPS: {fps:.1f}",
                 f"particles: {len(qtree.get_all_objects())}",
                 f"rect hits: {len(rect_hits)}",
-                f"rect size: {rect_half_width*2:.0f}x{rect_half_height*2:.0f}",
+                f"rect size: {rect_half_width * 2:.0f}x{rect_half_height * 2:.0f}",
                 f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
                 "WASD to pan. Mouse wheel or +/- to zoom.",
                 "arrow keys to resize rectangle.",

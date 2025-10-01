@@ -2,6 +2,7 @@
 """Test delete_by_object functionality with bimap implementation."""
 
 import pytest
+
 from fastquadtree import QuadTree
 
 

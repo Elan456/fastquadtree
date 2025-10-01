@@ -1,6 +1,7 @@
 # _bimap.py
 from __future__ import annotations
-from typing import Any, Iterable, Iterator, Tuple, Optional
+
+from typing import Any, Iterable, Iterator
 
 from ._item import Item
 
@@ -33,7 +34,7 @@ class BiMap:
         Insert or replace mapping for this Item.
         Handles conflicts so that both id and obj point to this exact Item.
         """
-        id_ = item.id
+        id_ = item.id_
         obj = item.obj
 
         # Unlink any old item currently bound to this id
@@ -47,20 +48,20 @@ class BiMap:
         if obj is not None:
             prev = self._objid_to_item.get(id(obj))
             if prev is not None and prev is not item:
-                self._id_to_item.pop(prev.id, None)
+                self._id_to_item.pop(prev.id_, None)
 
         # Link new
         self._id_to_item[id_] = item
         if obj is not None:
             self._objid_to_item[id(obj)] = item
 
-    def by_id(self, id_: int) -> Optional[Item]:
+    def by_id(self, id_: int) -> Item | None:
         return self._id_to_item.get(id_)
 
-    def by_obj(self, obj: Any) -> Optional[Item]:
+    def by_obj(self, obj: Any) -> Item | None:
         return self._objid_to_item.get(id(obj))
 
-    def pop_id(self, id_: int) -> Optional[Item]:
+    def pop_id(self, id_: int) -> Item | None:
         it = self._id_to_item.pop(id_, None)
         if it is not None:
             obj = it.obj
@@ -68,19 +69,19 @@ class BiMap:
                 self._objid_to_item.pop(id(obj), None)
         return it
 
-    def pop_obj(self, obj: Any) -> Optional[Item]:
+    def pop_obj(self, obj: Any) -> Item | None:
         it = self._objid_to_item.pop(id(obj), None)
         if it is not None:
-            self._id_to_item.pop(it.id, None)
+            self._id_to_item.pop(it.id_, None)
         return it
 
-    def pop_item(self, item: Item) -> Optional[Item]:
+    def pop_item(self, item: Item) -> Item | None:
         """
         Remove this exact Item if present on either side.
         """
         removed = None
         # Remove by id first
-        removed = self._id_to_item.pop(item.id)
+        removed = self._id_to_item.pop(item.id_)
 
         # Remove by obj side
         obj = item.obj
@@ -104,7 +105,7 @@ class BiMap:
     def contains_obj(self, obj: Any) -> bool:
         return id(obj) in self._objid_to_item
 
-    def items_by_id(self) -> Iterator[Tuple[int, Item]]:
+    def items_by_id(self) -> Iterator[tuple[int, Item]]:
         return iter(self._id_to_item.items())
 
     def items(self) -> Iterator[Item]:

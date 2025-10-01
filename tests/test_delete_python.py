@@ -1,4 +1,3 @@
-import pytest
 from fastquadtree._native import QuadTree
 
 

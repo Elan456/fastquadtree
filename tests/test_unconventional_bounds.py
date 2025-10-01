@@ -2,6 +2,7 @@
 """Test unconventional quadtree bounding boxes including negative regions."""
 
 import pytest
+
 from fastquadtree import QuadTree
 
 
@@ -119,7 +120,8 @@ def test_fractional_negative_coordinates():
     neighbors = qt.nearest_neighbors((-0.5, -0.5), 2)
     assert len(neighbors) == 2
     # First should be exact match
-    assert neighbors[0][1] == -0.5 and neighbors[0][2] == -0.5
+    assert neighbors[0][1] == -0.5
+    assert neighbors[0][2] == -0.5
 
 
 def test_boundary_edge_cases():
@@ -274,7 +276,7 @@ def test_item_wrappers_negative_coordinates():
     assert len(items) == 2
 
     for item in items:
-        assert hasattr(item, "id")
+        assert hasattr(item, "id_")
         assert hasattr(item, "x")
         assert hasattr(item, "y")
         assert hasattr(item, "obj")

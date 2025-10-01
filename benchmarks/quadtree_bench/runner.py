@@ -11,7 +11,7 @@ import random
 import statistics as stats
 from dataclasses import dataclass
 from time import perf_counter as now
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
 
 from tqdm import tqdm
 
@@ -35,8 +35,7 @@ class BenchmarkConfig:
         self.experiments = [2, 4, 8, 16]
         while self.experiments[-1] < self.max_experiment_points:
             self.experiments.append(int(self.experiments[-1] * 2))
-        if self.experiments[-1] > self.max_experiment_points:
-            self.experiments[-1] = self.max_experiment_points
+        self.experiments[-1] = min(self.experiments[-1], self.max_experiment_points)
 
 
 class BenchmarkRunner:
@@ -98,8 +97,11 @@ class BenchmarkRunner:
         cleaned = [x for x in vals if isinstance(x, (int, float)) and not math.isnan(x)]
         return stats.median(cleaned) if cleaned else math.nan
 
-    def _print_experiment_summary(self, n: int, results: Dict[str, Any], exp_idx: int) -> None:
+    def _print_experiment_summary(
+        self, n: int, results: Dict[str, Any], exp_idx: int
+    ) -> None:
         """Print a summary of results for the current experiment."""
+
         def fmt(x):
             return f"{x:.3f}" if not math.isnan(x) else "nan"
 
@@ -107,25 +109,30 @@ class BenchmarkRunner:
         total = results["total"]
         build = results["build"]
         query = results["query"]
-        
+
         # Find the fastest engine for this experiment
-        valid_engines = [(name, total[name][exp_idx]) for name in total.keys() 
-                        if not math.isnan(total[name][exp_idx])]
-        
+        valid_engines = [
+            (name, total[name][exp_idx])
+            for name in total
+            if not math.isnan(total[name][exp_idx])
+        ]
+
         if not valid_engines:
             return
-            
+
         fastest = min(valid_engines, key=lambda x: x[1])
-        
+
         print(f"\n  📊 Results for {n:,} points:")
         print(f"     Fastest: {fastest[0]} ({fmt(fastest[1])}s total)")
-        
+
         # Show top 3 performers
         sorted_engines = sorted(valid_engines, key=lambda x: x[1])[:3]
         for rank, (name, time) in enumerate(sorted_engines, 1):
             b = build[name][exp_idx]
             q = query[name][exp_idx]
-            print(f"     {rank}. {name:15} build={fmt(b)}s, query={fmt(q)}s, total={fmt(time)}s")
+            print(
+                f"     {rank}. {name:15} build={fmt(b)}s, query={fmt(q)}s, total={fmt(time)}s"
+            )
         print()
 
     def run_benchmark(self, engines: Dict[str, Engine]) -> Dict[str, Any]:
@@ -143,10 +150,7 @@ class BenchmarkRunner:
         warmup_points = self.generate_points(2_000)
         warmup_queries = self.generate_queries(self.config.n_queries)
         for engine in engines.values():
-            try:
-                self.benchmark_engine_once(engine, warmup_points, warmup_queries)
-            except Exception:
-                pass  # Ignore warmup failures
+            self.benchmark_engine_once(engine, warmup_points, warmup_queries)
 
         # Initialize result containers
         results = {
@@ -158,11 +162,17 @@ class BenchmarkRunner:
         }
 
         # Run experiments
-        print(f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines...")
-        experiment_bar = tqdm(self.config.experiments, desc="Experiments", unit="exp", position=0)
-        
+        print(
+            f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines..."
+        )
+        experiment_bar = tqdm(
+            self.config.experiments, desc="Experiments", unit="exp", position=0
+        )
+
         for exp_idx, n in enumerate(experiment_bar):
-            experiment_bar.set_description(f"Experiment {exp_idx+1}/{len(self.config.experiments)}")
+            experiment_bar.set_description(
+                f"Experiment {exp_idx + 1}/{len(self.config.experiments)}"
+            )
             experiment_bar.set_postfix({"points": f"{n:,}"})
 
             # Generate data for this experiment
@@ -173,14 +183,14 @@ class BenchmarkRunner:
             # Collect results across repeats
             engine_times = {name: {"build": [], "query": []} for name in engines}
 
-            # Progress bar for engines × repeats
+            # Progress bar for engines x repeats
             total_iterations = len(engines) * self.config.repeats
             engine_bar = tqdm(
-                total=total_iterations, 
-                desc="  Testing engines", 
+                total=total_iterations,
+                desc="  Testing engines",
                 unit="run",
                 position=1,
-                leave=False
+                leave=False,
             )
 
             for repeat in range(self.config.repeats):
@@ -188,19 +198,24 @@ class BenchmarkRunner:
 
                 # Benchmark each engine
                 for name, engine in engines.items():
-                    engine_bar.set_description(f"  {name} (repeat {repeat+1}/{self.config.repeats})")
-                    
+                    engine_bar.set_description(
+                        f"  {name} (repeat {repeat + 1}/{self.config.repeats})"
+                    )
+
                     try:
                         build_time, query_time = self.benchmark_engine_once(
                             engine, points, queries
                         )
-                    except Exception:
+                    except Exception as e:  # noqa: BLE001
                         # Mark as failed for this repeat
+                        print(
+                            f"  {name} (repeat {repeat + 1}/{self.config.repeats}) failed: {e}"
+                        )
                         build_time, query_time = math.nan, math.nan
 
                     engine_times[name]["build"].append(build_time)
                     engine_times[name]["query"].append(query_time)
-                    
+
                     engine_bar.update(1)
 
                 gc.enable()
@@ -238,7 +253,7 @@ class BenchmarkRunner:
             self._print_experiment_summary(n, results, exp_idx)
 
         experiment_bar.close()
-        
+
         # Add metadata to results
         results["engines"] = engines
         results["config"] = self.config
@@ -282,7 +297,7 @@ class BenchmarkRunner:
             t = total[name][i]
             if math.isnan(pyqt_total) or math.isnan(t) or t <= 0:
                 return "n/a"
-            return f"{(pyqt_total / t):.2f}×"
+            return f"{(pyqt_total / t):.2f}×"  # noqa: RUF001
 
         for name in ranked:
             b = build.get(name, [math.nan])[i] if name in build else math.nan

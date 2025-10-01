@@ -10,8 +10,8 @@ import argparse
 from pathlib import Path
 
 from .engines import get_engines
-from .runner import BenchmarkRunner, BenchmarkConfig
 from .plotting import PlotManager
+from .runner import BenchmarkConfig, BenchmarkRunner
 
 
 def main():

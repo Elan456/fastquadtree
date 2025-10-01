@@ -6,11 +6,11 @@ import gc
 import random
 import statistics as stats
 from time import perf_counter as now
+
 from tqdm import tqdm
 
-from fastquadtree._native import QuadTree as NativeQuadTree
 from fastquadtree import QuadTree as ShimQuadTree
-
+from fastquadtree._native import QuadTree as NativeQuadTree
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 CAPACITY = 20
@@ -89,7 +89,7 @@ def main():
 
     print("Native vs Shim Benchmark")
     print("=" * 50)
-    print(f"Configuration:")
+    print("Configuration:")
     print(f"  Points: {args.points:,}")
     print(f"  Queries: {args.queries}")
     print(f"  Repeats: {args.repeats}")
@@ -107,22 +107,25 @@ def main():
 
     print("Running benchmarks...")
     n_build, n_query = median_times(
-        lambda pts, qs: bench_native(pts, qs), points, queries, args.repeats,
-        desc="Native"
+        lambda pts, qs: bench_native(pts, qs),
+        points,
+        queries,
+        args.repeats,
+        desc="Native",
     )
     s_build_no_map, s_query_no_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=False, with_objs=False),
         points,
         queries,
         args.repeats,
-        desc="Shim (no map)"
+        desc="Shim (no map)",
     )
     s_build_map, s_query_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=True, with_objs=True),
         points,
         queries,
         args.repeats,
-        desc="Shim (track+objs)"
+        desc="Shim (track+objs)",
     )
     print()
 
@@ -147,7 +150,7 @@ def main():
 
 **Overhead vs Native**
 
-- No map: build {s_build_no_map / n_build:.2f}x, query {s_query_no_map / n_query:.2f}x, total {(s_build_no_map + s_query_no_map) / (n_build + n_query):.2f}x  
+- No map: build {s_build_no_map / n_build:.2f}x, query {s_query_no_map / n_query:.2f}x, total {(s_build_no_map + s_query_no_map) / (n_build + n_query):.2f}x
 - Track + objs: build {s_build_map / n_build:.2f}x, query {s_query_map / n_query:.2f}x, total {(s_build_map + s_query_map) / (n_build + n_query):.2f}x
 """
     print(md.strip())

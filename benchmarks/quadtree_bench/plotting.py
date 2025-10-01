@@ -5,7 +5,7 @@ This module handles creation of performance charts, graphs, and visualizations
 for benchmark results analysis.
 """
 
-from typing import Dict, Any, Tuple
+from typing import Any, Dict, Tuple
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -43,7 +43,7 @@ class PlotManager:
                         name=name,
                         legendgroup=name,
                         showlegend=show_legend,
-                        line=dict(color=color, width=3),
+                        line={"color": color, "width": 3},
                     ),
                     row=1,
                     col=col,
@@ -69,15 +69,15 @@ class PlotManager:
                 f"{self.config.n_queries} queries)"
             ),
             template="plotly_dark",
-            legend=dict(
-                orientation="v",
-                traceorder="normal",
-                xanchor="left",
-                x=0,
-                yanchor="top",
-                y=1,
-            ),
-            margin=dict(l=40, r=20, t=80, b=40),
+            legend={
+                "orientation": "v",
+                "traceorder": "normal",
+                "xanchor": "left",
+                "x": 0,
+                "yanchor": "top",
+                "y": 1,
+            },
+            margin={"l": 40, "r": 20, "t": 80, "b": 40},
             height=520,
         )
 
@@ -108,7 +108,7 @@ class PlotManager:
                         name=name,
                         legendgroup=name,
                         showlegend=False,
-                        line=dict(color=color, width=3),
+                        line={"color": color, "width": 3},
                     ),
                     row=1,
                     col=1,
@@ -122,7 +122,7 @@ class PlotManager:
                     name=name,
                     legendgroup=name,
                     showlegend=True,
-                    line=dict(color=color, width=3),
+                    line={"color": color, "width": 3},
                 ),
                 row=1,
                 col=2,
@@ -138,14 +138,14 @@ class PlotManager:
         fig.update_layout(
             title="Throughput",
             template="plotly_dark",
-            legend=dict(
-                orientation="h",
-                x=0,
-                xanchor="left",
-                y=1.08,  # above the subplots
-                yanchor="bottom",
-            ),
-            margin=dict(l=60, r=40, t=120, b=40),
+            legend={
+                "orientation": "h",
+                "x": 0,
+                "xanchor": "left",
+                "y": 1.08,  # above the subplots
+                "yanchor": "bottom",
+            },
+            margin={"l": 60, "r": 40, "t": 120, "b": 40},
             height=480,
         )
 
@@ -187,7 +187,7 @@ class PlotManager:
                 height=480,
             )
             print(f"Saved PNG images to {output_dir}/ with prefix '{output_prefix}'")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(
                 f"Failed to save PNG images. Install kaleido to enable PNG export: {e}"
             )
@@ -227,7 +227,7 @@ class PlotManager:
                         x=config.experiments,
                         y=values,
                         name=f"{label} - {engine_name}",
-                        line=dict(color=color, width=3),
+                        line={"color": color, "width": 3},
                         mode="lines+markers",
                     )
                 )
@@ -237,7 +237,7 @@ class PlotManager:
             xaxis_title="Number of points",
             yaxis_title="Time (s)" if "rate" not in metric else "Ops/sec",
             template="plotly_dark",
-            legend=dict(orientation="v"),
+            legend={"orientation": "v"},
             height=600,
         )
 

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, List, Optional, Tuple, overload
-from typing import Literal
+from typing import Any, Iterable, Literal, Tuple, overload
+
+from ._bimap import BiMap  # type: ignore[attr-defined]
+from ._item import Item
 
 # Compiled Rust module is provided by maturin (tool.maturin.module-name)
 from ._native import QuadTree as _RustQuadTree
-from ._bimap import BiMap  # type: ignore[attr-defined]
-from ._item import Item
 
 Bounds = Tuple[float, float, float, float]
 """Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
@@ -45,14 +45,14 @@ class QuadTree:
         ValueError: If parameters are invalid or inserts are out of bounds.
     """
 
-    __slots__ = ("_native", "_items", "_next_id", "_count", "_bounds")
+    __slots__ = ("_bounds", "_count", "_items", "_native", "_next_id")
 
     def __init__(
         self,
         bounds: Bounds,
         capacity: int,
         *,
-        max_depth: Optional[int] = None,
+        max_depth: int | None = None,
         track_objects: bool = False,
         start_id: int = 1,
     ):
@@ -60,14 +60,14 @@ class QuadTree:
             self._native = _RustQuadTree(bounds, capacity)
         else:
             self._native = _RustQuadTree(bounds, capacity, max_depth=max_depth)
-        self._items: Optional[BiMap] = BiMap() if track_objects else None
+        self._items: BiMap | None = BiMap() if track_objects else None
         self._next_id: int = int(start_id)
         self._count: int = 0
         self._bounds = bounds
 
     # ---------- inserts ----------
 
-    def insert(self, xy: Point, *, id: Optional[int] = None, obj: Any = None) -> int:
+    def insert(self, xy: Point, *, id_: int | None = None, obj: Any = None) -> int:
         """
         Insert a single point.
 
@@ -83,15 +83,14 @@ class QuadTree:
         Raises:
             ValueError: If the point is outside tree bounds.
         """
-        if id is None:
-            id = self._next_id
+        if id_ is None:
+            id_ = self._next_id
             self._next_id += 1
-        else:
-            # ensure future auto-ids do not collide
-            if id >= self._next_id:
-                self._next_id = id + 1
+        # ensure future auto-ids do not collide
+        elif id_ >= self._next_id:
+            self._next_id = id_ + 1
 
-        if not self._native.insert(id, xy):
+        if not self._native.insert(id_, xy):
             x, y = xy
             bx0, by0, bx1, by1 = self._bounds
             raise ValueError(
@@ -99,10 +98,10 @@ class QuadTree:
             )
 
         if self._items is not None:
-            self._items.add(Item(id, xy[0], xy[1], obj))
+            self._items.add(Item(id_, xy[0], xy[1], obj))
 
         self._count += 1
-        return id
+        return id_
 
     def insert_many_points(self, points: Iterable[Point]) -> int:
         """
@@ -136,39 +135,39 @@ class QuadTree:
         self._count += inserted
         return inserted
 
-    def attach(self, id: int, obj: Any) -> None:
+    def attach(self, id_: int, obj: Any) -> None:
         """
         Attach or replace the Python object for an existing id.
         Tracking must be enabled.
 
         Args:
-            id: Target id.
+            id_: Target id.
             obj: Object to associate with id.
         """
         if self._items is None:
             raise ValueError("Cannot attach objects when track_objects=False")
 
-        item = self._items.by_id(id)
+        item = self._items.by_id(id_)
         if item is None:
-            raise KeyError(f"Id {id} not found in quadtree")
-        self._items.add(Item(id, item.x, item.y, obj))
+            raise KeyError(f"Id {id_} not found in quadtree")
+        self._items.add(Item(id_, item.x, item.y, obj))
 
-    def delete(self, id: int, xy: Point) -> bool:
+    def delete(self, id_: int, xy: Point) -> bool:
         """
         Delete an item by id and exact coordinates.
 
         Args:
-            id: Integer id to remove.
+            id_: Integer id to remove.
             xy: Coordinates (x, y) of the item.
 
         Returns:
             True if the item was found and deleted, else False.
         """
-        deleted = self._native.delete(id, xy)
+        deleted = self._native.delete(id_, xy)
         if deleted:
             self._count -= 1
             if self._items is not None:
-                self._items.pop_id(id)  # ignore result
+                self._items.pop_id(id_)  # ignore result
         return deleted
 
     def delete_by_object(self, obj: Any) -> bool:
@@ -196,21 +195,21 @@ class QuadTree:
         if item is None:
             return False
 
-        return self.delete(item.id, (item.x, item.y))
+        return self.delete(item.id_, (item.x, item.y))
 
     # ---------- queries ----------
 
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
-    ) -> List[_IdCoord]: ...
+    ) -> list[_IdCoord]: ...
 
     @overload
-    def query(self, rect: Bounds, *, as_items: Literal[True]) -> List[Item]: ...
+    def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[Item]: ...
 
     def query(
         self, rect: Bounds, *, as_items: bool = False
-    ) -> List[_IdCoord] | List[Item]:
+    ) -> list[_IdCoord] | list[Item]:
         """
         Return all points inside an axis-aligned rectangle.
 
@@ -228,8 +227,8 @@ class QuadTree:
 
         if self._items is None:
             raise ValueError("Cannot return results as items with track_objects=False")
-        out: List[Item] = []
-        for id_, x, y in raw:
+        out: list[Item] = []
+        for id_, _, _ in raw:
             item = self._items.by_id(id_)
             if item is None:
                 raise RuntimeError(
@@ -242,12 +241,10 @@ class QuadTree:
     @overload
     def nearest_neighbor(
         self, xy: Point, *, as_item: Literal[False] = ...
-    ) -> Optional[_IdCoord]: ...
+    ) -> _IdCoord | None: ...
 
     @overload
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: Literal[True]
-    ) -> Optional[Item]: ...
+    def nearest_neighbor(self, xy: Point, *, as_item: Literal[True]) -> Item | None: ...
 
     def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
         """
@@ -278,12 +275,12 @@ class QuadTree:
     @overload
     def nearest_neighbors(
         self, xy: Point, k: int, *, as_items: Literal[False] = ...
-    ) -> List[_IdCoord]: ...
+    ) -> list[_IdCoord]: ...
 
     @overload
     def nearest_neighbors(
         self, xy: Point, k: int, *, as_items: Literal[True]
-    ) -> List[Item]: ...
+    ) -> list[Item]: ...
 
     def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
         """
@@ -303,7 +300,7 @@ class QuadTree:
         if self._items is None:
             raise ValueError("Cannot return results as items with track_objects=False")
 
-        out: List[Item] = []
+        out: list[Item] = []
         for id_, _, _ in raw:
             item = self._items.by_id(id_)
             if item is None:
@@ -316,7 +313,7 @@ class QuadTree:
 
     # ---------- misc ----------
 
-    def get(self, id: int) -> Any | None:
+    def get(self, id_: int) -> Any | None:
         """
         Return the object associated with id.
 
@@ -325,12 +322,12 @@ class QuadTree:
         """
         if self._items is None:
             raise ValueError("Cannot get objects when track_objects=False")
-        item = self._items.by_id(id)
+        item = self._items.by_id(id_)
         if item is None:
             return None
         return item.obj
 
-    def get_all_rectangles(self) -> List[Bounds]:
+    def get_all_rectangles(self) -> list[Bounds]:
         """
         Return all node rectangles in the current quadtree.
 
@@ -339,7 +336,7 @@ class QuadTree:
         """
         return self._native.get_all_rectangles()
 
-    def get_all_objects(self) -> List[Any]:
+    def get_all_objects(self) -> list[Any]:
         """
         Return all tracked objects.
 
@@ -350,7 +347,7 @@ class QuadTree:
             raise ValueError("Cannot get objects when track_objects=False")
         return [t.obj for t in self._items.items() if t.obj is not None]
 
-    def get_all_items(self) -> List[Item]:
+    def get_all_items(self) -> list[Item]:
         """
         Return all tracked items.
 
@@ -385,4 +382,4 @@ class QuadTree:
     NativeQuadTree = _RustQuadTree
 
 
-__all__ = ["QuadTree", "Item", "Bounds", "Point"]
+__all__ = ["Bounds", "Item", "Point", "QuadTree"]

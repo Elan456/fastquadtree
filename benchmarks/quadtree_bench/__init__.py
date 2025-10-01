@@ -6,8 +6,8 @@ implementations, including performance comparison, visualization, and analysis.
 """
 
 from .engines import Engine, get_engines
-from .runner import BenchmarkRunner, BenchmarkConfig
 from .plotting import PlotManager
+from .runner import BenchmarkConfig, BenchmarkRunner
 
 __version__ = "1.0.0"
-__all__ = ["Engine", "get_engines", "BenchmarkRunner", "BenchmarkConfig", "PlotManager"]
+__all__ = ["BenchmarkConfig", "BenchmarkRunner", "Engine", "PlotManager", "get_engines"]

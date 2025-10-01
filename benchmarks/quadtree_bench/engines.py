@@ -7,9 +7,11 @@ allowing fair comparison of their performance characteristics.
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from pyqtree import Index as PyQTree  # Pyqtree
+
 # Built-in engines (always available in this repo)
 from pyquadtree.quadtree import QuadTree as EPyQuadTree  # e-pyquadtree
-from pyqtree import Index as PyQTree  # Pyqtree
+
 from fastquadtree import QuadTree as RustQuadTree  # fastquadtree
 
 
@@ -67,7 +69,10 @@ def _create_e_pyquadtree_engine(
             _ = qt.query(q)
 
     return Engine(
-        "e-pyquadtree", "#1f77b4", build, query  # display name  # color (blue)
+        "e-pyquadtree",
+        "#1f77b4",
+        build,
+        query,  # display name  # color (blue)
     )
 
 
@@ -105,7 +110,10 @@ def _create_fastquadtree_engine(
             _ = qt.query(q)
 
     return Engine(
-        "fastquadtree", "#ff7f0e", build, query  # display name  # color (orange)
+        "fastquadtree",
+        "#ff7f0e",
+        build,
+        query,  # display name  # color (orange)
     )
 
 
@@ -165,7 +173,10 @@ def _create_nontree_engine(
             _ = tm.get_rect((xmin, ymin, xmax - xmin, ymax - ymin))
 
     return Engine(
-        "nontree-QuadTree", "#17becf", build, query  # display name  # color (cyan)
+        "nontree-QuadTree",
+        "#17becf",
+        build,
+        query,  # display name  # color (cyan)
     )
 
 
@@ -178,7 +189,7 @@ def _create_brute_force_engine(
         # Append each item as if they were being added separately
         out = []
         for p in points:
-            out.append(p)
+            out.append(p)  # noqa: PERF402
         return out
 
     def query(points, queries):
@@ -187,7 +198,10 @@ def _create_brute_force_engine(
             _ = [p for p in points if q[0] <= p[0] <= q[2] and q[1] <= p[1] <= q[3]]
 
     return Engine(
-        "Brute force", "#9467bd", build, query  # display name  # color (purple)
+        "Brute force",
+        "#9467bd",
+        build,
+        query,  # display name  # color (purple)
     )
 
 
@@ -213,8 +227,7 @@ def _create_rtree_engine(
         # Bulk stream loading is the fastest way to build
         # Keep the same 1x1 bbox convention used elsewhere for fairness
         stream = ((i, (x, y, x + 1, y + 1), None) for i, (x, y) in enumerate(points))
-        idx = rindex.Index(stream, properties=p)
-        return idx
+        return rindex.Index(stream, properties=p)
 
     def query(idx, queries):
         # Do not materialize results into a list, just consume the generator

@@ -1,11 +1,9 @@
-import pytest
-
 from fastquadtree._bimap import BiMap
 from fastquadtree._item import Item
 
 
 def make_item(id_, x=0.0, y=0.0, obj=None):
-    return Item(id=id_, x=x, y=y, obj=obj)
+    return Item(id_=id_, x=x, y=y, obj=obj)
 
 
 def test_init_with_items_populates_both_maps():
@@ -18,7 +16,8 @@ def test_init_with_items_populates_both_maps():
     assert b.by_obj(i1.obj) is i1
     assert b.by_obj(i2.obj) is i2
     assert len(b) == 2
-    assert b.contains_id(1) and b.contains_obj(i1.obj)
+    assert b.contains_id(1)
+    assert b.contains_obj(i1.obj)
 
 
 def test_add_with_obj_none_only_sets_id_side():
@@ -71,7 +70,8 @@ def test_add_same_item_is_idempotent():
     b.add(i)
     after = (b.by_id(5), b.by_obj(obj))
     assert before == after
-    assert before[0] is i and before[1] is i
+    assert before[0] is i
+    assert before[1] is i
 
 
 def test_by_obj_uses_identity_not_equality():
@@ -136,7 +136,8 @@ def test_len_clear_items_iterators_and_contains_helpers():
 
     # items_by_id returns (id, item) pairs
     pairs = dict(b.items_by_id())
-    assert pairs[31] is i1 and pairs[32] is i2
+    assert pairs[31] is i1
+    assert pairs[32] is i2
 
     # items returns items
     vals = list(b.items())

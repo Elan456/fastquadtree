@@ -1,5 +1,7 @@
 import math
+
 import pytest
+
 from fastquadtree import QuadTree
 
 
@@ -81,7 +83,8 @@ def test_nearest_neighbor_basic():
     qt.insert((10.0, 10.0))
     qt.insert((60.0, 60.0))
     nn = qt.nearest_neighbor((55.0, 55.0))
-    assert nn is not None and nn[0] == 2  # id 2 should be closer
+    assert nn is not None
+    assert nn[0] == 2  # id 2 should be closer
 
 
 def test_nearest_neighbors_k():
@@ -92,12 +95,12 @@ def test_nearest_neighbors_k():
         (3, (30.0, 30.0)),
         (4, (80.0, 80.0)),
     ]
-    for i, xy in pts:
+    for _, xy in pts:
         assert qt.insert(xy)
 
     res = qt.nearest_neighbors((25.0, 25.0), 3, as_items=True)
-    assert sorted([item.id for item in res]) == [1, 2, 3]
+    assert sorted([item.id_ for item in res]) == [1, 2, 3]
     assert res[0].obj is None  # no objects were attached
     # check the closest is indeed (20,20) or (30,30) depending on your distance tie rules
-    dists = [(item.id, math.hypot(item.x - 25.0, item.y - 25.0)) for item in res]
+    dists = [(item.id_, math.hypot(item.x - 25.0, item.y - 25.0)) for item in res]
     assert len(dists) == 3
