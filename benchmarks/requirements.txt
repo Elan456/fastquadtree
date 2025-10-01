@@ -6,7 +6,7 @@ kaleido>=0.2
 # Your three baseline libs
 e-pyquadtree>=0.1.1
 Pyqtree>=1.0.0
-quadtree-rs>=0.1.0
+fastquadtree>=0.1.0
 
 # Added libraries
 quads>=1.1.0         # pure-Python quadtree

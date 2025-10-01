@@ -1,7 +1,7 @@
 import re
 import pytest
 
-from quadtree_rs import QuadTree, Item
+from fastquadtree import QuadTree, Item
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 

@@ -1,4 +1,4 @@
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 import pygame
 import random
 

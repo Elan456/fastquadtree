@@ -1,7 +1,7 @@
 import pytest
 
-from quadtree_rs._bimap import BiMap
-from quadtree_rs._item import Item
+from fastquadtree._bimap import BiMap
+from fastquadtree._item import Item
 
 
 def make_item(id_, x=0.0, y=0.0, obj=None):

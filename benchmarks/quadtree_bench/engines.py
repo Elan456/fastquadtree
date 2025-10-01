@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 # Built-in engines (always available in this repo)
 from pyquadtree.quadtree import QuadTree as EPyQuadTree  # e-pyquadtree
 from pyqtree import Index as PyQTree  # Pyqtree
-from quadtree_rs import QuadTree as RustQuadTree  # quadtree-rs
+from fastquadtree import QuadTree as RustQuadTree  # fastquadtree
 
 
 class Engine:
@@ -89,10 +89,10 @@ def _create_pyqtree_engine(
     return Engine("PyQtree", "#2ca02c", build, query)  # display name  # color (green)
 
 
-def _create_quadtree_rs_engine(
+def _create_fastquadtree_engine(
     bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
-    """Create engine adapter for quadtree-rs."""
+    """Create engine adapter for fastquadtree."""
 
     def build(points):
         qt = RustQuadTree(bounds, max_points, max_depth=max_depth)
@@ -105,7 +105,7 @@ def _create_quadtree_rs_engine(
             _ = qt.query(q)
 
     return Engine(
-        "quadtree-rs", "#ff7f0e", build, query  # display name  # color (orange)
+        "fastquadtree", "#ff7f0e", build, query  # display name  # color (orange)
     )
 
 
@@ -244,7 +244,7 @@ def get_engines(
     """
     # Always available engines
     engines = {
-        "quadtree-rs": _create_quadtree_rs_engine(bounds, max_points, max_depth),
+        "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
         "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
         "PyQtree": _create_pyqtree_engine(bounds, max_points, max_depth),
         "Brute force": _create_brute_force_engine(bounds, max_points, max_depth),

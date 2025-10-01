@@ -1,20 +1,20 @@
-# quadtree-rs
+# fastquadtree
 
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/quadtree-rs?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/quadtree-rs)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=downloads)](https://pepy.tech/projects/fastquadtree)
 
-![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/interactive_v2_screenshot.png)
+![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
 
 
 Rust-optimized quadtree with a simple Python API.
 
-- Python package: **`quadtree_rs`**
+- Python package: **`fastquadtree`**
 - Python ≥ 3.8
-- Import path: `from quadtree_rs import QuadTree`
+- Import path: `from fastquadtree import QuadTree`
 
 ## Install
 
 ```bash
-pip install quadtree_rs
+pip install fastquadtree
 ````
 
 If you are developing locally:
@@ -27,7 +27,7 @@ maturin develop --release
 ## Quickstart
 
 ```python
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 # Bounds are (min_x, min_y, max_x, max_y)
 qt = QuadTree(bounds=(0, 0, 1000, 1000), capacity=20)  # max_depth is optional
@@ -74,7 +74,7 @@ You can keep the tree pure and manage your own id → object map, or let the wra
 **Option A: Manage your own map**
 
 ```python
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 qt = QuadTree((0, 0, 1000, 1000), capacity=16)
 objects: dict[int, object] = {}
@@ -92,7 +92,7 @@ selected = [objects[i] for i in ids]
 **Option B: Ask the wrapper to track objects**
 
 ```python
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
 
@@ -123,7 +123,7 @@ qt.attach(123, my_object)  # binds object to id 123
 
 ### Core Methods
 
-Full docs are in the docstrings of the [Python Shim](pysrc/quadtree_rs/__init__.py)
+Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__.py)
 
 - `insert(xy, *, id=None, obj=None) -> int`
 
@@ -168,20 +168,20 @@ Full docs are in the docstrings of the [Python Shim](pysrc/quadtree_rs/__init__.
 
 ## Benchmarks
 
-quadtree-rs outperforms all other quadtree python packages (at least all the ones I could find and install via pip.)
+fastquadtree outperforms all other quadtree python packages (at least all the ones I could find and install via pip.)
 
 ### Library comparison
 
-![Total time](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/quadtree_bench_time.png)
-![Throughput](https://raw.githubusercontent.com/Elan456/quadtree-rs/main/assets/quadtree_bench_throughput.png)
+![Total time](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_time.png)
+![Throughput](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_throughput.png)
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
-- Fastest total: **quadtree-rs** at **2.207 s**
+- Fastest total: **fastquadtree** at **2.207 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| quadtree-rs  | 0.321 | 1.885 | 2.207 | 4.27× |
+| fastquadtree  | 0.321 | 1.885 | 2.207 | 4.27× |
 | Rtree        | 1.718 | 4.376 | 6.095 | 1.55× |
 | nontree-QuadTree | 1.617 | 7.643 | 9.260 | 1.02× |
 | PyQtree      | 4.349 | 5.082 | 9.431 | 1.00× |

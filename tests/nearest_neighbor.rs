@@ -1,4 +1,4 @@
-use quadtree_rs::{Point, Rect, Item, QuadTree};
+use fastquadtree::{Point, Rect, Item, QuadTree};
 
 fn r(x0: f64, y0: f64, x1: f64, y1: f64) -> Rect {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }

@@ -1,4 +1,4 @@
-use quadtree_rs::{QuadTree, Item, Point, Rect};
+use fastquadtree::{QuadTree, Item, Point, Rect};
 
 #[test]
 fn test_get_all_rectangles_single_node() {

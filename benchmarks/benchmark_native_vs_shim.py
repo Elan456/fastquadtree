@@ -8,8 +8,8 @@ import statistics as stats
 from time import perf_counter as now
 from tqdm import tqdm
 
-from quadtree_rs._native import QuadTree as NativeQuadTree
-from quadtree_rs import QuadTree as ShimQuadTree
+from fastquadtree._native import QuadTree as NativeQuadTree
+from fastquadtree import QuadTree as ShimQuadTree
 
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)

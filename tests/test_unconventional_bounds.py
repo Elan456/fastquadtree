@@ -2,7 +2,7 @@
 """Test unconventional quadtree bounding boxes including negative regions."""
 
 import pytest
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 
 def test_negative_region_basic():

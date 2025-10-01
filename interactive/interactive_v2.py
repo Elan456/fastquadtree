@@ -2,7 +2,7 @@ import math
 import random
 import pygame
 from collections import deque
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 pygame.init()
 pygame.font.init()
@@ -12,7 +12,7 @@ pygame.font.init()
 # ------------------------------
 W, H = 1920, 1080
 screen = pygame.display.set_mode((W, H))
-pygame.display.set_caption("quadtree-rs showcase")
+pygame.display.set_caption("fastquadtree showcase")
 clock = pygame.time.Clock()
 
 WORLD_MIN_X, WORLD_MIN_Y = -1200, -800

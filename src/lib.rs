@@ -2,7 +2,7 @@
 pub mod geom;
 pub mod quadtree;
 
-// Optional re-exports so users of the crate can do `use quadtree_rs::QuadTree;`
+// Optional re-exports so users of the crate can do `use fastquadtree::QuadTree;`
 pub use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
 pub use crate::quadtree::{Item, QuadTree};
 

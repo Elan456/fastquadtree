@@ -1,5 +1,5 @@
 import pytest
-from quadtree_rs._native import QuadTree
+from fastquadtree._native import QuadTree
 
 
 def test_delete_simple():

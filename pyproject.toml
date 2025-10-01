@@ -3,7 +3,7 @@ requires = ["maturin>=1.5"]
 build-backend = "maturin"
 
 [project]
-name = "quadtree_rs"
+name = "fastquadtree"
 # Version comes from Cargo.toml
 dynamic = ["version"]
 description = "Rust-accelerated quadtree for Python with fast inserts, range queries, and k-NN search."
@@ -26,16 +26,16 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Elan456/quadtree-rs"
-Repository = "https://github.com/Elan456/quadtree-rs"
-Issues = "https://github.com/Elan456/quadtree-rs/issues"
+Homepage = "https://github.com/Elan456/fastquadtree"
+Repository = "https://github.com/Elan456/fastquadtree"
+Issues = "https://github.com/Elan456/fastquadtree/issues"
 
 [tool.maturin]
 # Use PyO3 bindings
 bindings = "pyo3"
 strip = true
 python-source = "pysrc"
-module-name = "quadtree_rs._native"
+module-name = "fastquadtree._native"
 # Choose a wide wheel tag for Linux. Adjust if your build images are newer.
 # Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
 compatibility = "manylinux2014"

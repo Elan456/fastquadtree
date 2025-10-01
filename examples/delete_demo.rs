@@ -1,4 +1,4 @@
-use quadtree_rs::{QuadTree, Item, Point, Rect};
+use fastquadtree::{QuadTree, Item, Point, Rect};
 
 fn main() {
     println!("=== QuadTree Delete by ID+Location Demo ===\n");

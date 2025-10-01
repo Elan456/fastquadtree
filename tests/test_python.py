@@ -1,6 +1,6 @@
 import math
 import pytest
-from quadtree_rs import QuadTree
+from fastquadtree import QuadTree
 
 
 def ids(hits):
