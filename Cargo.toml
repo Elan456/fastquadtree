@@ -1,6 +1,6 @@
 [package]
 name = "fastquadtree"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 
 [lib]
@@ -8,3 +8,9 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.21", features = ["extension-module", "abi3-py38"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"

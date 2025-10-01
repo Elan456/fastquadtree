@@ -22,6 +22,7 @@ pub struct QuadTree {
 // 1: (x >= cx, y < cy)
 // 2: (x < cx, y >= cy)
 // 3: (x >= cx, y >= cy)
+#[inline(always)]
 fn child_index_for_point(b: &Rect, p: &Point) -> usize {
     let cx = 0.5 * (b.min_x + b.max_x);
     let cy = 0.5 * (b.min_y + b.max_y);
@@ -34,7 +35,7 @@ impl QuadTree {
     pub fn new(boundary: Rect, capacity: usize) -> Self {
         QuadTree {
             boundary,
-            items: Vec::new(),
+            items: Vec::with_capacity(capacity),
             capacity,
             children: None,
             depth: 0,
@@ -45,7 +46,7 @@ impl QuadTree {
     pub fn new_with_max_depth(boundary: Rect, capacity: usize, max_depth: usize) -> Self {
         QuadTree {
             boundary,
-            items: Vec::new(),
+            items: Vec::with_capacity(capacity),
             capacity,
             children: None,
             depth: 0,
@@ -56,7 +57,7 @@ impl QuadTree {
     pub fn new_child(boundary: Rect, capacity: usize, depth: usize, max_depth: usize) -> Self {
         QuadTree {
             boundary,
-            items: Vec::new(),
+            items: Vec::with_capacity(capacity),
             capacity,
             children: None,
             depth: depth,
@@ -121,29 +122,23 @@ impl QuadTree {
 
     pub fn query(&self, range: Rect) -> Vec<Item> {
         let mut out = Vec::new();
-        self.query_into(&range, &mut out);
+        let mut stack: Vec<&QuadTree> = Vec::new();
+        stack.push(self);
+
+        while let Some(node) = stack.pop() {
+            if !node.boundary.intersects(&range) {
+                continue;
+            }
+            for it in &node.items {
+                if range.contains(&it.point) {
+                    out.push(*it);
+                }
+            }
+            if let Some(children) = node.children.as_ref() {
+                stack.extend(children.iter());
+            }
+        }
         out
-    }
-
-    fn query_into(&self, range: &Rect, out: &mut Vec<Item>) {
-        // prune if this node does not intersect the query
-        if !self.boundary.intersects(range) {
-            return;
-        }
-
-        // check items stored at this node
-        for it in &self.items {
-            if range.contains(&it.point) {
-                out.push(*it); // Item is Copy
-            }
-        }
-
-        // recurse to children
-        if let Some(children) = self.children.as_ref() {
-            for child in children.iter() {
-                child.query_into(range, out);
-            }
-        }
     }
 
     pub fn nearest_neighbor(&self, point: Point) -> Option<Item> {
