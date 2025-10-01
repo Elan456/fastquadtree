@@ -68,9 +68,10 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     return t_build, t_query
 
 
-def median_times(fn, points, queries, repeats: int):
+def median_times(fn, points, queries, repeats: int, desc: str = "Running"):
+    """Run benchmark multiple times and return median times."""
     builds, queries_t = [], []
-    for _ in tqdm(range(repeats)):
+    for _ in tqdm(range(repeats), desc=desc, unit="run"):
         gc.disable()
         b, q = fn(points, queries)
         gc.enable()
@@ -86,29 +87,44 @@ def main():
     ap.add_argument("--repeats", type=int, default=5)
     args = ap.parse_args()
 
+    print("Native vs Shim Benchmark")
+    print("=" * 50)
+    print(f"Configuration:")
+    print(f"  Points: {args.points:,}")
+    print(f"  Queries: {args.queries}")
+    print(f"  Repeats: {args.repeats}")
+    print()
+
     rng = random.Random(SEED)
     points = gen_points(args.points, rng)
     queries = gen_queries(args.queries, rng)
 
     # Warmup to load modules
+    print("Warming up...")
     _ = bench_native(points[:1000], queries[:50])
     _ = bench_shim(points[:1000], queries[:50], track_objects=False, with_objs=False)
+    print()
 
+    print("Running benchmarks...")
     n_build, n_query = median_times(
-        lambda pts, qs: bench_native(pts, qs), points, queries, args.repeats
+        lambda pts, qs: bench_native(pts, qs), points, queries, args.repeats,
+        desc="Native"
     )
     s_build_no_map, s_query_no_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=False, with_objs=False),
         points,
         queries,
         args.repeats,
+        desc="Shim (no map)"
     )
     s_build_map, s_query_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=True, with_objs=True),
         points,
         queries,
         args.repeats,
+        desc="Shim (track+objs)"
     )
+    print()
 
     def fmt(x):
         return f"{x:.3f}"
