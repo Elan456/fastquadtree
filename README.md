@@ -12,7 +12,7 @@
 
 [![Rust core via PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
 [![Built with maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
-[![Lint and format: Ruff](https://img.shields.io/badge/Lint%20and%20format-Ruff-46a758?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 
 
