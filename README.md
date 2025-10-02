@@ -5,8 +5,7 @@
 [![Wheels](https://img.shields.io/pypi/wheel/fastquadtree.svg)](https://pypi.org/project/fastquadtree/#files)
 [![License: MIT](https://img.shields.io/pypi/l/fastquadtree.svg)](LICENSE)
 
-[![Downloads total](https://static.pepy.tech/badge/fastquadtree)](https://pepy.tech/projects/fastquadtree)
-[![Downloads month](https://static.pepy.tech/badge/fastquadtree/month)](https://pepy.tech/projects/fastquadtree)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total+Downloads)](https://pepy.tech/projects/fastquadtree)
 
 [![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/ci.yml)
 [![Codecov](https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg)](https://codecov.io/gh/Elan456/fastquadtree)
