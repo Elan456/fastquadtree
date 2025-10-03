@@ -101,8 +101,7 @@ def _create_fastquadtree_engine(
 
     def build(points):
         qt = RustQuadTree(bounds, max_points, max_depth=max_depth)
-        for p in points:
-            qt.insert(p)
+        qt.insert_many_points(points)
         return qt
 
     def query(qt, queries):

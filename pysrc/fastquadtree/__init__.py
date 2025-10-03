@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Literal, Tuple, overload
+from typing import Any, Literal, Tuple, overload
 
 from ._bimap import BiMap  # type: ignore[attr-defined]
 from ._item import Item
@@ -103,37 +103,33 @@ class QuadTree:
         self._count += 1
         return id_
 
-    def insert_many_points(self, points: Iterable[Point]) -> int:
+    def insert_many_points(self, points: list[Point]) -> int:
         """
         Bulk insert points with auto-assigned ids.
 
         Args:
-            points: Iterable of (x, y) points.
+            points: List of (x, y) points.
 
         Returns:
-            Number of points successfully inserted.
-
-        Raises:
-            ValueError: If any point is outside tree bounds.
+            The number of points inserted
         """
-        ins = self._native.insert
-        nid = self._next_id
-        inserted = 0
-        bx0, by0, bx1, by1 = self._bounds
-        for xy in points:
-            id_ = nid
-            nid += 1
-            if not ins(id_, xy):
-                x, y = xy
-                raise ValueError(
-                    f"Point ({x}, {y}) is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
-                )
-            inserted += 1
-            if self._items is not None:
-                self._items.add(Item(id_, xy[0], xy[1], None))
-        self._next_id = nid
-        self._count += inserted
-        return inserted
+        start_id = self._next_id
+        last_id = self._native.insert_many_points(start_id, points)
+
+        num_inserted = last_id - start_id + 1
+
+        if num_inserted < len(points):
+            raise ValueError("One or more points are outside tree bounds")
+
+        self._next_id = last_id + 1
+
+        # Update the item tracker if needed
+        if self._items is not None:
+            for i, id_ in enumerate(range(start_id, last_id + 1)):
+                x, y = points[i]
+                self._items.add(Item(id_, x, y, None))
+
+        return num_inserted
 
     def attach(self, id_: int, obj: Any) -> None:
         """

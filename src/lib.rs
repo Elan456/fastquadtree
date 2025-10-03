@@ -36,6 +36,18 @@ impl PyQuadTree {
         self.inner.insert(Item { id, point: Point { x, y } })
     }
 
+    // Insert many points with auto ids starting at `start_id`: [(x, y), ...]
+    // Returns the last id used
+    pub fn insert_many_points(&mut self, start_id: u64, points: Vec<(f32, f32)>) -> u64 {
+        let mut id = start_id;
+        for (x, y) in points {
+            if self.inner.insert(Item { id, point: Point { x, y } }) {
+                id += 1;
+            }
+        }
+        id - 1  // -1 because id was incremented after last successful insert
+    }
+
     pub fn delete(&mut self, id: u64, xy: (f32, f32)) -> bool {
         let (x, y) = xy;
         self.inner.delete(id, Point { x, y })
