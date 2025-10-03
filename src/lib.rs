@@ -7,7 +7,7 @@ pub use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
 pub use crate::quadtree::{Item, QuadTree};
 
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyTuple};
+use pyo3::types::{PyList};
 
 fn item_to_tuple(it: Item) -> (u64, f32, f32) {
     (it.id, it.point.x, it.point.y)
@@ -57,21 +57,11 @@ impl PyQuadTree {
     // Public behavior is unchanged: returns list[(id, x, y)].
     pub fn query<'py>(&self, py: Python<'py>, rect: (f32, f32, f32, f32)) -> Bound<'py, PyList> {
         let (min_x, min_y, max_x, max_y) = rect;
-        let items = self.inner.query(Rect { min_x, min_y, max_x, max_y }); // Vec<Item>
-
-        // Preallocate to reduce re-allocations
-        let mut objs: Vec<PyObject> = Vec::with_capacity(items.len());
-        for it in items {
-            let tup = PyTuple::new_bound(py, &[
-                it.id.into_py(py),
-                it.point.x.into_py(py),
-                it.point.y.into_py(py),
-            ]);
-            objs.push(tup.into_py(py));
-        }
-
-        PyList::new_bound(py, &objs)
+        let tuples = self.inner.query(Rect { min_x, min_y, max_x, max_y });
+        // PyO3 will turn Vec<(u64,f32,f32)> into a Python list of tuples
+        PyList::new_bound(py, &tuples)
     }
+
 
     pub fn nearest_neighbor(&self, xy: (f32, f32)) -> Option<(u64, f32, f32)> {
         let (x, y) = xy;

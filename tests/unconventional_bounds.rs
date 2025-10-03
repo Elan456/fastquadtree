@@ -12,8 +12,8 @@ fn item(id: u64, x: f32, y: f32) -> Item {
     Item { id, point: pt(x, y) }
 }
 
-fn ids(v: &[Item]) -> Vec<u64> {
-    let mut out: Vec<u64> = v.iter().map(|it| it.id).collect();
+fn ids(v: &Vec<(u64, f32, f32)>) -> Vec<u64> {
+    let mut out: Vec<u64> = v.iter().map(|it| it.0).collect();
     out.sort_unstable();
     out
 }

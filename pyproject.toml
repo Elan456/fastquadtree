@@ -41,7 +41,7 @@ module-name = "fastquadtree._native"
 compatibility = "manylinux2014"
 
 [tool.pytest.ini_options]
-addopts = "--cov=fastquadtree --cov-branch --cov-report=xml --cov-fail-under=95"
+addopts = "--cov=fastquadtree --cov-branch --cov-report=xml --cov-fail-under=100"
 testpaths = ["tests"]  # still run tests
 
 [tool.coverage.run]
@@ -110,6 +110,7 @@ ignore = [
   "PLR0915",
   "PLR0913",
   "PLR0912",
+  "PLC0415",
 ]
 
 # Make pytest files less strict where asserts and fixtures are common.

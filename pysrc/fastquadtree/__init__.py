@@ -259,7 +259,7 @@ class QuadTree:
 
         if self._items is None:
             raise ValueError("Cannot return result as item with track_objects=False")
-        id_, x, y = t
+        id_, _x, _y = t
         item = self._items.by_id(id_)
         if item is None:
             raise RuntimeError(

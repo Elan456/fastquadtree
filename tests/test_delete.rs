@@ -166,7 +166,7 @@ fn test_delete_preserves_other_operations() {
     let query_rect = Rect { min_x: 5.0, min_y: 5.0, max_x: 25.0, max_y: 25.0 };
     let results = tree.query(query_rect);
     assert_eq!(results.len(), 1); // Should only find point (10,10)
-    assert_eq!(results[0].id, 1);
+    assert_eq!(results[0].0, 1);
     
     // Test nearest neighbor
     let nearest = tree.nearest_neighbor(Point { x: 15.0, y: 15.0 });
@@ -230,7 +230,7 @@ fn test_delete_multiple_items_same_location() {
     assert_eq!(results.len(), 2);
     
     // Verify we can find both remaining items
-    let ids: Vec<u64> = results.iter().map(|item| item.id).collect();
+    let ids: Vec<u64> = results.iter().map(|item| item.0).collect();
     assert!(ids.contains(&10));
     assert!(ids.contains(&30));
     assert!(!ids.contains(&20)); // Should be deleted

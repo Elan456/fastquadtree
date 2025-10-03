@@ -25,10 +25,10 @@ def main():
     parser.add_argument(
         "--max-points",
         type=int,
-        default=20,
+        default=128,
         help="Maximum points per node before splitting",
     )
-    parser.add_argument("--max-depth", type=int, default=10, help="Maximum tree depth")
+    parser.add_argument("--max-depth", type=int, default=16, help="Maximum tree depth")
     parser.add_argument(
         "--n-queries", type=int, default=500, help="Number of queries per experiment"
     )
@@ -41,7 +41,7 @@ def main():
     parser.add_argument(
         "--max-experiment-points",
         type=int,
-        default=500_000,
+        default=250_000,
         help="Maximum number of points in largest experiment",
     )
     parser.add_argument(

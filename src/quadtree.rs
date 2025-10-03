@@ -121,26 +121,83 @@ impl QuadTree {
         self.children = Some(Box::new(kids));
     }
 
-    pub fn query(&self, range: Rect) -> Vec<Item> {
-        let mut out = Vec::new();
-        let mut stack: SmallVec<[&QuadTree; 16]> = SmallVec::new();
-        stack.push(self);
+    #[inline(always)]
+    fn rect_contains_rect(a: &Rect, b: &Rect) -> bool {
+        a.min_x <= b.min_x && a.min_y <= b.min_y &&
+        a.max_x >= b.max_x && a.max_y >= b.max_y
+    }
 
-        while let Some(node) = stack.pop() {
-            for it in &node.items {
-                if range.contains(&it.point) {
-                    out.push(*it);
+    pub fn query(&self, range: Rect) -> Vec<(u64, f32, f32)> {
+        #[derive(Copy, Clone)]
+        enum Mode { Filter, ReportAll }
+
+        // Hoist bounds for tight leaf checks
+        let rx0 = range.min_x;
+        let ry0 = range.min_y;
+        let rx1 = range.max_x;
+        let ry1 = range.max_y;
+
+        let mut out: Vec<(u64, f32, f32)> = Vec::with_capacity(128);
+        let mut stack: SmallVec<[(&QuadTree, Mode); 64]> = SmallVec::new();
+        stack.push((self, Mode::Filter));
+
+        while let Some((node, mode)) = stack.pop() {
+            match mode {
+                Mode::ReportAll => {
+                    if let Some(children) = node.children.as_ref() {
+                        // Entire subtree is inside the query.
+                        // No filtering, just recurse in ReportAll.
+                        stack.push((&children[0], Mode::ReportAll));
+                        stack.push((&children[1], Mode::ReportAll));
+                        stack.push((&children[2], Mode::ReportAll));
+                        stack.push((&children[3], Mode::ReportAll));
+                    } else {
+                        // Leaf: append all items, no per-point test
+                        let items = &node.items;
+                        out.reserve(items.len());
+                        out.extend(items.iter().map(|it| (it.id, it.point.x, it.point.y)));
+                    }
                 }
-            }
-            if let Some(children) = node.children.as_ref() {
-                // Push children that intersect the query range
-                for child in children.iter() {
-                    if range.intersects(&child.boundary) {
-                        stack.push(child);
+
+                Mode::Filter => {
+                    // Node cull
+                    if !range.intersects(&node.boundary) {
+                        continue;
+                    }
+
+                    // Full cover: switch to ReportAll
+                    if Self::rect_contains_rect(&range, &node.boundary) {
+                        stack.push((node, Mode::ReportAll));
+                        continue;
+                    }
+
+                    // Partial overlap
+                    if let Some(children) = node.children.as_ref() {
+                        // Only push intersecting children
+                        let c0 = &children[0];
+                        if range.intersects(&c0.boundary) { stack.push((c0, Mode::Filter)); }
+                        let c1 = &children[1];
+                        if range.intersects(&c1.boundary) { stack.push((c1, Mode::Filter)); }
+                        let c2 = &children[2];
+                        if range.intersects(&c2.boundary) { stack.push((c2, Mode::Filter)); }
+                        let c3 = &children[3];
+                        if range.intersects(&c3.boundary) { stack.push((c3, Mode::Filter)); }
+                    } else {
+                        // Leaf scan with tight predicate
+                        let items = &node.items;
+                        // Reserve a little to reduce reallocs if many will pass
+                        out.reserve(items.len().min(64));
+                        for it in items {
+                            let p = &it.point;
+                            if p.x >= rx0 && p.x < rx1 && p.y >= ry0 && p.y < ry1 {
+                                out.push((it.id, p.x, p.y));
+                            }
+                        }
                     }
                 }
             }
         }
+
         out
     }
 

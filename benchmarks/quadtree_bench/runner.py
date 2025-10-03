@@ -23,12 +23,12 @@ class BenchmarkConfig:
     """Configuration for benchmark runs."""
 
     bounds: Tuple[int, int, int, int] = (0, 0, 1000, 1000)
-    max_points: int = 20  # node capacity where supported
-    max_depth: int = 10  # depth cap for fairness where supported
-    n_queries: int = 500  # queries per experiment
+    max_points: int = 64  # node capacity where supported
+    max_depth: int = 1_000  # depth cap for fairness where supported
+    n_queries: int = 100  # queries per experiment
     repeats: int = 3  # median over repeats
     rng_seed: int = 42  # random seed for reproducibility
-    max_experiment_points: int = 500_000
+    max_experiment_points: int = 100_000
 
     def __post_init__(self):
         """Generate experiment point sizes."""
@@ -69,8 +69,8 @@ class BenchmarkRunner:
         for _ in range(m):
             x = rng.randint(x_min, x_max)
             y = rng.randint(y_min, y_max)
-            w = rng.randint(0, x_max - x)
-            h = rng.randint(0, y_max - y)
+            w = rng.randint(0, x_max - x) // rng.randint(1, 8)
+            h = rng.randint(0, y_max - y) // rng.randint(1, 8)
             queries.append((x, y, x + w, y + h))
         return queries
 
@@ -306,3 +306,12 @@ class BenchmarkRunner:
             print(f"| {name:12} | {fmt(b)} | {fmt(q)} | {fmt(t)} | {rel_speed(name)} |")
 
         print("")
+
+        # Config table
+        print("#### Benchmark Configuration")
+        print("| Parameter | Value |")
+        print("|---|---:|")
+        print(f"| Bounds | {config.bounds} |")
+        print(f"| Max points per node | {config.max_points} |")
+        print(f"| Max depth | {config.max_depth} |")
+        print(f"| Queries per experiment | {config.n_queries} |")

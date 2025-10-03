@@ -7,10 +7,13 @@ allowing fair comparison of their performance characteristics.
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import numpy as np
 from pyqtree import Index as PyQTree  # Pyqtree
 
 # Built-in engines (always available in this repo)
 from pyquadtree.quadtree import QuadTree as EPyQuadTree  # e-pyquadtree
+from shapely import box as shp_box, points  # Shapely 2.x
+from shapely.strtree import STRtree
 
 from fastquadtree import QuadTree as RustQuadTree  # fastquadtree
 
@@ -243,13 +246,8 @@ def _create_strtree_engine(
 ) -> Optional[Engine]:
     """Create engine adapter for Shapely STRtree (optional)."""
 
-    from shapely import box as shp_box, points  # Shapely 2.x
-    from shapely.strtree import STRtree
-
     def build(points_list: List[Tuple[int, int]]):
         # Build geometries efficiently
-
-        import numpy as np
 
         xs = np.fromiter(
             (x for x, _ in points_list), dtype="float32", count=len(points_list)
@@ -296,15 +294,15 @@ def get_engines(
     # Always available engines
     engines = {
         "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
-        #      "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
+        "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
         "PyQtree": _create_pyqtree_engine(bounds, max_points, max_depth),
         #    "Brute force": _create_brute_force_engine(bounds, max_points, max_depth),  # Brute force doesn't scale well on the graphs so omit it from the main set
     }
 
     # Optional engines (only include if import succeeded)
     optional_engines = [
-        #       _create_quads_engine,
-        #       _create_nontree_engine,
+        _create_quads_engine,
+        _create_nontree_engine,
         _create_rtree_engine,
         _create_strtree_engine,
     ]
