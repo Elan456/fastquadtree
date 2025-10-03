@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
+use smallvec::SmallVec;
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Item {
@@ -122,7 +123,7 @@ impl QuadTree {
 
     pub fn query(&self, range: Rect) -> Vec<Item> {
         let mut out = Vec::new();
-        let mut stack: Vec<&QuadTree> = Vec::new();
+        let mut stack: SmallVec<[&QuadTree; 16]> = SmallVec::new();
         stack.push(self);
 
         while let Some(node) = stack.pop() {
