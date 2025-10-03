@@ -239,6 +239,45 @@ def _create_rtree_engine(
     return Engine("Rtree", "#e377c2", build, query)
 
 
+def _create_strtree_engine(
+    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+) -> Optional[Engine]:
+    """Create engine adapter for Shapely STRtree (optional)."""
+
+    from shapely import box as shp_box, points  # Shapely 2.x
+    from shapely.strtree import STRtree
+
+    def build(points_list: List[Tuple[int, int]]):
+        # Build geometries efficiently
+
+        import numpy as np
+
+        xs = np.fromiter(
+            (x for x, _ in points_list), dtype="float32", count=len(points_list)
+        )
+        ys = np.fromiter(
+            (y for _, y in points_list), dtype="float32", count=len(points_list)
+        )
+        geoms = points(xs, ys)  # vectorized Point creation
+        assert type(geoms) is np.ndarray
+        tree = STRtree(geoms, node_capacity=max_points)
+        # Keep geoms alive next to the tree
+        return (tree, geoms)
+
+    def query(built, queries: List[Tuple[int, int, int, int]]):
+        tree, _geoms = built
+        for xmin, ymin, xmax, ymax in queries:
+            window = shp_box(xmin, ymin, xmax, ymax)
+            # Shapely 2.x returns ndarray of indices for a single geometry
+            res = tree.query(window)
+            # Consume results without materializing to keep parity with other engines
+            if hasattr(res, "__iter__"):
+                for _ in res:
+                    pass
+
+    return Engine("Shapely STRtree", "#7f7f7f", build, query)
+
+
 def get_engines(
     bounds: Tuple[int, int, int, int] = (0, 0, 1000, 1000),
     max_points: int = 20,
@@ -258,16 +297,17 @@ def get_engines(
     # Always available engines
     engines = {
         "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
-        "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
+        #      "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),
         "PyQtree": _create_pyqtree_engine(bounds, max_points, max_depth),
         #    "Brute force": _create_brute_force_engine(bounds, max_points, max_depth),  # Brute force doesn't scale well on the graphs so omit it from the main set
     }
 
     # Optional engines (only include if import succeeded)
     optional_engines = [
-        _create_quads_engine,
-        _create_nontree_engine,
+        #       _create_quads_engine,
+        #       _create_nontree_engine,
         _create_rtree_engine,
+        _create_strtree_engine,
     ]
 
     for engine_creator in optional_engines:
