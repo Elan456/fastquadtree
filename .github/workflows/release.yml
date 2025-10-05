@@ -62,6 +62,14 @@ jobs:
             args: "--skip-existing --target universal2-apple-darwin"
           - os: windows-latest
             args: "--skip-existing"
+          # Linux aarch64 abi3
+          - os: ubuntu-latest
+            target: "aarch64-unknown-linux-gnu"
+            args: "--skip-existing --target aarch64-unknown-linux-gnu --zig"
+          # Linux armv7 abi3
+          - os: ubuntu-latest
+            target: "armv7-unknown-linux-gnueabihf"
+            args: "--skip-existing --target armv7-unknown-linux-gnueabihf --zig"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
