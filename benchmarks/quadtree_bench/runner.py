@@ -6,6 +6,7 @@ and result collection for performance analysis.
 """
 
 import gc
+import json
 import math
 import random
 import statistics as stats
@@ -16,6 +17,7 @@ from typing import Any, Dict, List, Tuple
 from tqdm import tqdm
 
 from .engines import Engine
+from .system_info_collector import collect_system_info
 
 
 @dataclass
@@ -315,3 +317,9 @@ class BenchmarkRunner:
         print(f"| Max points per node | {config.max_points} |")
         print(f"| Max depth | {config.max_depth} |")
         print(f"| Queries per experiment | {config.n_queries} |")
+
+        system_info = collect_system_info()
+        print("#### System Info")
+        print("```json")
+        print(json.dumps(system_info, indent=2))
+        print("```")

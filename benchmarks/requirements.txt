@@ -13,3 +13,9 @@ quads>=1.1.0         # pure-Python quadtree
 nontree>=1.0.5       # pure-Python PR quadtree (TreeMap mode=4)
 rtree>=1.3.0         # R-tree comparator with wheels for Win/macOS/Linux
 shapely>=2.0.0       # STRtree comparator
+
+# For getting system info
+psutil
+py-cpuinfo
+distro
+GPUtil
