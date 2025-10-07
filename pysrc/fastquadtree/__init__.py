@@ -85,7 +85,7 @@ class QuadTree:
 
         Args:
             xy: Point (x, y).
-            id: Optional integer id. If None, an auto id is assigned.
+            id_: Optional integer id. If None, an auto id is assigned.
             obj: Optional Python object to associate with id. Stored only if
                 object tracking is enabled.
 
@@ -278,7 +278,9 @@ class QuadTree:
     @overload
     def nearest_neighbor(self, xy: Point, *, as_item: Literal[True]) -> Item | None: ...
 
-    def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: bool = False
+    ) -> _IdCoord | Item | None:
         """
         Return the single nearest neighbor to the query point.
 
@@ -314,7 +316,9 @@ class QuadTree:
         self, xy: Point, k: int, *, as_items: Literal[True]
     ) -> list[Item]: ...
 
-    def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: bool = False
+    ) -> list[_IdCoord] | list[Item]:
         """
         Return the k nearest neighbors to the query point.
 
