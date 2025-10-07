@@ -26,9 +26,9 @@ class QuadTree:
     Python object per ID when object tracking is enabled.
 
     Performance characteristics:
-        Inserts: average O(log n)
-        Rect queries: average O(log n + k) where k is matches returned
-        Nearest neighbor: average O(log n)
+        Inserts: average O(log n) <br>
+        Rect queries: average O(log n + k) where k is matches returned <br>
+        Nearest neighbor: average O(log n) <br>
 
     Thread-safety:
         Instances are not thread-safe. Use external synchronization if you
