@@ -377,8 +377,8 @@ def main():
         if not paused:
             objs = list(qtree.get_all_objects())
             for p in objs:
-                qtree.delete_by_object(p)
                 p.update(dt)
+                qtree.delete_by_object(p)
                 qtree.insert((p.x, p.y), obj=p)
 
         # Mouse-following rectangle
