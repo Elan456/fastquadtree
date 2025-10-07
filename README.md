@@ -229,6 +229,8 @@ python benchmarks/cross_library_bench.py
 python benchmarks/benchmark_native_vs_shim.py 
 ```
 
+Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
+
 ## Run Visualizer
 A visualizer is included to help you understand how the quadtree subdivides space.
 
@@ -237,7 +239,17 @@ pip install -r interactive/requirements.txt
 python interactive/interactive_v2.py
 ```
 
-Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
+### Pygame Ball Pit Demo
+
+![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)
+
+A simple demo of moving objects with collision detection using **fastquadtree**. 
+You can toggle between quadtree mode and brute-force mode to see the performance difference.
+
+```bash
+pip install -r interactive/requirements.txt
+python interactive/ball_pit.py
+```
 
 ## FAQ
 

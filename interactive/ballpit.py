@@ -207,6 +207,13 @@ class BallPit:
             f"Balls: {len(self.balls)}",
             f"Pair checks this frame: {self.pair_checks}",
         ]
+
+        # Draw a semi-transparent background for the HUD
+        hud_bg_height = len(hud_lines) * 18 + 6
+        hud_bg = pygame.Surface((250, hud_bg_height), pygame.SRCALPHA)
+        hud_bg.fill((255, 255, 255, 200))  # White
+        self.screen.blit(hud_bg, (0, 0))
+
         y = 6
         for line in hud_lines:
             surf = font.render(line, True, (20, 20, 20))
