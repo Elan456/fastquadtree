@@ -28,6 +28,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/Elan456/fastquadtree"
 Repository = "https://github.com/Elan456/fastquadtree"
+Documentation = "https://elan456.github.io/fastquadtree/"
 Issues = "https://github.com/Elan456/fastquadtree/issues"
 
 [tool.maturin]

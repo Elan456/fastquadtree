@@ -1,5 +1,6 @@
 # fastquadtree
 
+[![Docs](https://img.shields.io/badge/docs-online-brightgreen)](https://elan456.github.io/fastquadtree/)
 [![PyPI version](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Wheels](https://img.shields.io/pypi/wheel/fastquadtree.svg)](https://pypi.org/project/fastquadtree/#files)
@@ -20,6 +21,8 @@
 
 
 Rust-optimized quadtree with a simple Python API.
+
+👉 **Docs:** https://elan456.github.io/fastquadtree/
 
 - Python package: **`fastquadtree`**
 - Python ≥ 3.8
