@@ -42,8 +42,14 @@ module-name = "fastquadtree._native"
 compatibility = "manylinux2014"
 
 [tool.pytest.ini_options]
-addopts = "--cov=fastquadtree --cov-branch --cov-report=xml --cov-fail-under=100"
-testpaths = ["tests"]  # still run tests
+addopts = [
+  "--cov=fastquadtree",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-report=xml:coverage.xml",
+  "--cov-fail-under=100",
+]
+testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["fastquadtree"]
@@ -59,8 +65,8 @@ omit = [
 [project.optional-dependencies]
 dev = [
   "ruff>=0.6.0",
-  "pytest>=7.0",
-  "pytest-cov>=4.1",
+  "pytest>=8.4.2",
+  "pytest-cov>=7.0.0",
   "coverage>=7.5",
   "mypy>=1.10",        # optional static checks
   "build>=1.2.1",      # python -m build
@@ -70,6 +76,7 @@ dev = [
   "mkdocs-autorefs",
   "mkdocs-git-revision-date-localized-plugin",
   "mkdocs-minify-plugin",
+  "maturin>=1.5",  # build Rust wheels
 ]
 
 [tool.ruff]
