@@ -45,7 +45,15 @@ class QuadTree:
         ValueError: If parameters are invalid or inserts are out of bounds.
     """
 
-    __slots__ = ("_bounds", "_count", "_items", "_native", "_next_id")
+    __slots__ = (
+        "_bounds",
+        "_capacity",
+        "_count",
+        "_items",
+        "_max_depth",
+        "_native",
+        "_next_id",
+    )
 
     def __init__(
         self,
@@ -56,14 +64,18 @@ class QuadTree:
         track_objects: bool = False,
         start_id: int = 1,
     ):
+        self._bounds = bounds
+        self._max_depth = max_depth  # store for clear()
+        self._capacity = capacity  # store for clear()
         if max_depth is None:
-            self._native = _RustQuadTree(bounds, capacity)
+            self._native = _RustQuadTree(self._bounds, self._capacity)
         else:
-            self._native = _RustQuadTree(bounds, capacity, max_depth=max_depth)
+            self._native = _RustQuadTree(
+                self._bounds, self._capacity, max_depth=max_depth
+            )
         self._items: BiMap | None = BiMap() if track_objects else None
         self._next_id: int = int(start_id)
         self._count: int = 0
-        self._bounds = bounds
 
     # ---------- inserts ----------
 
@@ -148,6 +160,8 @@ class QuadTree:
             raise KeyError(f"Id {id_} not found in quadtree")
         self._items.add(Item(id_, item.x, item.y, obj))
 
+    # ---------- deletes ----------
+
     def delete(self, id_: int, xy: Point) -> bool:
         """
         Delete an item by id and exact coordinates.
@@ -192,6 +206,28 @@ class QuadTree:
             return False
 
         return self.delete(item.id_, (item.x, item.y))
+
+    def clear(self, *, reset_ids: bool = False) -> None:
+        """
+        Empty the tree in place, preserving bounds/capacity/max_depth.
+
+        Args:
+            reset_ids: If True, restart auto-assigned ids from 1.
+        """
+        # swap in a fresh native instance
+        if self._max_depth is None:
+            self._native = _RustQuadTree(self._bounds, self._capacity)
+        else:
+            self._native = _RustQuadTree(
+                self._bounds, self._capacity, max_depth=self._max_depth
+            )
+
+        # reset Python-side trackers
+        self._count = 0
+        if self._items is not None:
+            self._items.clear()
+        if reset_ids:
+            self._next_id = 1
 
     # ---------- queries ----------
 

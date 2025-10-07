@@ -167,6 +167,8 @@ Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__
 
 - `delete_by_object(obj) -> bool (requires track_objects=True)`
 
+- `clear(*, reset_ids=False) -> None`
+
 - `attach(id, obj) -> None (requires track_objects=True)`
 
 - `count_items() -> int`
@@ -174,6 +176,8 @@ Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__
 - `get(id) -> object | None`
 
 - `get_all_rectangles() -> list[tuple] (for visualization)`
+
+- `get_all_objects() -> list[object] (requires track_objects=True)`
 
 ### `Item` (returned when `as_items=True`)
 
@@ -192,7 +196,7 @@ Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
 * If your data is very skewed, set a `max_depth` to prevent long chains.
 * For fastest local runs, use `maturin develop --release`.
-* The wrapper keeps Python overhead low: raw tuple results by default, `Item` wrappers only when requested.
+* The wrapper only maintains an ID -> Obj map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance. Look at the [Native vs Shim Benchmark](#native-vs-shim-benchmark) below for details.
 
 
 ### Native vs Shim Benchmark
@@ -261,9 +265,6 @@ Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID
 
 **Can I store rectangles or circles?**
 The core stores points. To index objects with extent, insert whatever representative point you choose. For rectangles you can insert centers or build an AABB tree separately.
-
-**Threading**
-Use one tree per thread if you need heavy parallel inserts from Python.
 
 ## License
 

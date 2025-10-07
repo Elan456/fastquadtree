@@ -141,8 +141,9 @@ class BallPit:
             self.qt.insert((ball.x, ball.y), obj=ball)
 
     def rebuild_quadtree(self):
-        # Full rebuild is simple and robust for a demo
-        self.qt = QuadTree((0, 0, self.width, self.height), 16, track_objects=True)
+        # Clear quadtree and re-insert all balls
+        # This is faster when most of the balls move each frame compared to updating individual points
+        self.qt.clear()
         for b in self.balls:
             with contextlib.suppress(ValueError):
                 self.qt.insert((b.x, b.y), obj=b)
