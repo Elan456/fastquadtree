@@ -71,7 +71,7 @@ for id_, x, y in qt.nearest_neighbors(cursor, k=5):
 
 ## Track Python objects when you need them
 
-Turn on object tracking to bind your own objects to ids. Delete by object in O(1).
+Turn on object tracking to bind your own objects to ids. Object lookups for deletion are O(1).
 
 ```python
 qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
