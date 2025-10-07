@@ -81,7 +81,7 @@ def resolve_ball_ball(a: Ball, b: Ball):
 
     # Positional correction to remove overlap
     overlap = rsum - dist if dist != 0 else rsum
-    # Split correction by mass proportion (heavier moves less)
+    # Split correction by mass proportion
     inv_ma = 0.0 if a.mass == 0 else 1.0 / a.mass
     inv_mb = 0.0 if b.mass == 0 else 1.0 / b.mass
     inv_sum = inv_ma + inv_mb if (inv_ma + inv_mb) != 0 else 1.0
@@ -99,7 +99,7 @@ def resolve_ball_ball(a: Ball, b: Ball):
     rvy = b.vy - a.vy
     vel_along_normal = rvx * nx + rvy * ny
     if vel_along_normal > 0:
-        return  # already separating
+        return  # separating
 
     # Restitution
     e = min(a.restitution, b.restitution)
@@ -125,21 +125,23 @@ class BallPit:
         self.screen = screen
         self.width = width
         self.height = height
-        self.gravity = 980.0  # px/s^2 for smooth dt-based motion
         self.qt = QuadTree((0, 0, width, height), 16, track_objects=True)
         self.balls: List[Ball] = []
+        self.use_quadtree = True
+        self.pair_checks = 0  # updated each frame
 
     def add_ball(self, x, y, radius=10, color=(255, 0, 0)):
         vx = (random.random() - 0.5) * 300.0  # px/s
-        vy = 0.0
+        vy = (random.random() - 0.5) * 300.0  # px/s
         ball = Ball(
             x, y, r=radius, color=color, vx=vx, vy=vy, mass=1.0, restitution=0.7
         )
         self.balls.append(ball)
-        self.qt.insert((ball.x, ball.y), obj=ball)
+        with contextlib.suppress(ValueError):
+            self.qt.insert((ball.x, ball.y), obj=ball)
 
     def rebuild_quadtree(self):
-        # Faster than delete+insert per object
+        # Full rebuild is simple and robust for a demo
         self.qt = QuadTree((0, 0, self.width, self.height), 16, track_objects=True)
         for b in self.balls:
             with contextlib.suppress(ValueError):
@@ -147,42 +149,69 @@ class BallPit:
 
     def update(self, dt: float):
         # 1) Integrate motion
-        ax, ay = 0.0, self.gravity
+        ax, ay = 0.0, 0.0
         for b in self.balls:
             b.integrate(ax, ay, dt)
             b.clamp_to_bounds(self.width, self.height)
 
-        # 2) Rebuild spatial index for broadphase queries
-        self.rebuild_quadtree()
+        self.pair_checks = 0
 
-        # 3) Narrowphase collisions via quadtree neighborhood queries
-        processed: Set[Tuple[int, int]] = set()
-        for b in self.balls:
-            # Query a box around the ball that guarantees catching overlaps
-            x0, y0, x1, y1 = (
-                b.x - 2 * b.r,
-                b.y - 2 * b.r,
-                b.x + 2 * b.r,
-                b.y + 2 * b.r,
-            )
-            for item in self.qt.query((x0, y0, x1, y1), as_items=True):
-                other = item.obj
-                if other is b or other is None:
-                    continue
-                a_id = id(b)
-                o_id = id(other)
-                key = (a_id, o_id) if a_id < o_id else (o_id, a_id)
-                if key in processed:
-                    continue
-                processed.add(key)
-                resolve_ball_ball(b, other)
+        if self.use_quadtree:
+            # 2) Rebuild spatial index
+            self.rebuild_quadtree()
 
-        # 4) Update quadtree positions after collision resolution
-        self.rebuild_quadtree()
+            # 3) Quadtree neighborhood checks
+            processed: Set[Tuple[int, int]] = set()
+            for b in self.balls:
+                # Query a box that guarantees catching overlaps
+                x0 = b.x - 2 * b.r
+                y0 = b.y - 2 * b.r
+                x1 = b.x + 2 * b.r
+                y1 = b.y + 2 * b.r
+                for item in self.qt.query((x0, y0, x1, y1), as_items=True):
+                    other = item.obj
+                    if other is b or other is None:
+                        continue
+                    a_id = id(b)
+                    o_id = id(other)
+                    key = (a_id, o_id) if a_id < o_id else (o_id, a_id)
+                    if key in processed:
+                        continue
+                    processed.add(key)
+                    self.pair_checks += 1
+                    resolve_ball_ball(b, other)
 
-    def draw(self):
+            # 4) Update quadtree after resolution
+            self.rebuild_quadtree()
+
+        else:
+            # Brute-force O(n^2) checks
+            n = len(self.balls)
+            for i in range(n):
+                a = self.balls[i]
+                for j in range(i + 1, n):
+                    b = self.balls[j]
+                    self.pair_checks += 1
+                    resolve_ball_ball(a, b)
+
+    def draw(self, fps: float):
         for ball in self.balls:
             ball.draw(self.screen)
+
+        # HUD
+        font = pygame.font.SysFont(None, 20)
+        mode = "Quadtree" if self.use_quadtree else "Brute force"
+        hud_lines = [
+            f"FPS: {fps:.1f}",
+            f"Mode: {mode} (press Q to toggle)",
+            f"Balls: {len(self.balls)}",
+            f"Pair checks this frame: {self.pair_checks}",
+        ]
+        y = 6
+        for line in hud_lines:
+            surf = font.render(line, True, (20, 20, 20))
+            self.screen.blit(surf, (6, y))
+            y += 18
 
 
 # ------------------------------- main ------------------------------- #
@@ -192,18 +221,38 @@ def main():
     pygame.init()
     width, height = 800, 600
     screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("BallPit: Quadtree vs Brute Force")
     clock = pygame.time.Clock()
     ball_pit = BallPit(screen, width, height)
 
+    # Pre-seed a few balls so the FPS change is obvious
+    for _ in range(500):
+        x, y = random.randint(40, width - 40), random.randint(40, height - 40)
+        r = random.randint(8, 18)
+        color = (
+            random.randint(80, 255),
+            random.randint(80, 255),
+            random.randint(80, 255),
+        )
+        ball_pit.add_ball(x, y, radius=r, color=color)
+
     running = True
     while running:
-        dt = clock.tick(60) / 1000.0  # seconds
+        dt_ms = clock.tick(60)  # target 60 fps
+        dt = dt_ms / 1000.0
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    ball_pit.use_quadtree = not ball_pit.use_quadtree
+                elif event.key == pygame.K_c:
+                    # Clear all balls (optional helper)
+                    ball_pit.balls.clear()
+                    ball_pit.rebuild_quadtree()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
-                # Randomize radius and color a bit to show generality
                 r = random.randint(8, 18)
                 color = (
                     random.randint(80, 255),
@@ -215,7 +264,8 @@ def main():
         ball_pit.update(dt)
 
         screen.fill((255, 255, 255))
-        ball_pit.draw()
+        fps = clock.get_fps()
+        ball_pit.draw(fps)
         pygame.display.flip()
 
     pygame.quit()
