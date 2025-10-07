@@ -66,6 +66,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
+  - Runnables: runnables.md
+  - Benchmark: benchmark.md
   - API:
       - fastquadtree.QuadTree: api/quadtree.md
       - fastquadtree.Item: api/item.md

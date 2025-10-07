@@ -52,13 +52,15 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 | PyQtree      | 1.492 | 0.263 | 1.755 | 1.00× |
 | quads        | 1.407 | 0.484 | 1.890 | 0.93× |
 
-#### Benchmark Configuration
+### Benchmark Configuration
 | Parameter | Value |
 |---|---:|
 | Bounds | (0, 0, 1000, 1000) |
 | Max points per node | 128 |
 | Max depth | 16 |
 | Queries per experiment | 500 |
+
+See the [benchmark section](elan456.github.io/fastquadtree/benchmark/) for details.
 
 ## Install
 
@@ -74,77 +76,11 @@ maturin develop --release
 ```
 
 ## Quickstart
-
-```python
-from fastquadtree import QuadTree
-
-# Bounds are (min_x, min_y, max_x, max_y)
-qt = QuadTree(bounds=(0, 0, 1000, 1000), capacity=20)  # max_depth is optional
-
-# Insert points with auto ids
-id1 = qt.insert((10, 10))
-id2 = qt.insert((200, 300))
-id3 = qt.insert((999, 500), id=42)  # you can supply your own id
-
-# Axis-aligned rectangle query
-hits = qt.query((0, 0, 250, 350))  # returns [(id, x, y), ...] by default
-print(hits)  # e.g. [(1, 10.0, 10.0), (2, 200.0, 300.0)]
-
-# Nearest neighbor
-best = qt.nearest_neighbor((210, 310))  # -> (id, x, y) or None
-print(best)
-
-# k-nearest neighbors
-top3 = qt.nearest_neighbors((210, 310), 3)
-print(top3)  # list of up to 3 (id, x, y) tuples
-
-# Delete items by ID and location
-deleted = qt.delete(id2, (200, 300))  # True if found and deleted
-print(f"Deleted: {deleted}")
-print(f"Remaining items: {qt.count_items()}")
-
-# For object tracking with track_objects=True
-qt_tracked = QuadTree((0, 0, 1000, 1000), capacity=4, track_objects=True)
-player1 = {"name": "Alice", "score": 100}
-player2 = {"name": "Bob", "score": 200}
-
-id1 = qt_tracked.insert((50, 50), obj=player1)
-id2 = qt_tracked.insert((150, 150), obj=player2)
-
-# Delete by object reference (O(1) lookup!)
-deleted = qt_tracked.delete_by_object(player1)
-print(f"Deleted player: {deleted}")  # True
-```
-
-### Working with Python objects
-
-You can keep the tree pure and manage your own id → object map, or let the wrapper manage it.
-
-**Wrapper Managed Objects**
-
-```python
-from fastquadtree import QuadTree
-
-qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
-
-# Store the object alongside the point
-qt.insert((25, 40), obj={"name": "apple"})
-
-# Ask for Item objects within a bounding box
-items = qt.query((0, 0, 100, 100), as_items=True)
-for it in items:
-    print(it.id, it.x, it.y, it.obj)
-```
-
-You can also attach or replace an object later:
-
-```python
-qt.attach(123, my_object)  # binds object to id 123
-```
+[See the quickstart guide](https://elan456.github.io/fastquadtree/quickstart/)
 
 ## API
 
-[Full api for QuadTree](https://elan456.github.io/fastquadtree/api/quadtree/)
+[See the full API](https://elan456.github.io/fastquadtree/api/quadtree/)
 
 ### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, start_id=1)`
 
@@ -154,38 +90,17 @@ qt.attach(123, my_object)  # binds object to id 123
 * `track_objects` — if `True`, the wrapper maintains an id → object map for convenience.
 * `start_id` — starting value for auto-assigned ids
 
-### Core Methods
+### Key Methods
 
 - `insert(xy, *, id=None, obj=None) -> int`
-
-- `insert_many_points(points) -> int`
 
 - `query(rect, *, as_items=False) -> list`
 
 - `nearest_neighbor(xy, *, as_item=False) -> (id, x, y) | Item | None`
 
-- `nearest_neighbors(xy, k, *, as_items=False) -> list`
-
 - `delete(id, xy) -> bool`
 
-- `delete_by_object(obj) -> bool (requires track_objects=True)`
-
-- `clear(*, reset_ids=False) -> None`
-
-- `attach(id, obj) -> None (requires track_objects=True)`
-
-- `count_items() -> int`
-
-- `get(id) -> object | None`
-
-- `get_all_rectangles() -> list[tuple] (for visualization)`
-
-- `get_all_objects() -> list[object] (requires track_objects=True)`
-
-### `Item` (returned when `as_items=True`)
-
-* Attributes: `id`, `x`, `y`, and a lazy `obj` property
-* Accessing `obj` performs a dictionary lookup only if tracking is enabled
+There are more methods and object tracking version in the [docs](https://elan456.github.io/fastquadtree/api/quadtree/).
 
 ### Geometric conventions
 
@@ -199,52 +114,7 @@ qt.attach(123, my_object)  # binds object to id 123
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
 * If your data is very skewed, set a `max_depth` to prevent long chains.
 * For fastest local runs, use `maturin develop --release`.
-* The wrapper only maintains an ID -> Obj map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance. Look at the [Native vs Shim Benchmark](#native-vs-shim-benchmark) below for details.
-
-
-### Native vs Shim Benchmark
-
-**Setup**
-- Points: 500,000
-- Queries: 500
-- Repeats: 5
-
-**Timing (seconds)**
-
-| Variant | Build | Query | Total |
-|---|---:|---:|---:|
-| Native | 0.483 | 4.380 | 4.863 |
-| Shim (no map) | 0.668 | 4.167 | 4.835 |
-| Shim (track+objs) | 1.153 | 4.458 | 5.610 |
-
-**Overhead vs Native**
-
-- No map: build 1.38x, query 0.95x, total 0.99x  
-- Track + objs: build 2.39x, query 1.02x, total 1.15x
-
-### Run benchmarks
-To run the benchmarks yourself, first install the dependencies:
-
-```bash
-pip install -r benchmarks/requirements.txt
-```
-
-Then run:
-
-```bash
-python benchmarks/cross_library_bench.py
-python benchmarks/benchmark_native_vs_shim.py 
-```
-
-Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
-
-## Run Visualizer
-A visualizer is included to help you understand how the quadtree subdivides space.
-
-```bash
-pip install -r interactive/requirements.txt
-python interactive/interactive_v2.py
-```
+* The wrapper only maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance. Look at the [Native vs Shim Benchmark](#native-vs-shim-benchmark) below for details.
 
 ### Pygame Ball Pit Demo
 
@@ -253,10 +123,7 @@ python interactive/interactive_v2.py
 A simple demo of moving objects with collision detection using **fastquadtree**. 
 You can toggle between quadtree mode and brute-force mode to see the performance difference.
 
-```bash
-pip install -r interactive/requirements.txt
-python interactive/ball_pit.py
-```
+See the [runnables guide](https://elan456.github.io/fastquadtree/runnables/) for setup instructions.
 
 ## FAQ
 

@@ -129,17 +129,7 @@ print(f"Build: {(t1-t0):.3f}s  Query: {(t2-t1):.3f}s  Hits: {len(hits)}")
 
 ## Common patterns
 
-* **Toggle index vs brute force** while debugging performance
-  Keep an array of points for ground truth, wire a flag to switch `qt.query` vs a list comprehension.
 * **Use `capacity` 8 to 64** for most workloads
   If data is highly skewed, set a `max_depth` to avoid very deep trees.
-* **Do not panic about memory**
-  Rebuilding with `clear()` drops the old native tree as soon as Python releases it.
-
----
-
-## Next steps
-
-* API reference lives in the sidebar
-* Try the visualizer in `interactive/` to see splits live
-* Bring your own objects, or stay minimal with ids and tuples
+* **Use `clear()` to reset** when most points are moving rather than deleting and reinserting.
+* **Use `insert_many_points()`** to bulk load a large batch of points at once.
