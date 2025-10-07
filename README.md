@@ -144,6 +144,8 @@ qt.attach(123, my_object)  # binds object to id 123
 
 ## API
 
+[Full api for QuadTree](https://elan456.github.io/fastquadtree/api/quadtree/)
+
 ### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, start_id=1)`
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
@@ -153,8 +155,6 @@ qt.attach(123, my_object)  # binds object to id 123
 * `start_id` — starting value for auto-assigned ids
 
 ### Core Methods
-
-Full docs are in the docstrings of the [Python Shim](pysrc/fastquadtree/__init__.py)
 
 - `insert(xy, *, id=None, obj=None) -> int`
 
