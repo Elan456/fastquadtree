@@ -11,8 +11,8 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 ![Throughput](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_throughput.png)
 
 ### Summary (largest dataset, PyQtree baseline)
+
 - Points: **250,000**, Queries: **500**
---------------------
 - Fastest total: **fastquadtree** at **0.120 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
@@ -33,25 +33,34 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 | Max depth | 16 |
 | Queries per experiment | 500 |
 
-## Native vs Shim Benchmark
+## Native vs Shim
 
-**Setup**
+### Configuration
 - Points: 500,000
 - Queries: 500
 - Repeats: 5
 
-**Timing (seconds)**
+### Results
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.483 | 4.380 | 4.863 |
-| Shim (no map) | 0.668 | 4.167 | 4.835 |
-| Shim (track+objs) | 1.153 | 4.458 | 5.610 |
+| Native | 0.181 | 2.024 | 2.205 |
+| Shim (no map) | 0.301 | 1.883 | 2.184 |
+| Shim (track+objs) | 0.651 | 2.016 | 2.667 |
 
-**Overhead vs Native**
+### Summary
 
-- No map: build 1.38x, query 0.95x, total 0.99x  
-- Track + objs: build 2.39x, query 1.02x, total 1.15x
+Using the shim with object tracking increases build time by 3.604x and query time by 0.996x.
+**Total slowdown = 1.210x.**
+
+Adding the object map only impacts the build time, not the query time.
+
+## System Info
+- **OS**: Windows 11 AMD64
+- **Python**: CPython 3.12.2
+- **CPU**: AMD Ryzen 7 3700X 8-Core Processor (16 threads)
+- **Memory**: 31.9 GB
+- **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks
 To run the benchmarks yourself, first install the dependencies:

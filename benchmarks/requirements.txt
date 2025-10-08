@@ -18,4 +18,3 @@ shapely>=2.0.0       # STRtree comparator
 psutil
 py-cpuinfo
 distro
-GPUtil

@@ -60,7 +60,7 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 | Max depth | 16 |
 | Queries per experiment | 500 |
 
-See the [benchmark section](elan456.github.io/fastquadtree/benchmark/) for details.
+See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) for details.
 
 ## Install
 
@@ -114,7 +114,8 @@ There are more methods and object tracking version in the [docs](https://elan456
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
 * If your data is very skewed, set a `max_depth` to prevent long chains.
 * For fastest local runs, use `maturin develop --release`.
-* The wrapper only maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance. Look at the [Native vs Shim Benchmark](#native-vs-shim-benchmark) below for details.
+* The wrapper only maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance.
+* Refer to the [Native vs Shim Benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim-benchmark) for overhead details.
 
 ### Pygame Ball Pit Demo
 

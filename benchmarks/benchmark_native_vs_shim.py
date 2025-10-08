@@ -7,6 +7,7 @@ import random
 import statistics as stats
 from time import perf_counter as now
 
+from system_info_collector import collect_system_info, format_system_info_markdown_lite
 from tqdm import tqdm
 
 from fastquadtree import QuadTree as ShimQuadTree
@@ -55,10 +56,10 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     )
     if with_objs:
         for i, p in enumerate(points):
-            qt.insert(p, id=i, obj=i)  # store a tiny object
+            qt.insert(p, id_=i, obj=i)  # store a tiny object
     else:
         for i, p in enumerate(points):
-            qt.insert(p, id=i)
+            qt.insert(p, id_=i)
     t_build = now() - t0
 
     t0 = now()
@@ -133,14 +134,14 @@ def main():
         return f"{x:.3f}"
 
     md = f"""
-### Native vs Shim
+## Native vs Shim
 
-**Setup**
+### Configuration
 - Points: {args.points:,}
 - Queries: {args.queries}
 - Repeats: {args.repeats}
 
-**Timing (seconds)**
+### Results
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
@@ -148,12 +149,17 @@ def main():
 | Shim (no map) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
 | Shim (track+objs) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
 
-**Overhead vs Native**
+### Summary
 
-- No map: build {s_build_no_map / n_build:.2f}x, query {s_query_no_map / n_query:.2f}x, total {(s_build_no_map + s_query_no_map) / (n_build + n_query):.2f}x
-- Track + objs: build {s_build_map / n_build:.2f}x, query {s_query_map / n_query:.2f}x, total {(s_build_map + s_query_map) / (n_build + n_query):.2f}x
+Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
+**Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
+
+Adding the object map only impacts the build time, not the query time.
 """
     print(md.strip())
+
+    info = collect_system_info()
+    print(format_system_info_markdown_lite(info))
 
 
 if __name__ == "__main__":
