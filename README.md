@@ -8,7 +8,7 @@
 
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total+Downloads)](https://pepy.tech/projects/fastquadtree)
 
-[![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/ci.yml)
+[![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml)
 [![Codecov](https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg)](https://codecov.io/gh/Elan456/fastquadtree)
 
 [![Rust core via PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
@@ -39,7 +39,6 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **250,000**, Queries: **500**
---------------------
 - Fastest total: **fastquadtree** at **0.120 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
@@ -66,7 +65,7 @@ See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) f
 
 ```bash
 pip install fastquadtree
-````
+```
 
 If you are developing locally:
 
@@ -100,7 +99,7 @@ maturin develop --release
 
 - `delete(id, xy) -> bool`
 
-There are more methods and object tracking version in the [docs](https://elan456.github.io/fastquadtree/api/quadtree/).
+There are more methods and object tracking versions in the [docs](https://elan456.github.io/fastquadtree/api/quadtree/).
 
 ### Geometric conventions
 
@@ -114,7 +113,7 @@ There are more methods and object tracking version in the [docs](https://elan456
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
 * If your data is very skewed, set a `max_depth` to prevent long chains.
 * For fastest local runs, use `maturin develop --release`.
-* The wrapper only maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance.
+* The wrapper maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance.
 * Refer to the [Native vs Shim Benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim-benchmark) for overhead details.
 
 ### Pygame Ball Pit Demo

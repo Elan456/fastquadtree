@@ -255,8 +255,8 @@ class BenchmarkRunner:
         experiment_bar.close()
 
         # Add metadata to results
-        results["engines"] = engines
-        results["config"] = self.config
+        results["engines"] = engines  # pyright: ignore[reportArgumentType]
+        results["config"] = self.config  # pyright: ignore[reportArgumentType]
 
         return results
 
@@ -277,7 +277,6 @@ class BenchmarkRunner:
         print(
             f"- Points: **{config.experiments[i]:,}**, Queries: **{config.n_queries}**"
         )
-        print("--------------------")
 
         # Find fastest and show key results
         ranked = sorted(
