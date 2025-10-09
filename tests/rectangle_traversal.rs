@@ -1,17 +1,17 @@
 use fastquadtree::{QuadTree, Item, Point, Rect};
 
 #[test]
-fn test_get_all_rectangles_single_node() {
+fn test_get_all_node_boundaries_single_node() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
     let qt = QuadTree::new(boundary, 4);
     
-    let rectangles = qt.get_all_rectangles();
+    let rectangles = qt.get_all_node_boundaries();
     assert_eq!(rectangles.len(), 1);
     assert_eq!(rectangles[0], boundary);
 }
 
 #[test]
-fn test_get_all_rectangles_after_split() {
+fn test_get_all_node_boundaries_after_split() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
     let mut qt = QuadTree::new(boundary, 2);
     
@@ -20,7 +20,7 @@ fn test_get_all_rectangles_after_split() {
     qt.insert(Item { id: 2, point: Point { x: 80.0, y: 20.0 } }); // Bottom-right
     qt.insert(Item { id: 3, point: Point { x: 30.0, y: 80.0 } }); // Top-left - This should trigger split
     
-    let rectangles = qt.get_all_rectangles();
+    let rectangles = qt.get_all_node_boundaries();
     
     // Should have root + 4 children = 5 rectangles (since items are in different quadrants)
     assert_eq!(rectangles.len(), 5);
@@ -43,7 +43,7 @@ fn test_get_all_rectangles_after_split() {
 }
 
 #[test]
-fn test_get_all_rectangles_deep_tree() {
+fn test_get_all_node_boundaries_deep_tree() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
     let mut qt = QuadTree::new(boundary, 1); // Small capacity to force deep splits
     
@@ -52,7 +52,7 @@ fn test_get_all_rectangles_deep_tree() {
     qt.insert(Item { id: 2, point: Point { x: 12.0, y: 12.0 } }); // Close to first, will split further
     qt.insert(Item { id: 3, point: Point { x: 14.0, y: 14.0 } }); // Even deeper split
     
-    let rectangles = qt.get_all_rectangles();
+    let rectangles = qt.get_all_node_boundaries();
     
     // Should have more than just root + 4 children due to deeper splits
     assert!(rectangles.len() > 5, "Expected more rectangles due to deep splits, got {}", rectangles.len());
@@ -62,7 +62,7 @@ fn test_get_all_rectangles_deep_tree() {
 }
 
 #[test]
-fn test_get_all_rectangles_same_quadrant_deep_split() {
+fn test_get_all_node_boundaries_same_quadrant_deep_split() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
     let mut qt = QuadTree::new(boundary, 2);
     
@@ -71,7 +71,7 @@ fn test_get_all_rectangles_same_quadrant_deep_split() {
     qt.insert(Item { id: 2, point: Point { x: 20.0, y: 20.0 } });
     qt.insert(Item { id: 3, point: Point { x: 30.0, y: 30.0 } }); // All in bottom-left, forces deep split
     
-    let rectangles = qt.get_all_rectangles();
+    let rectangles = qt.get_all_node_boundaries();
     
     // Should have root + first level children + deeper subdivisions = 9 rectangles
     assert_eq!(rectangles.len(), 9);

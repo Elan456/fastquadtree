@@ -48,7 +48,7 @@ def test_delete_by_object_uses_cached_coords_and_updates_counts():
 def test_bounds_error_message_includes_point_and_bounds():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
     with pytest.raises(
-        ValueError, match=r"Point \([^)]*\) is outside bounds \([^)]*\)"
+        ValueError, match=r"Geometry \([^)]*\) is outside bounds \([^)]*\)"
     ):
         qt.insert((1500, -10))
 
@@ -145,7 +145,7 @@ def test_out_of_bounds_insert():
     with pytest.raises(ValueError):
         qt.insert((100, 100))  # on max edge, should be excluded
 
-    assert len(qt.get_all_rectangles()) == 1
+    assert len(qt.get_all_node_boundaries()) == 1
 
     with pytest.raises(ValueError):
         qt.get_all_objects()

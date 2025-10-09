@@ -186,7 +186,7 @@ def draw_grid():
 
 
 def draw_nodes(query_rect):
-    rects = qtree.get_all_rectangles()
+    rects = qtree.get_all_node_boundaries()
     qminx, qminy, qmaxx, qmaxy = query_rect
     lw = max(1, int(1.25 * zoom))
     for r in rects:

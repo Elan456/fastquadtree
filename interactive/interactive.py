@@ -16,7 +16,7 @@ camera_y = -500
 
 
 def draw_quadtree(tree: QuadTree):
-    bboxs = tree.get_all_rectangles()
+    bboxs = tree.get_all_node_boundaries()
     for bbox in bboxs:
         rect = (
             bbox[0] - camera_x,
