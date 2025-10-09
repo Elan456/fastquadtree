@@ -70,7 +70,9 @@ nav:
   - Benchmark: benchmark.md
   - API:
       - fastquadtree.QuadTree: api/quadtree.md
-      - fastquadtree.Item: api/item.md
+      - fastquadtree.RectQuadTree: api/rect_quadtree.md
+      - fastquadtree.RectItem: api/rect_item.md
+      - fastquadtree.PointItem: api/point_item.md
 
 extra:
   social:
