@@ -1,10 +1,11 @@
 
 pub mod geom;
 pub mod quadtree;
+pub mod rect_quadtree;
 
-// Optional re-exports so users of the crate can do `use fastquadtree::QuadTree;`
 pub use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
 pub use crate::quadtree::{Item, QuadTree};
+pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
 use pyo3::prelude::*;
 use pyo3::types::{PyList};
