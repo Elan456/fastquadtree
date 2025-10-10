@@ -39,6 +39,7 @@
 - Fast inserts and queries on hundreds of thousands of points
 - Optional object tracking for id ↔ object mapping
 - Clean integrations for range queries and nearest neighbors
+- Support for inserting bounding boxes or points
 
 ## Install
 ```bash

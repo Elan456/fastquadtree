@@ -2,7 +2,7 @@
 
 Meet **fastquadtree** — a Rust powered spatial index for Python
 
-> TLDR: create a tree, insert points, query ranges or nearest neighbors.
+> TLDR: create a tree, insert points, insert boxes, query ranges or nearest neighbors.
 
 ## Installation
 

@@ -33,6 +33,8 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 | Max depth | 16 |
 | Queries per experiment | 500 |
 
+---------
+
 ## Native vs Shim
 
 ### Configuration
@@ -54,6 +56,8 @@ Using the shim with object tracking increases build time by 3.604x and query tim
 **Total slowdown = 1.210x.**
 
 Adding the object map only impacts the build time, not the query time.
+
+---------
 
 ## System Info
 - **OS**: Windows 11 AMD64
