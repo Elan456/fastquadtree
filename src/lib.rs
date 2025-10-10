@@ -146,12 +146,6 @@ impl PyRectQuadTree {
         PyList::new_bound(py, &tuples)
     }
 
-    /// Convenience to only get ids.
-    pub fn query_ids(&self, rect: (f32, f32, f32, f32)) -> Vec<u64> {
-        let (min_x, min_y, max_x, max_y) = rect;
-        self.inner.query_ids(Rect { min_x, min_y, max_x, max_y })
-    }
-
     /// Collect all node boundaries for visualization or debugging.
     pub fn get_all_node_boundaries(&self) -> Vec<(f32, f32, f32, f32)> {
         self.inner

@@ -14,9 +14,6 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     """
     High-level Python wrapper over the Rust quadtree engine.
 
-    The quadtree stores points with integer IDs. You may attach an arbitrary
-    Python object per ID when object tracking is enabled.
-
     Performance characteristics:
         Inserts: average O(log n) <br>
         Rect queries: average O(log n + k) where k is matches returned <br>
@@ -54,15 +51,6 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             start_id=start_id,
         )
 
-    def insert(self, xy: Point, *, id_: int | None = None, obj: Any = None) -> int:
-        return self._insert_common(xy, id_=id_, obj=obj)
-
-    def insert_many_points(self, points: list[Point]) -> int:
-        return self._insert_many_common(points)
-
-    def delete(self, id_: int, xy: Point) -> bool:
-        return self._delete_exact(id_, xy)
-
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
@@ -70,6 +58,17 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     @overload
     def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[PointItem]: ...
     def query(self, rect: Bounds, *, as_items: bool = False):
+        """
+        Return all points inside an axis-aligned rectangle.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+
+        Returns:
+            If as_items is False: list of (id, x, y) tuples.
+            If as_items is True: list of Item objects.
+        """
         raw = self._native.query(rect)
         if not as_items:
             return raw
@@ -85,7 +84,25 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             out.append(it)
         return out
 
+    @overload
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[False] = ...
+    ) -> _IdCoord | None: ...
+    @overload
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[True]
+    ) -> PointItem | None: ...
     def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
+        """
+        Return the single nearest neighbor to the query point.
+
+        Args:
+            xy: Query point (x, y).
+            as_item: If True, return Item. If False, return (id, x, y).
+
+        Returns:
+            The nearest neighbor or None if the tree is empty.
+        """
         t = self._native.nearest_neighbor(xy)
         if t is None or not as_item:
             return t
@@ -97,7 +114,26 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             raise RuntimeError("Internal error: missing tracked item")
         return it
 
+    @overload
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[False] = ...
+    ) -> list[_IdCoord]: ...
+    @overload
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[True]
+    ) -> list[PointItem]: ...
     def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
+        """
+        Return the k nearest neighbors to the query point in order of increasing distance.
+
+        Args:
+            xy: Query point (x, y).
+            k: Number of neighbors to return.
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+        Returns:
+            If as_items is False: list of (id, x, y) tuples.
+            If as_items is True: list of Item objects.
+        """
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:
             return raw
@@ -111,9 +147,6 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             out.append(it)
         return out
 
-    def get_all_node_boundaries(self) -> list[Bounds]:
-        return self._native.get_all_node_boundaries()
-
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         if max_depth is None:
             return _RustQuadTree(bounds, capacity)
@@ -121,5 +154,3 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
 
     def _make_item(self, id_: int, geom: Point, obj: Any | None) -> PointItem:
         return PointItem(id_, geom, obj)
-
-    NativeQuadTree = _RustQuadTree

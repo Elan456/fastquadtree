@@ -128,7 +128,7 @@ def test_delete_all_points():
     assert final_rectangles == 1
 
 
-def test_delete_exact_point_matching():
+def testdelete_point_matching():
     """Test that delete requires exact ID and point matching"""
     tree = QuadTree((0, 0, 100, 100), capacity=4)
 

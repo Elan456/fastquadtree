@@ -116,7 +116,7 @@ pts = [(random.random()*1000, random.random()*1000) for _ in range(N)]
 qt = QuadTree((0, 0, 1000, 1000), capacity=32)
 
 t0 = time.perf_counter()
-qt.insert_many_points(pts)
+qt.insert_many(pts)
 t1 = time.perf_counter()
 
 hits = qt.query((250, 250, 750, 750))
@@ -132,4 +132,4 @@ print(f"Build: {(t1-t0):.3f}s  Query: {(t2-t1):.3f}s  Hits: {len(hits)}")
 * **Use `capacity` 8 to 64** for most workloads
   If data is highly skewed, set a `max_depth` to avoid very deep trees.
 * **Use `clear()` to reset** when most points are moving rather than deleting and reinserting.
-* **Use `insert_many_points()`** to bulk load a large batch of points at once.
+* **Use `insert_many()`** to bulk load a large batch of points at once.

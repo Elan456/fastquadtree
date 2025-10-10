@@ -33,18 +33,6 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             start_id=start_id,
         )
 
-    def insert(self, rect: Bounds, *, id_: int | None = None, obj: Any = None) -> int:
-        return self._insert_common(rect, id_=id_, obj=obj)
-
-    def insert_many_rects(self, rects: list[Bounds]) -> int:
-        return self._insert_many_common(rects)
-
-    def delete(self, id_: int, rect: Bounds) -> bool:
-        return self._delete_exact(id_, rect)
-
-    def query_ids(self, rect: Bounds) -> list[int]:
-        return self._native.query_ids(rect)
-
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
@@ -52,6 +40,17 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     @overload
     def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
     def query(self, rect: Bounds, *, as_items: bool = False):
+        """
+        Query the tree for all items that intersect the given rectangle.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+
+        Returns:
+            If as_items is False: list of (id, x0, y0, x1, y1) tuples.
+            If as_items is True: list of Item objects.
+        """
         raw = self._native.query(rect)
         if not as_items:
             return raw
@@ -77,5 +76,3 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
 
     def _make_item(self, id_: int, geom: Bounds, obj: Any | None) -> RectItem:
         return RectItem(id_, geom, obj)
-
-    NativeRectQuadTree = _RustRectQuadTree

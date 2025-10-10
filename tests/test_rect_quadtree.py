@@ -16,7 +16,7 @@ _IdRect = Tuple[int, float, float, float, float]
 class FakeNative:
     """
     Minimal in-memory stand-in for _RustRectQuadTree:
-      - insert / insert_many_rects
+      - insert / insert_many
       - delete
       - query / query_ids
       - count_items
@@ -106,8 +106,6 @@ def b(x0, y0, x1, y1) -> Bounds:
 
 
 def test_init_uses_native_with_and_without_max_depth():
-    import fastquadtree
-
     qt1 = rq.RectQuadTree(b(0, 0, 100, 100), 4)  # max_depth None branch
     assert isinstance(qt1._native, FakeNative)
     assert qt1._native.max_depth is None
@@ -115,9 +113,6 @@ def test_init_uses_native_with_and_without_max_depth():
     qt2 = rq.RectQuadTree(b(0, 0, 50, 50), 2, max_depth=7)  # explicit branch
     assert isinstance(qt2._native, FakeNative)
     assert qt2._native.max_depth == 7
-
-    # alias exposed to users
-    assert rq.RectQuadTree.NativeRectQuadTree is fastquadtree._native.RectQuadTree  # type: ignore[attr-defined]
 
 
 def test_insert_delete_and_count_and_len_no_tracking():
@@ -143,14 +138,14 @@ def test_bulk_insert_success_and_error_paths(monkeypatch):
     qt = rq.RectQuadTree(b(0, 0, 100, 100), 8)
 
     # success path
-    n = qt.insert_many_rects([b(1, 1, 2, 2), b(3, 3, 4, 4)])
+    n = qt.insert_many([b(1, 1, 2, 2), b(3, 3, 4, 4)])
     assert n == 2
     assert qt.count_items() == 2
     assert len(qt) == 2
 
     # error path: one out of bounds so _insert_many_common raises ValueError
     with pytest.raises(ValueError):
-        qt.insert_many_rects([b(5, 5, 6, 6), b(1000, 1000, 1001, 1001)])
+        qt.insert_many([b(5, 5, 6, 6), b(1000, 1000, 1001, 1001)])
 
 
 def test_query_paths_without_tracking_raw_and_as_items():
@@ -191,14 +186,10 @@ def test_query_with_tracking_ok_and_missing_item_raises():
         qt.query(b(0, 0, 10, 10), as_items=True)
 
 
-def test_query_ids_and_node_boundaries_and_delete_miss():
+def test_node_boundaries_and_delete_miss():
     qt = rq.RectQuadTree(b(0, 0, 10, 10), 8)
     a = qt.insert(b(1, 1, 2, 2))
     qt.insert(b(5, 5, 6, 6))
-
-    # query_ids delegates to native
-    ids = sorted(qt.query_ids(b(0, 0, 10, 10)))
-    assert ids == [a, a + 1]
 
     # get_all_node_boundaries delegates to native hook
     bounds = qt.get_all_node_boundaries()
