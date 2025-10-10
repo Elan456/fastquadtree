@@ -16,35 +16,6 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     High-level Python wrapper over the Rust RectQuadTree.
     """
 
-    # ---- native hooks ----
-
-    def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
-        if max_depth is None:
-            return _RustRectQuadTree(bounds, capacity)
-        return _RustRectQuadTree(bounds, capacity, max_depth=max_depth)
-
-    def _native_insert(self, id_: int, geom: Bounds) -> bool:
-        return self._native.insert(id_, geom)
-
-    def _native_insert_many(self, start_id: int, geoms: list[Bounds]) -> int:
-        return self._native.insert_many_rects(start_id, geoms)
-
-    def _native_delete(self, id_: int, geom: Bounds) -> bool:
-        return self._native.delete(id_, geom)
-
-    def _native_query(self, rect: Bounds) -> list[_IdRect]:
-        return self._native.query(rect)
-
-    def _native_count(self) -> int:
-        return self._native.count_items()
-
-    # ---- item helpers ----
-
-    def _make_item(self, id_: int, geom: Bounds, obj: Any | None) -> RectItem:
-        return RectItem(id_, geom, obj)
-
-    # ---- public API identical to your rect wrapper ----
-
     def __init__(
         self,
         bounds: Bounds,
@@ -81,7 +52,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     @overload
     def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
     def query(self, rect: Bounds, *, as_items: bool = False):
-        raw = self._native_query(rect)
+        raw = self._native.query(rect)
         if not as_items:
             return raw
         if self._items is None:
@@ -99,5 +70,12 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             out.append(it)
         return out
 
-    # Power users
+    def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
+        if max_depth is None:
+            return _RustRectQuadTree(bounds, capacity)
+        return _RustRectQuadTree(bounds, capacity, max_depth=max_depth)
+
+    def _make_item(self, id_: int, geom: Bounds, obj: Any | None) -> RectItem:
+        return RectItem(id_, geom, obj)
+
     NativeRectQuadTree = _RustRectQuadTree

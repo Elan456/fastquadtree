@@ -42,29 +42,6 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """Create the native engine instance."""
 
     @abstractmethod
-    def _native_insert(self, id_: int, geom: G) -> bool:
-        """Call native insert for one geometry."""
-
-    @abstractmethod
-    def _native_delete(self, id_: int, geom: G) -> bool:
-        """Call native delete for one geometry."""
-
-    @abstractmethod
-    def _native_query(self, rect: Bounds) -> list[HitT]:
-        """Call native query. Returns raw hit tuples."""
-
-    @abstractmethod
-    def _native_count(self) -> int:
-        """Call native count_items()."""
-
-    @abstractmethod
-    def _native_insert_many(self, start_id: int, geoms: list[G]) -> int:
-        """
-        Bulk insert. Default: loop calling single insert.
-        Override to bind to a native bulk method returning last_id.
-        """
-
-    @abstractmethod
     def _make_item(self, id_: int, geom: G, obj: Any | None) -> ItemType:
         """Build an ItemType from id, geometry, and optional object."""
 
@@ -102,7 +79,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
     def _insert_common(self, geom: G, *, id_: int | None, obj: Any = None) -> int:
         use_id = self._alloc_id(id_)
-        if not self._native_insert(use_id, geom):
+        if not self._native.insert(use_id, geom):
             bx0, by0, bx1, by1 = self._bounds
             raise ValueError(
                 f"Geometry {geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
@@ -116,7 +93,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
     def _insert_many_common(self, geoms: list[G]) -> int:
         start_id = self._next_id
-        last_id = self._native_insert_many(start_id, geoms)
+        last_id = self._native.insert_many(start_id, geoms)
         num = last_id - start_id + 1
         if num < len(geoms):
             raise ValueError("One or more items are outside tree bounds")
@@ -129,7 +106,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         return num
 
     def _delete_exact(self, id_: int, geom: G) -> bool:
-        deleted = self._native_delete(id_, geom)
+        deleted = self._native.delete(id_, geom)
         if deleted:
             self._count -= 1
             if self._items is not None:
@@ -187,7 +164,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         return None if item is None else item.obj
 
     def count_items(self) -> int:
-        return self._native_count()
+        return self._native.count_items()
 
     def __len__(self) -> int:
         return self._count

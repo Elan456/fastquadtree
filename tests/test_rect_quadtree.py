@@ -45,7 +45,7 @@ class FakeNative:
         self.items[id_] = rect
         return True
 
-    def insert_many_rects(self, start_id: int, rects: list[Bounds]) -> int:
+    def insert_many(self, start_id: int, rects: list[Bounds]) -> int:
         next_id = start_id
         for r in rects:
             if self.insert(next_id, r):

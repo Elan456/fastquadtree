@@ -42,7 +42,7 @@ impl PyQuadTree {
 
     // Insert many points with auto ids starting at start_id: [(x, y), ...]
     // Returns the last id used
-    pub fn insert_many_points(&mut self, start_id: u64, points: Vec<(f32, f32)>) -> u64 {
+    pub fn insert_many(&mut self, start_id: u64, points: Vec<(f32, f32)>) -> u64 {
         let mut id = start_id;
         for (x, y) in points {
             if self.inner.insert(Item { id, point: Point { x, y } }) {
@@ -118,7 +118,7 @@ impl PyRectQuadTree {
     }
 
     /// Insert many AABBs with auto ids starting at start_id. Returns the last id used.
-    pub fn insert_many_rects(&mut self, start_id: u64, rects: Vec<(f32, f32, f32, f32)>) -> u64 {
+    pub fn insert_many(&mut self, start_id: u64, rects: Vec<(f32, f32, f32, f32)>) -> u64 {
         let mut id = start_id;
         for (min_x, min_y, max_x, max_y) in rects {
             if self.inner.insert(RectItem { id, rect: Rect { min_x, min_y, max_x, max_y } }) {
