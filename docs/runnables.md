@@ -21,6 +21,8 @@ pip install -r interactive/requirements.txt
 python interactive/interactive_v2_rect.py
 ```
 
+![Interactive_V2_Rect_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_rect_screenshot.png)
+
 ## 2. Ball Pit  
 - Spawn balls in a pit with physics-based collisions
 - Easily switch between brute force and quadtree collision detection to see the performance difference

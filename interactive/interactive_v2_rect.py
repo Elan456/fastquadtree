@@ -85,8 +85,8 @@ class Box:
         spd = random.uniform(60.0, 160.0)
         self.vx = math.cos(ang) * spd
         self.vy = math.sin(ang) * spd
-        self.w = random.uniform(8.0, 20.0)
-        self.h = random.uniform(8.0, 20.0)
+        self.w = random.uniform(8.0, 200.0)
+        self.h = random.uniform(8.0, 200.0)
 
     def update(self, dt):
         self.x += self.vx * dt
