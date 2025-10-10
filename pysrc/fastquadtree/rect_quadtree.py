@@ -59,7 +59,9 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     ) -> list[_IdRect]: ...
     @overload
     def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
-    def query(self, rect: Bounds, *, as_items: bool = False):
+    def query(
+        self, rect: Bounds, *, as_items: bool = False
+    ) -> list[_IdRect] | list[RectItem]:
         """
         Query the tree for all items that intersect the given rectangle.
 
