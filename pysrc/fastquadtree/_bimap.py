@@ -1,14 +1,16 @@
 # _bimap.py
 from __future__ import annotations
 
-from typing import Any, Iterable, Iterator
+from typing import Any, Generic, Iterable, Iterator, TypeVar
 
-from ._item import Item
+from ._item import Item  # base class for PointItem and RectItem
+
+TItem = TypeVar("TItem", bound=Item)
 
 
-class BiMap:
+class BiMap(Generic[TItem]):
     """
-    Bidirectional map to the same Item:
+    Bidirectional map to the same Item subtype:
       id -> Item
       obj -> Item  (uses object identity)
 
@@ -20,19 +22,22 @@ class BiMap:
 
     __slots__ = ("_id_to_item", "_objid_to_item")
 
-    def __init__(self, items: Iterable[Item] | None = None) -> None:
-        self._id_to_item: dict[int, Item] = {}
-        self._objid_to_item: dict[int, Item] = {}
+    def __init__(
+        self,
+        items: Iterable[TItem] | None = None,
+    ) -> None:
+        self._id_to_item: dict[int, TItem] = {}
+        self._objid_to_item: dict[int, TItem] = {}
         if items:
             for it in items:
                 self.add(it)
 
     # - core -
 
-    def add(self, item: Item) -> None:
+    def add(self, item: TItem) -> None:
         """
         Insert or replace mapping for this Item.
-        Handles conflicts so that both id and obj point to this exact Item.
+        Handles conflicts so both id and obj point to this exact Item.
         """
         id_ = item.id_
         obj = item.obj
@@ -55,13 +60,13 @@ class BiMap:
         if obj is not None:
             self._objid_to_item[id(obj)] = item
 
-    def by_id(self, id_: int) -> Item | None:
+    def by_id(self, id_: int) -> TItem | None:
         return self._id_to_item.get(id_)
 
-    def by_obj(self, obj: Any) -> Item | None:
+    def by_obj(self, obj: Any) -> TItem | None:
         return self._objid_to_item.get(id(obj))
 
-    def pop_id(self, id_: int) -> Item | None:
+    def pop_id(self, id_: int) -> TItem | None:
         it = self._id_to_item.pop(id_, None)
         if it is not None:
             obj = it.obj
@@ -69,25 +74,20 @@ class BiMap:
                 self._objid_to_item.pop(id(obj), None)
         return it
 
-    def pop_obj(self, obj: Any) -> Item | None:
+    def pop_obj(self, obj: Any) -> TItem | None:
         it = self._objid_to_item.pop(id(obj), None)
         if it is not None:
             self._id_to_item.pop(it.id_, None)
         return it
 
-    def pop_item(self, item: Item) -> Item | None:
+    def pop_item(self, item: TItem) -> TItem | None:
         """
         Remove this exact Item if present on either side.
         """
-        removed = None
-        # Remove by id first
-        removed = self._id_to_item.pop(item.id_)
-
-        # Remove by obj side
+        removed = self._id_to_item.pop(item.id_, None)
         obj = item.obj
         if obj is not None:
             self._objid_to_item.pop(id(obj), None)
-            removed = removed or item
         return removed
 
     # - convenience -
@@ -105,8 +105,8 @@ class BiMap:
     def contains_obj(self, obj: Any) -> bool:
         return id(obj) in self._objid_to_item
 
-    def items_by_id(self) -> Iterator[tuple[int, Item]]:
+    def items_by_id(self) -> Iterator[tuple[int, TItem]]:
         return iter(self._id_to_item.items())
 
-    def items(self) -> Iterator[Item]:
+    def items(self) -> Iterator[TItem]:
         return iter(self._id_to_item.values())

@@ -1,10 +1,11 @@
+# Rectangle-version of the interactive demo
+
 import math
 import random
-from collections import deque
 
 import pygame
 
-from fastquadtree import QuadTree
+from fastquadtree import RectQuadTree
 
 pygame.init()
 pygame.font.init()
@@ -23,11 +24,6 @@ WORLD_MAX_X, WORLD_MAX_Y = 1200, 800
 # Camera
 camera_x = -(W // 2)
 camera_y = -(H // 2)
-zoom = 1.0
-zoom_target = 0.17
-ZOOM_MIN, ZOOM_MAX = 0.01, 2.5
-ZOOM_FACTOR = 1.15  # per key press or mouse wheel notch
-ZOOM_SMOOTH = 10.0  # higher = snappier smoothing
 
 # Pan speed in world units per second (at zoom 1.0)
 PAN_SPEED = 1200.0
@@ -37,7 +33,7 @@ PAN_SPEED = 1200.0
 # Helpers for coords and drawing
 # ------------------------------
 def world_to_screen(x, y):
-    return int((x - camera_x) * zoom), int((y - camera_y) * zoom)
+    return int(x - camera_x), int(y - camera_y)
 
 
 def screen_rect_from_world(b):
@@ -72,7 +68,7 @@ font = pygame.font.SysFont("Consolas", 12)
 # ------------------------------
 # Quadtree and actors
 # ------------------------------
-qtree = QuadTree(
+qtree = RectQuadTree(
     (WORLD_MIN_X, WORLD_MIN_Y, WORLD_MAX_X + 1, WORLD_MAX_Y + 1),
     6,
     max_depth=12,
@@ -80,9 +76,7 @@ qtree = QuadTree(
 )
 
 
-class Particle:
-    __slots__ = ("r", "trail", "vx", "vy", "x", "y")
-
+class Box:
     def __init__(self, x, y):
         self.x = float(x)
         self.y = float(y)
@@ -91,43 +85,51 @@ class Particle:
         spd = random.uniform(60.0, 160.0)
         self.vx = math.cos(ang) * spd
         self.vy = math.sin(ang) * spd
-        self.r = random.randint(8, 16)
-        self.trail = deque(maxlen=14)
+        self.w = random.uniform(8.0, 20.0)
+        self.h = random.uniform(8.0, 20.0)
 
     def update(self, dt):
         self.x += self.vx * dt
         self.y += self.vy * dt
 
-        if self.x < WORLD_MIN_X or self.x > WORLD_MAX_X:
-            self.vx *= -1
-            self.x = clamp(self.x, WORLD_MIN_X, WORLD_MAX_X)
-        if self.y < WORLD_MIN_Y or self.y > WORLD_MAX_Y:
-            self.vy *= -1
-            self.y = clamp(self.y, WORLD_MIN_Y, WORLD_MAX_Y)
+        rect = self.get_rect()
 
-        self.trail.append((self.x, self.y))
+        # World bounds bounce
+        if rect[0] < WORLD_MIN_X:
+            self.x = WORLD_MIN_X + self.w / 2
+            self.vx *= -1
+        elif rect[2] > WORLD_MAX_X:
+            self.x = WORLD_MAX_X - self.w / 2
+            self.vx *= -1
+        if rect[1] < WORLD_MIN_Y:
+            self.y = WORLD_MIN_Y + self.h / 2
+            self.vy *= -1
+        elif rect[3] > WORLD_MAX_Y:
+            self.y = WORLD_MAX_Y - self.h / 2
+            self.vy *= -1
 
     def draw(self):
-        # trail (draw to alpha surface that we fully rebuild every frame)
-        if len(self.trail) > 1:
-            pts = [world_to_screen(px, py) for (px, py) in self.trail]
-            n = len(pts)
-            for i in range(1, n):
-                t = i / n
-                alpha = int(50 + 180 * t)
-                col = (COL_TRAIL[0], COL_TRAIL[1], COL_TRAIL[2], alpha)
-                pygame.draw.line(
-                    trail_surf, col, pts[i - 1], pts[i], max(1, int(2 * zoom))
-                )
-
         sx, sy = world_to_screen(self.x, self.y)
-        pygame.draw.circle(screen, COL_POINT, (sx, sy), max(1, int(self.r * zoom)))
+        pygame.draw.rect(
+            screen, COL_POINT, (sx - self.w / 2, sy - self.h / 2, self.w, self.h)
+        )
+        pygame.draw.rect(
+            screen, COL_POINT_DIM, (sx - self.w / 2, sy - self.h / 2, self.w, self.h), 2
+        )
+
+    def get_rect(self):
+        return (
+            self.x - self.w / 2,
+            self.y - self.h / 2,
+            self.x + self.w / 2,
+            self.y + self.h / 2,
+        )
 
 
 # Seed particles
 random.seed(2)
 initial_particles = [
-    Particle(
+    Box(
         random.uniform(WORLD_MIN_X * 0.9, WORLD_MAX_X * 0.9),
         random.uniform(WORLD_MIN_Y * 0.9, WORLD_MAX_Y * 0.9),
     )
@@ -135,7 +137,7 @@ initial_particles = [
 ]
 
 for p in initial_particles:
-    qtree.insert((p.x, p.y), obj=p)
+    qtree.insert(p.get_rect(), obj=p)
 
 # Offscreen surfaces
 trail_surf = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -155,8 +157,8 @@ RECT_RESIZE_SPEED = 200.0  # pixels per second
 
 def screen_to_world(screen_x, screen_y):
     """Convert screen coordinates to world coordinates"""
-    world_x = screen_x / max(zoom, 1e-6) + camera_x
-    world_y = screen_y / max(zoom, 1e-6) + camera_y
+    world_x = screen_x + camera_x
+    world_y = screen_y + camera_y
     return world_x, world_y
 
 
@@ -174,11 +176,11 @@ def get_mouse_rect():
 
 def draw_grid():
     step = 100
-    s = step * zoom
+    s = step
     if s < 30:
         return
-    ox = -int((camera_x * zoom) % s)
-    oy = -int((camera_y * zoom) % s)
+    ox = -int((camera_x) % s)
+    oy = -int((camera_y) % s)
     for x in range(ox, W, int(s)):
         pygame.draw.line(screen, COL_GRID, (x, 0), (x, H), 1)
     for y in range(oy, H, int(s)):
@@ -188,7 +190,7 @@ def draw_grid():
 def draw_nodes(query_rect):
     rects = qtree.get_all_node_boundaries()
     qminx, qminy, qmaxx, qmaxy = query_rect
-    lw = max(1, int(1.25 * zoom))
+    lw = max(1, int(1.25))
     for r in rects:
         srect = screen_rect_from_world(r[:4])
         inter = not (r[2] < qminx or r[0] > qmaxx or r[3] < qminy or r[1] > qmaxy)
@@ -202,21 +204,22 @@ def draw_nodes(query_rect):
 
 def draw_query_rect(rect, blink):
     srect = screen_rect_from_world(rect)
-    w = max(2, int(2 * zoom)) if blink else max(1, int(1 * zoom))
+    w = max(2, 2) if blink else max(1, 1)
     pygame.draw.rect(screen, COL_QUERY_RECT, srect, w)
 
 
 def draw_query_circle(cx, cy, r, blink):
     sx, sy = world_to_screen(cx, cy)
-    sr = max(2, int(r * zoom))
-    w = max(2, int(2 * zoom)) if blink else max(1, int(1 * zoom))
+    sr = max(2, int(r))
+    w = max(2, 2) if blink else max(1, 1)
     pygame.draw.circle(screen, COL_QUERY_CIRC, (sx, sy), sr, w)
 
 
 def draw_nn_rays():
     for obj in list(qtree.get_all_objects()):
         wx, wy = obj.x, obj.y
-        out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
+        # out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
+        out = []
         if len(out) < 2:
             continue
         nn = out[1].obj  # second nearest (first is self)
@@ -238,7 +241,7 @@ def hud(text_lines):
 # ------------------------------
 # Event and input handling
 # ------------------------------
-def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target):
+def handle_events(running, paused, show_nodes, show_nn, show_trails):
     """Handle discrete events like key presses and mouse clicks."""
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
@@ -254,68 +257,56 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target
                 show_nn = not show_nn
             elif ev.key == pygame.K_3:
                 show_trails = not show_trails
-            elif ev.key in (pygame.K_EQUALS, pygame.K_PLUS, pygame.K_KP_PLUS):
-                zoom_target = clamp(zoom_target * ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
-            elif ev.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
-                zoom_target = clamp(zoom_target / ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
-
-        elif ev.type == pygame.MOUSEWHEEL:
-            if ev.y != 0:
-                factor = ZOOM_FACTOR**ev.y
-                zoom_target = clamp(zoom_target * factor, ZOOM_MIN, ZOOM_MAX)
 
         # Left click
         elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
             mx, my = ev.pos
-            wx = mx / max(zoom, 1e-6) + camera_x
-            wy = my / max(zoom, 1e-6) + camera_y
+            wx = mx + camera_x
+            wy = my + camera_y
             if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
-                p = Particle(wx, wy)
-                qtree.insert((p.x, p.y), obj=p)
+                p = Box(wx, wy)
+                qtree.insert(p.get_rect(), obj=p)
 
         # Right click
         elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
             mx, my = ev.pos
-            wx = mx / max(zoom, 1e-6) + camera_x
-            wy = my / max(zoom, 1e-6) + camera_y
-            nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+            wx = mx + camera_x
+            wy = my + camera_y
+            #       nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+            nn = None
             if nn is not None:
                 qtree.delete_by_object(nn.obj)
 
-    return running, paused, show_nodes, show_nn, show_trails, zoom_target
+    return running, paused, show_nodes, show_nn, show_trails
 
 
-def handle_continuous_input(
-    dt, zoom, zoom_target, camera_x, camera_y, rect_half_width, rect_half_height
-):
+def handle_continuous_input(dt, camera_x, camera_y, rect_half_width, rect_half_height):
     """Handle continuous input like held keys and mouse buttons."""
     mx, my = pygame.mouse.get_pos()
 
     # Smooth zoom toward target and keep the mouse-anchored world point fixed
-    wx_anchor = camera_x + mx / max(zoom, 1e-6)
-    wy_anchor = camera_y + my / max(zoom, 1e-6)
+    wx_anchor = camera_x + mx
+    wy_anchor = camera_y + my
 
     # Add a point instantly with left mouse button held + shift
     if pygame.mouse.get_pressed(3)[0] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-        wx = mx / max(zoom, 1e-6) + camera_x
-        wy = my / max(zoom, 1e-6) + camera_y
+        wx = mx + camera_x
+        wy = my + camera_y
         if WORLD_MIN_X <= wx < WORLD_MAX_X and WORLD_MIN_Y <= wy < WORLD_MAX_Y:
-            p = Particle(wx, wy)
-            qtree.insert((p.x, p.y), obj=p)
+            p = Box(wx, wy)
+            qtree.insert(p.get_rect(), obj=p)
 
     # Remove nearest point with right click
     if pygame.mouse.get_pressed(3)[2] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-        wx = mx / max(zoom, 1e-6) + camera_x
-        wy = my / max(zoom, 1e-6) + camera_y
-        nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+        wx = mx + camera_x
+        wy = my + camera_y
+        #     nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+        nn = None
         if nn is not None:
             qtree.delete_by_object(nn.obj)
 
-    zoom += (zoom_target - zoom) * min(1.0, ZOOM_SMOOTH * dt)
-    zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX)
-
-    camera_x = wx_anchor - mx / max(zoom, 1e-6)
-    camera_y = wy_anchor - my / max(zoom, 1e-6)
+    camera_x = wx_anchor - mx
+    camera_y = wy_anchor - my
 
     # Rectangle size controls with arrow keys
     keys = pygame.key.get_pressed()
@@ -332,17 +323,17 @@ def handle_continuous_input(
     dx = keys[pygame.K_d] - keys[pygame.K_a]
     dy = keys[pygame.K_s] - keys[pygame.K_w]
     if dx or dy:
-        camera_x += (dx * PAN_SPEED * dt) / max(zoom, 1e-6)
-        camera_y += (dy * PAN_SPEED * dt) / max(zoom, 1e-6)
+        camera_x += dx * PAN_SPEED * dt
+        camera_y += dy * PAN_SPEED * dt
 
-    return zoom, camera_x, camera_y, rect_half_width, rect_half_height
+    return camera_x, camera_y, rect_half_width, rect_half_height
 
 
 # ------------------------------
 # Main loop
 # ------------------------------
 def main():
-    global camera_x, camera_y, zoom, zoom_target, rect_half_width, rect_half_height
+    global camera_x, camera_y, rect_half_width, rect_half_height
     running = True
     paused = False
     show_nodes = True
@@ -356,21 +347,17 @@ def main():
         t += dt
 
         # Handle discrete events
-        running, paused, show_nodes, show_nn, show_trails, zoom_target = handle_events(
-            running, paused, show_nodes, show_nn, show_trails, zoom_target
+        running, paused, show_nodes, show_nn, show_trails = handle_events(
+            running, paused, show_nodes, show_nn, show_trails
         )
 
         # Handle continuous input
-        zoom, camera_x, camera_y, rect_half_width, rect_half_height = (
-            handle_continuous_input(
-                dt,
-                zoom,
-                zoom_target,
-                camera_x,
-                camera_y,
-                rect_half_width,
-                rect_half_height,
-            )
+        camera_x, camera_y, rect_half_width, rect_half_height = handle_continuous_input(
+            dt,
+            camera_x,
+            camera_y,
+            rect_half_width,
+            rect_half_height,
         )
 
         # Update particles and quadtree
@@ -379,7 +366,7 @@ def main():
             for p in objs:
                 p.update(dt)
                 qtree.delete_by_object(p)
-                qtree.insert((p.x, p.y), obj=p)
+                qtree.insert(p.get_rect(), obj=p)
 
         # Mouse-following rectangle
         rect_q = get_mouse_rect()
@@ -402,14 +389,11 @@ def main():
         for item in rect_hits:
             if item.obj is None:
                 continue
-            sx, sy = world_to_screen(item.x, item.y)
-            radius = (item.obj.r + 8) * zoom
-            pygame.draw.circle(
-                screen,
-                COL_QUERY_RECT,
-                (sx, sy),
-                max(1, int(radius)),
-                max(1, int(3 * zoom)),
+            sx, sy = world_to_screen(item.obj.x, item.obj.y)
+            pygame.draw.rect(
+                trail_surf,
+                (255, 0, 0),
+                (sx - item.obj.w / 2, sy - item.obj.h / 2, item.obj.w, item.obj.h),
             )
 
         # Draw particles and their trails
@@ -433,8 +417,7 @@ def main():
                 f"particles: {len(qtree.get_all_objects())}",
                 f"rect hits: {len(rect_hits)}",
                 f"rect size: {rect_half_width * 2:.0f}x{rect_half_height * 2:.0f}",
-                f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
-                "WASD to pan. Mouse wheel or +/- to zoom.",
+                "WASD to pan.",
                 "arrow keys to resize rectangle.",
                 "1 nodes. 2 NN rays. 3 trails. SPACE pause. L-click add. R-click remove (shift to repeat)",
             ]

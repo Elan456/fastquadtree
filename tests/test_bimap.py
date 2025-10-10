@@ -3,7 +3,7 @@ from fastquadtree._item import Item
 
 
 def make_item(id_, x=0.0, y=0.0, obj=None):
-    return Item(id_=id_, x=x, y=y, obj=obj)
+    return Item(id_=id_, geom=(x, y), obj=obj)
 
 
 def test_init_with_items_populates_both_maps():

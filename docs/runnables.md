@@ -12,6 +12,14 @@ python interactive/interactive_v2.py
 
 ![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
 
+## 1.5 Interactive Demo with Rectangles
+- Similar to the above demo, but uses rectangles instead of points
+- If the rectangles intersect at all with the query area, they will be highlighted in red
+
+```bash
+pip install -r interactive/requirements.txt
+python interactive/interactive_v2_rect.py
+```
 
 ## 2. Ball Pit  
 - Spawn balls in a pit with physics-based collisions

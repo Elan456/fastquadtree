@@ -64,7 +64,7 @@ fn test_delete_with_split_and_merge() {
     tree.insert(Item { id: 4, point: Point { x: 40.0, y: 40.0 } });
     tree.insert(Item { id: 5, point: Point { x: 60.0, y: 60.0 } }); // Different quadrant
     
-    let initial_rectangles = tree.get_all_rectangles().len();
+    let initial_rectangles = tree.get_all_node_boundaries().len();
     assert!(initial_rectangles > 1); // Should have split
     assert_eq!(tree.count_items(), 5);
     
@@ -76,7 +76,7 @@ fn test_delete_with_split_and_merge() {
     assert_eq!(tree.count_items(), 2);
     
     // Tree should have merged back to fewer rectangles
-    let final_rectangles = tree.get_all_rectangles().len();
+    let final_rectangles = tree.get_all_node_boundaries().len();
     assert!(final_rectangles <= initial_rectangles);
 }
 
@@ -98,7 +98,7 @@ fn test_delete_deep_tree() {
     }
     
     let initial_count = tree.count_items();
-    let initial_rectangles = tree.get_all_rectangles().len();
+    let initial_rectangles = tree.get_all_node_boundaries().len();
     
     assert_eq!(initial_count, 5);
     assert!(initial_rectangles > 5); // Should have created a deep tree
@@ -113,7 +113,7 @@ fn test_delete_deep_tree() {
     assert_eq!(tree.count_items(), 2);
     
     // Tree should have simplified (allow equal in case merging isn't as aggressive)
-    let final_rectangles = tree.get_all_rectangles().len();
+    let final_rectangles = tree.get_all_node_boundaries().len();
     assert!(final_rectangles <= initial_rectangles);
 }
 
@@ -135,7 +135,7 @@ fn test_delete_all_points() {
     }
     
     assert_eq!(tree.count_items(), 5);
-    let _initial_rectangles = tree.get_all_rectangles().len();
+    let _initial_rectangles = tree.get_all_node_boundaries().len();
     
     // Delete all points
     for (i, point) in points.iter().enumerate() {
@@ -145,7 +145,7 @@ fn test_delete_all_points() {
     assert_eq!(tree.count_items(), 0);
     
     // Tree should be back to just the root rectangle
-    let final_rectangles = tree.get_all_rectangles().len();
+    let final_rectangles = tree.get_all_node_boundaries().len();
     assert_eq!(final_rectangles, 1);
 }
 
@@ -264,7 +264,7 @@ fn merge_happens_when_grandchildren_exist() {
     }
 
     // Sanity: we should have split, so there are multiple rectangles
-    let initial_rects = tree.get_all_rectangles().len();
+    let initial_rects = tree.get_all_node_boundaries().len();
     assert!(initial_rects > 1);
 
     // Delete enough to make the subtree compact again
@@ -274,7 +274,7 @@ fn merge_happens_when_grandchildren_exist() {
 
     // Only two points left in that region, which fits capacity at the parent
     // The recursive merge should collapse grandchildren, then children, possibly the root if applicable
-    let final_rects = tree.get_all_rectangles().len();
+    let final_rects = tree.get_all_node_boundaries().len();
     assert!(final_rects < initial_rects, "expected fewer rectangles after recursive merge");
 }
 
@@ -293,14 +293,14 @@ fn root_collapses_when_total_items_fit_capacity() {
         tree.insert(Item { id: *id, point: *p });
     }
 
-    assert!(tree.get_all_rectangles().len() > 1);
+    assert!(tree.get_all_node_boundaries().len() > 1);
     // Delete two so only two remain in total, which equals capacity at the root
     assert!(tree.delete(2, Point { x: 80.0, y: 80.0 }));
     assert!(tree.delete(3, Point { x: 90.0, y: 90.0 }));
 
     // With 2 items left and capacity 2, the root should collapse to a leaf
     assert!(tree.children.is_none(), "root should have collapsed to a leaf");
-    assert_eq!(tree.get_all_rectangles().len(), 1, "only the root rectangle should remain");
+    assert_eq!(tree.get_all_node_boundaries().len(), 1, "only the root rectangle should remain");
 }
 
 #[test]
@@ -316,7 +316,7 @@ fn no_merge_when_over_capacity() {
     for (id, p) in pts.iter() {
         tree.insert(Item { id: *id, point: *p });
     }
-    assert!(tree.get_all_rectangles().len() > 1);
+    assert!(tree.get_all_node_boundaries().len() > 1);
 
     // Delete one, total remains 2 across two different quadrants plus one more insert to make it 3
     assert!(tree.delete(1, Point { x: 20.0, y: 20.0 }));
@@ -339,7 +339,7 @@ fn deep_chain_collapses_to_leaf() {
         tree.insert(Item { id: *id, point: *p });
     }
 
-    assert!(tree.get_all_rectangles().len() > 1);
+    assert!(tree.get_all_node_boundaries().len() > 1);
 
     // Delete back down to one point, which must fit in a single leaf
     assert!(tree.delete(3, pts[3].1));

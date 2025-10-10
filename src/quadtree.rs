@@ -273,7 +273,7 @@ impl QuadTree {
     }
 
     // Traverses the entire quadtree and returns a list of all rectangle boundaries.
-    pub fn get_all_rectangles(&self) -> Vec<Rect> {
+    pub fn get_all_node_boundaries(&self) -> Vec<Rect> {
         let mut rectangles = Vec::new();
         self.collect_rectangles(&mut rectangles);
         rectangles

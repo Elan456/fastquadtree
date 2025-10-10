@@ -1,2 +1,0 @@
-# fastquadtree.Item
-::: fastquadtree.Item

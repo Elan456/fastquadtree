@@ -247,12 +247,12 @@ def test_insert_many_negative_coordinates():
     qt = QuadTree((-1000, -1000, 0, 0), capacity=4)
 
     # Create list of negative coordinate points
-    points = [(-100 - i * 10, -100 - j * 10) for i in range(10) for j in range(10)]
+    points = [(-100.0 - i * 10, -100.0 - j * 10) for i in range(10) for j in range(10)]
 
     # Filter to ensure all points are within bounds
     valid_points = [(x, y) for x, y in points if -1000 <= x < 0 and -1000 <= y < 0]
 
-    count = qt.insert_many_points(valid_points)
+    count = qt.insert_many(valid_points)
     assert count == len(valid_points)
     assert qt.count_items() == len(valid_points)
 

@@ -61,7 +61,7 @@ def test_delete_with_split_and_merge():
     tree.insert(4, (40, 40))
     tree.insert(5, (60, 60))  # Different quadrant
 
-    initial_rectangles = len(tree.get_all_rectangles())
+    initial_rectangles = len(tree.get_all_node_boundaries())
     assert initial_rectangles > 1  # Should have split
     assert tree.count_items() == 5
 
@@ -73,7 +73,7 @@ def test_delete_with_split_and_merge():
     assert tree.count_items() == 2
 
     # Tree should have merged back to fewer rectangles
-    final_rectangles = len(tree.get_all_rectangles())
+    final_rectangles = len(tree.get_all_node_boundaries())
     assert final_rectangles <= initial_rectangles
 
 
@@ -124,11 +124,11 @@ def test_delete_all_points():
     assert tree.count_items() == 0
 
     # Tree should be back to just the root rectangle
-    final_rectangles = len(tree.get_all_rectangles())
+    final_rectangles = len(tree.get_all_node_boundaries())
     assert final_rectangles == 1
 
 
-def test_delete_exact_point_matching():
+def testdelete_point_matching():
     """Test that delete requires exact ID and point matching"""
     tree = QuadTree((0, 0, 100, 100), capacity=4)
 

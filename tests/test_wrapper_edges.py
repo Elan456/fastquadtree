@@ -7,7 +7,7 @@ BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 
 def test_insert_many_seeds_items_and_query_as_items_round_trip():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    n = qt.insert_many_points([(10, 10), (20, 20), (30, 30)])
+    n = qt.insert_many([(10, 10), (20, 20), (30, 30)])
     assert n == 3
 
     raw = qt.query((0, 0, 40, 40), as_items=False)
@@ -48,7 +48,7 @@ def test_delete_by_object_uses_cached_coords_and_updates_counts():
 def test_bounds_error_message_includes_point_and_bounds():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
     with pytest.raises(
-        ValueError, match=r"Point \([^)]*\) is outside bounds \([^)]*\)"
+        ValueError, match=r"Geometry \([^)]*\) is outside bounds \([^)]*\)"
     ):
         qt.insert((1500, -10))
 
@@ -145,7 +145,7 @@ def test_out_of_bounds_insert():
     with pytest.raises(ValueError):
         qt.insert((100, 100))  # on max edge, should be excluded
 
-    assert len(qt.get_all_rectangles()) == 1
+    assert len(qt.get_all_node_boundaries()) == 1
 
     with pytest.raises(ValueError):
         qt.get_all_objects()
@@ -200,12 +200,12 @@ def test_get_all_items_returns_tracked_items():
             pytest.fail(f"Unexpected item ID {item.id_}")
 
 
-def test_insert_many_points_exception_for_out_of_bounds():
+def test_insert_many_exception_for_out_of_bounds():
     qt = QuadTree((0, 0, 100, 100), capacity=4)
-    points = [(10, 10), (20, 20), (150, 150)]  # Last point is out of bounds
+    points = [(10.0, 10.0), (20.0, 20.0), (150.0, 150.0)]  # Last point is out of bounds
 
     with pytest.raises(ValueError):
-        qt.insert_many_points(points)
+        qt.insert_many(points)
 
 
 def test_auto_id_collision_prevention():
