@@ -1,4 +1,4 @@
 # fastquadtree.RectQuadTree
-::: fastquadtree.QuadTree
+::: fastquadtree.RectQuadTree
     options:
         inherited_members: true

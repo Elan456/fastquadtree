@@ -13,7 +13,27 @@ Point = Tuple[float, float]  # only for type hints in docstrings
 
 class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     """
-    High-level Python wrapper over the Rust RectQuadTree.
+    Rectangle version of the quadtree. All geometries are axis-aligned rectangles. (min_x, min_y, max_x, max_y)
+    High-level Python wrapper over the Rust quadtree engine.
+
+    Performance characteristics:
+        Inserts: average O(log n) <br>
+        Rect queries: average O(log n + k) where k is matches returned <br>
+        Nearest neighbor: average O(log n) <br>
+
+    Thread-safety:
+        Instances are not thread-safe. Use external synchronization if you
+        mutate the same tree from multiple threads.
+
+    Args:
+        bounds: World bounds as (min_x, min_y, max_x, max_y).
+        capacity: Max number of points per node before splitting.
+        max_depth: Optional max tree depth. If omitted, engine decides.
+        track_objects: Enable id <-> object mapping inside Python.
+        start_id: Starting auto-assigned id when you omit id on insert.
+
+    Raises:
+        ValueError: If parameters are invalid or inserts are out of bounds.
     """
 
     def __init__(

@@ -12,6 +12,7 @@ _IdCoord = Tuple[int, float, float]
 
 class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     """
+    Point version of the quadtree. All geometries are 2D points (x, y).
     High-level Python wrapper over the Rust quadtree engine.
 
     Performance characteristics:
@@ -57,7 +58,9 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     ) -> list[_IdCoord]: ...
     @overload
     def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[PointItem]: ...
-    def query(self, rect: Bounds, *, as_items: bool = False):
+    def query(
+        self, rect: Bounds, *, as_items: bool = False
+    ) -> list[PointItem] | list[_IdCoord]:
         """
         Return all points inside an axis-aligned rectangle.
 
@@ -92,7 +95,9 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     def nearest_neighbor(
         self, xy: Point, *, as_item: Literal[True]
     ) -> PointItem | None: ...
-    def nearest_neighbor(self, xy: Point, *, as_item: bool = False):
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: bool = False
+    ) -> PointItem | _IdCoord | None:
         """
         Return the single nearest neighbor to the query point.
 
