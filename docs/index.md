@@ -35,11 +35,17 @@
 
 ## Why use fastquadtree
 
-- Simple Python API you can teach in one review
-- Fast inserts and queries on hundreds of thousands of points
+- Clean [Python API](api/quadtree.md) with modern typing hints
+- The fastest quadtree Python package ([>10x faster](benchmark.md) than pyqtree)
+- Prebuilt wheels for Windows, macOS, and Linux
+- Support for [inserting bounding boxes](api/rect_quadtree.md) or points
+- Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
-- Clean integrations for range queries and nearest neighbors
-- Support for inserting bounding boxes or points
+- [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
+
+## Examples
+See examples of how fastquadtree can be used in the [runnables](runnables.md) section.
+
 
 ## Install
 ```bash

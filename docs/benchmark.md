@@ -17,7 +17,7 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.031 | 0.089 | 0.120 | 14.64× |
+| **fastquadtree** | 0.031 | 0.089 | 0.120 | **14.64×** |
 | Shapely STRtree | 0.179 | 0.100 | 0.279 | 6.29× |
 | nontree-QuadTree | 0.595 | 0.605 | 1.200 | 1.46× |
 | Rtree        | 0.961 | 0.300 | 1.261 | 1.39× |

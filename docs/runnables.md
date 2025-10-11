@@ -5,6 +5,10 @@
 - Add and delete boids with mouse clicks
 - Visualize KNN and range queries
 
+The interactive demo is a great way to see how fastquadtree works in practice.
+You can see how the quadtree subdivides as you add points, and validate the accuracy of the queries visually.
+By pressing 1, you can visualize the KNN query for each boid. 
+
 ```bash
 pip install -r interactive/requirements.txt
 python interactive/interactive_v2.py
@@ -16,6 +20,9 @@ python interactive/interactive_v2.py
 - Similar to the above demo, but uses rectangles instead of points
 - If the rectangles intersect at all with the query area, they will be highlighted in red
 
+If you are creating a game or simulation environment where entities have bounding boxes, you can use the
+rectangular quadtree to quickly check which entities are intersecting with another. 
+
 ```bash
 pip install -r interactive/requirements.txt
 python interactive/interactive_v2_rect.py
@@ -26,6 +33,9 @@ python interactive/interactive_v2_rect.py
 ## 2. Ball Pit  
 - Spawn balls in a pit with physics-based collisions
 - Easily switch between brute force and quadtree collision detection to see the performance difference
+
+The ball pit demo shows how quadtrees offer massive performance improvements for collision detection.
+Rectangular queries are used to find potential collisions, and then precise circle-circle collision checks are performed.
 
 ```bash
 pip install -r interactive/requirements.txt
