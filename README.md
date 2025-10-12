@@ -1,32 +1,62 @@
-# fastquadtree
+<div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+  <div>
+    <h1 style="margin-bottom:0.25rem;">fastquadtree</h1>
+    <p style="margin-top:0; font-size:1.05rem;">Rust-optimized quadtree with a clean Python API</p>
+    <p style="margin:0.5rem 0 0;">
+      <a href="https://pypi.org/project/fastquadtree/">
+        <img alt="PyPI" src="https://img.shields.io/pypi/v/fastquadtree.svg">
+      </a>
+      <a href="https://pypi.org/project/fastquadtree/">
+        <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/fastquadtree.svg">
+      </a>
+      <a href="https://pepy.tech/projects/fastquadtree">
+        <img alt="Downloads" src="https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total+Downloads">
+      </a>
+      <a href="https://github.com/Elan456/fastquadtree/actions/workflows/release.yml">
+        <img alt="Build" src="https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg">
+      </a>
+      <a href="https://codecov.io/gh/Elan456/fastquadtree">
+        <img alt="Coverage" src="https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg">
+      </a>
+    </p>
+    <p style="margin:0.5rem 0 0;">
+      <a href="https://pyo3.rs/"><img alt="PyO3" src="https://img.shields.io/badge/Rust-core%20via%20PyO3-orange"></a>
+      <a href="https://www.maturin.rs/"><img alt="maturin" src="https://img.shields.io/badge/Built%20with-maturin-1f6feb"></a>
+    </p>
+    <p style="margin-top:0.75rem;">
+  </div>
+  <div style="min-width:260px; max-width:420px; flex:1;">
+    <img alt="Interactive Screenshot" src="https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png">
+  </div>
+</div>
 
-[![Docs](https://img.shields.io/badge/docs-online-brightgreen)](https://elan456.github.io/fastquadtree/)
-[![PyPI version](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
-[![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
-[![Wheels](https://img.shields.io/pypi/wheel/fastquadtree.svg)](https://pypi.org/project/fastquadtree/#files)
-[![License: MIT](https://img.shields.io/pypi/l/fastquadtree.svg)](LICENSE)
+---
 
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total+Downloads)](https://pepy.tech/projects/fastquadtree)
+## Why use fastquadtree
 
-[![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml)
-[![Codecov](https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg)](https://codecov.io/gh/Elan456/fastquadtree)
-
-[![Rust core via PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
-[![Built with maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-
-
-
-![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
-
-
-Rust-optimized quadtree with a simple Python API.
+- Clean [Python API](https://elan456.github.io/fastquadtree/api/quadtree/) with modern typing hints
+- The fastest quadtree Python package ([>10x faster](https://elan456.github.io/fastquadtree/benchmark/) than pyqtree)
+- Prebuilt wheels for Windows, macOS, and Linux
+- Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
+- Fast KNN and range queries
+- Optional object tracking for id ↔ object mapping
+- [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
 
 👉 **Docs:** https://elan456.github.io/fastquadtree/
 
-- Python package: **`fastquadtree`**
-- Python ≥ 3.8
-- Import path: `from fastquadtree import QuadTree`
+## Examples
+See examples of how fastquadtree can be used in the [runnables](https://elan456.github.io/fastquadtree/runnables/) section.
+
+
+## Install
+```bash
+pip install fastquadtree
+```
+
+```python
+from fastquadtree import QuadTree  # Point handling
+from fastquadtree import RectQuadTree  # Bounding box handling
+```
 
 ## Benchmarks
 
@@ -51,28 +81,7 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 | PyQtree      | 1.492 | 0.263 | 1.755 | 1.00× |
 | quads        | 1.407 | 0.484 | 1.890 | 0.93× |
 
-### Benchmark Configuration
-| Parameter | Value |
-|---|---:|
-| Bounds | (0, 0, 1000, 1000) |
-| Max points per node | 128 |
-| Max depth | 16 |
-| Queries per experiment | 500 |
-
-See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) for details.
-
-## Install
-
-```bash
-pip install fastquadtree
-```
-
-If you are developing locally:
-
-```bash
-# optimized dev install
-maturin develop --release
-```
+See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) for details, including configurations, system info, and native vs shim benchmarks.
 
 ## Quickstart
 [See the quickstart guide](https://elan456.github.io/fastquadtree/quickstart/)
