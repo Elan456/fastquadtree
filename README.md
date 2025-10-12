@@ -1,36 +1,25 @@
-<div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
-  <div>
-    <h1 style="margin-bottom:0.25rem;">fastquadtree</h1>
-    <p style="margin-top:0; font-size:1.05rem;">Rust-optimized quadtree with a clean Python API</p>
-    <p style="margin:0.5rem 0 0;">
-      <a href="https://pypi.org/project/fastquadtree/">
-        <img alt="PyPI" src="https://img.shields.io/pypi/v/fastquadtree.svg">
-      </a>
-      <a href="https://pypi.org/project/fastquadtree/">
-        <img alt="Python versions" src="https://img.shields.io/pypi/pyversions/fastquadtree.svg">
-      </a>
-      <a href="https://pepy.tech/projects/fastquadtree">
-        <img alt="Downloads" src="https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total+Downloads">
-      </a>
-      <a href="https://github.com/Elan456/fastquadtree/actions/workflows/release.yml">
-        <img alt="Build" src="https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg">
-      </a>
-      <a href="https://codecov.io/gh/Elan456/fastquadtree">
-        <img alt="Coverage" src="https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg">
-      </a>
-    </p>
-    <p style="margin:0.5rem 0 0;">
-      <a href="https://pyo3.rs/"><img alt="PyO3" src="https://img.shields.io/badge/Rust-core%20via%20PyO3-orange"></a>
-      <a href="https://www.maturin.rs/"><img alt="maturin" src="https://img.shields.io/badge/Built%20with-maturin-1f6feb"></a>
-    </p>
-    <p style="margin-top:0.75rem;">
-  </div>
-  <div style="min-width:260px; max-width:420px; flex:1;">
-    <img alt="Interactive Screenshot" src="https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png">
-  </div>
-</div>
+# fastquadtree
 
----
+<img src="https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png"
+     alt="Interactive Screenshot" align="right" width="420">
+
+Rust-optimized quadtree with a clean Python API
+
+[![PyPI](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
+[![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
+[![Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total%20Downloads)](https://pepy.tech/projects/fastquadtree)
+[![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml)
+
+[![PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
+[![maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
+[![Docs](https://img.shields.io/badge/docs-online-brightgreen)](https://elan456.github.io/fastquadtree/)
+[![Wheels](https://img.shields.io/pypi/wheel/fastquadtree.svg)](https://pypi.org/project/fastquadtree/#files)
+[![Coverage](https://codecov.io/gh/Elan456/fastquadtree/branch/main/graph/badge.svg)](https://codecov.io/gh/Elan456/fastquadtree)
+[![License: MIT](https://img.shields.io/pypi/l/fastquadtree.svg)](LICENSE)
+
+<br clear="right"/>
 
 ## Why use fastquadtree
 
@@ -41,6 +30,8 @@
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
+
+----
 
 👉 **Docs:** https://elan456.github.io/fastquadtree/
 
