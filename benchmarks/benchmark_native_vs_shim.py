@@ -16,7 +16,7 @@ from fastquadtree._native import QuadTree as NativeQuadTree
 from fastquadtree.pyqtree import Index as FQTIndex
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
-CAPACITY = 20
+CAPACITY = 64
 MAX_DEPTH = 10
 SEED = 42
 
@@ -78,7 +78,11 @@ def bench_pyqtree(points, queries, fqt: bool):
     Set fqt to True to use the shim, False to use the original pyqtree.
     """
     t0 = now()
-    qt = FQTIndex(bbox=BOUNDS) if fqt else PyQTreeIndex(bbox=BOUNDS)
+    qt = (
+        FQTIndex(bbox=BOUNDS, max_items=CAPACITY, max_depth=MAX_DEPTH)
+        if fqt
+        else PyQTreeIndex(bbox=BOUNDS, max_items=CAPACITY, max_depth=MAX_DEPTH)
+    )
     for i, p in enumerate(points):
         box = (p[0], p[1], p[0], p[1])
         qt.insert(i, box)
@@ -192,7 +196,7 @@ def main():
 Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
 **Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
 
-If you directly replace pyqtree with the drop-in fastquadtree.pyqtree.Index shim, you get a build time of {fmt(fqt_build)}s and query time of {fmt(fqt_query)}s.
+If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of {fmt(fqt_build)}s and query time of {fmt(fqt_query)}s.
 This is a total speedup of {fmt((p_build + p_query) / (fqt_build + fqt_query))}x compared to the original pyqtree and requires no code changes.
 
 Adding the object map only impacts the build time, not the query time.
