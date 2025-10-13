@@ -26,24 +26,16 @@ fn child_index_for_rect(boundary: &Rect, r: &Rect) -> Option<usize> {
     let cx = 0.5 * (boundary.min_x + boundary.max_x);
     let cy = 0.5 * (boundary.min_y + boundary.max_y);
 
-    // Does r fit entirely on one side of the vertical split?
-    let in_left  = r.max_x <= cx;
-    let in_right = r.min_x >= cx;
-
-    // Does r fit entirely on one side of the horizontal split?
-    let in_bottom = r.max_y <= cy;
-    let in_top    = r.min_y >= cy;
-
-    let x_side = if in_left { Some(0) } else if in_right { Some(1) } else { None };
-    let y_side = if in_bottom { Some(0) } else if in_top   { Some(1) } else { None };
-
-    match (x_side, y_side) {
-        (Some(0), Some(0)) => Some(0),
-        (Some(1), Some(0)) => Some(1),
-        (Some(0), Some(1)) => Some(2),
-        (Some(1), Some(1)) => Some(3),
-        _ => None, // Spans split line(s) so it must live at this node
+    // fits entirely on one side per axis?
+    let fits_x = r.max_x <= cx || r.min_x >= cx;
+    let fits_y = r.max_y <= cy || r.min_y >= cy;
+    if !(fits_x && fits_y) {
+        return None;
     }
+    // right=1 if min_x >= cx, top=1 if min_y >= cy
+    let ix = (r.min_x >= cx) as usize;
+    let iy = (r.min_y >= cy) as usize;
+    Some(ix | (iy << 1)) // 0..3
 }
 
 #[inline(always)]
@@ -120,10 +112,10 @@ impl RectQuadTree {
         let cy = 0.5 * (self.boundary.min_y + self.boundary.max_y);
 
         let quads = [
-            Rect { min_x: self.boundary.min_x, min_y: self.boundary.min_y, max_x: cx,                    max_y: cy                    }, // 0
-            Rect { min_x: cx,                    min_y: self.boundary.min_y, max_x: self.boundary.max_x, max_y: cy                    }, // 1
-            Rect { min_x: self.boundary.min_x,   min_y: cy,                  max_x: cx,                    max_y: self.boundary.max_y }, // 2
-            Rect { min_x: cx,                    min_y: cy,                  max_x: self.boundary.max_x,  max_y: self.boundary.max_y }, // 3
+            Rect { min_x: self.boundary.min_x, min_y: self.boundary.min_y, max_x: cx,                    max_y: cy },
+            Rect { min_x: cx,                    min_y: self.boundary.min_y, max_x: self.boundary.max_x, max_y: cy },
+            Rect { min_x: self.boundary.min_x,   min_y: cy,                  max_x: cx,                    max_y: self.boundary.max_y },
+            Rect { min_x: cx,                    min_y: cy,                  max_x: self.boundary.max_x,  max_y: self.boundary.max_y },
         ];
 
         let d = self.depth + 1;
@@ -134,16 +126,19 @@ impl RectQuadTree {
             RectQuadTree::new_child(quads[3], self.capacity, d, self.max_depth),
         ];
 
-        // Move any items that fully fit a child
-        let mut stay: Vec<RectItem> = Vec::new();
-        for it in self.items.drain(..) {
-            if let Some(idx) = child_index_for_rect(&self.boundary, &it.rect) {
+        // Move any items that fully fit a child, in place
+        let mut i = 0;
+        while i < self.items.len() {
+            let rect = self.items[i].rect;
+            if let Some(idx) = child_index_for_rect(&self.boundary, &rect) {
+                let it = self.items.swap_remove(i);
                 kids[idx].insert(it);
+                // do not advance i, we swapped in a new element at i
             } else {
-                stay.push(it);
+                i += 1;
             }
         }
-        self.items = stay;
+
         self.children = Some(Box::new(kids));
     }
 
@@ -159,7 +154,7 @@ impl RectQuadTree {
         #[derive(Copy, Clone)]
         enum Mode { Filter, ReportAll }
 
-        let mut out: Vec<(u64, Rect)> = Vec::with_capacity(128);
+        let mut out: SmallVec<[(u64, Rect); 128]> = SmallVec::new();
         let mut stack: SmallVec<[(&RectQuadTree, Mode); 64]> = SmallVec::new();
         stack.push((self, Mode::Filter));
 
@@ -213,7 +208,7 @@ impl RectQuadTree {
             }
         }
 
-        out
+        out.into_vec()
     }
 
     /// Convenience if you only want ids.
