@@ -7,11 +7,13 @@ import random
 import statistics as stats
 from time import perf_counter as now
 
+from pyqtree import Index as PyQTreeIndex
 from system_info_collector import collect_system_info, format_system_info_markdown_lite
 from tqdm import tqdm
 
 from fastquadtree import QuadTree as ShimQuadTree
 from fastquadtree._native import QuadTree as NativeQuadTree
+from fastquadtree.pyqtree import Index as FQTIndex
 
 BOUNDS = (0.0, 0.0, 1000.0, 1000.0)
 CAPACITY = 20
@@ -69,6 +71,26 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     return t_build, t_query
 
 
+def bench_pyqtree(points, queries, fqt: bool):
+    """
+    Benchmarks the pyqtree compatibility shim vs the original pyqtree.
+
+    Set fqt to True to use the shim, False to use the original pyqtree.
+    """
+    t0 = now()
+    qt = FQTIndex(bbox=BOUNDS) if fqt else PyQTreeIndex(bbox=BOUNDS)
+    for i, p in enumerate(points):
+        box = (p[0], p[1], p[0], p[1])
+        qt.insert(i, box)
+    t_build = now() - t0
+
+    t0 = now()
+    for q in queries:
+        _ = qt.intersect(q)
+    t_query = now() - t0
+    return t_build, t_query
+
+
 def median_times(fn, points, queries, repeats: int, desc: str = "Running"):
     """Run benchmark multiple times and return median times."""
     builds, queries_t = [], []
@@ -119,14 +141,28 @@ def main():
         points,
         queries,
         args.repeats,
-        desc="Shim (no map)",
+        desc="Shim (no tracking)",
     )
     s_build_map, s_query_map = median_times(
         lambda pts, qs: bench_shim(pts, qs, track_objects=True, with_objs=True),
         points,
         queries,
         args.repeats,
-        desc="Shim (track+objs)",
+        desc="Shim (tracking)",
+    )
+    p_build, p_query = median_times(
+        lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
+        points,
+        queries,
+        args.repeats,
+        desc="pyqtree (original)",
+    )
+    fqt_build, fqt_query = median_times(
+        lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
+        points,
+        queries,
+        args.repeats,
+        desc="pyqtree (FQT shim)",
     )
     print()
 
@@ -146,13 +182,18 @@ def main():
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
-| Shim (no map) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
-| Shim (track+objs) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
+| Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
+| Shim (tracking) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
+| pyqtree (fastquadtree) | {fmt(fqt_build)} | {fmt(fqt_query)} | {fmt(fqt_build + fqt_query)} |
+| pyqtree (original) | {fmt(p_build)} | {fmt(p_query)} | {fmt(p_build + p_query)} |
 
 ### Summary
 
 Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
 **Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
+
+If you directly replace pyqtree with the drop-in fastquadtree.pyqtree.Index shim, you get a build time of {fmt(fqt_build)}s and query time of {fmt(fqt_query)}s.
+This is a total speedup of {fmt((p_build + p_query) / (fqt_build + fqt_query))}x compared to the original pyqtree and requires no code changes.
 
 Adding the object map only impacts the build time, not the query time.
 """
