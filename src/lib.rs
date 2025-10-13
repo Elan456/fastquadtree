@@ -25,6 +25,7 @@ pub struct PyQuadTree {
 #[pymethods]
 impl PyQuadTree {
     #[new]
+    #[pyo3(signature = (bounds, capacity, max_depth=None))]
     pub fn new(bounds: (f32, f32, f32, f32), capacity: usize, max_depth: Option<usize>) -> Self {
         let (min_x, min_y, max_x, max_y) = bounds;
         let rect = Rect { min_x, min_y, max_x, max_y };
@@ -61,7 +62,7 @@ impl PyQuadTree {
     pub fn query<'py>(&self, py: Python<'py>, rect: (f32, f32, f32, f32)) -> Bound<'py, PyList> {
         let (min_x, min_y, max_x, max_y) = rect;
         let tuples = self.inner.query(Rect { min_x, min_y, max_x, max_y });
-        PyList::new_bound(py, &tuples)
+        PyList::new(py, &tuples).expect("Failed to create Python list")
     }
 
     pub fn nearest_neighbor(&self, xy: (f32, f32)) -> Option<(u64, f32, f32)> {
@@ -101,6 +102,7 @@ pub struct PyRectQuadTree {
 #[pymethods]
 impl PyRectQuadTree {
     #[new]
+    #[pyo3(signature = (bounds, capacity, max_depth=None))]
     pub fn new(bounds: (f32, f32, f32, f32), capacity: usize, max_depth: Option<usize>) -> Self {
         let (min_x, min_y, max_x, max_y) = bounds;
         let rect = Rect { min_x, min_y, max_x, max_y };
@@ -143,7 +145,7 @@ impl PyRectQuadTree {
             .into_iter()
             .map(|(id, r)| (id, r.min_x, r.min_y, r.max_x, r.max_y))
             .collect();
-        PyList::new_bound(py, &tuples)
+        PyList::new(py, &tuples).expect("Failed to create Python list")
     }
 
     /// Collect all node boundaries for visualization or debugging.
