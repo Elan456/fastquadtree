@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
-from .rect_quadtree import RectQuadTree
+from ._native import RectQuadTree
 
 Point = Tuple[float, float]  # only for type hints in docstrings
 
@@ -71,24 +71,23 @@ class Index:
         """
         if bbox is not None:
             x1, y1, x2, y2 = bbox
-            self.rect_quadtree = RectQuadTree(
-                (x1, y1, x2, y2), max_items, max_depth=max_depth, track_objects=True
-            )
+            self._qt = RectQuadTree((x1, y1, x2, y2), max_items, max_depth=max_depth)
 
         elif (
             x is not None and y is not None and width is not None and height is not None
         ):
-            self.rect_quadtree = RectQuadTree(
+            self._qt = RectQuadTree(
                 (x - width / 2, y - height / 2, x + width / 2, y + height / 2),
                 max_items,
                 max_depth=max_depth,
-                track_objects=True,
             )
 
         else:
             raise ValueError(
                 "Either the bbox argument must be set, or the x, y, width, and height arguments must be set"
             )
+
+        self._id_to_obj: dict[int, Any] = {}
 
     def insert(self, item: Any, bbox):  # pyright: ignore[reportIncompatibleMethodOverride]
         """
@@ -98,7 +97,8 @@ class Index:
         - **item**: The item to insert into the index, which will be returned by the intersection method
         - **bbox**: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
         """
-        self.rect_quadtree.insert(geom=bbox, obj=item)
+        self._id_to_obj[id(item)] = item
+        self._qt.insert(id(item), bbox)
 
     def remove(self, item, bbox):
         """
@@ -110,7 +110,10 @@ class Index:
 
         Both parameters need to exactly match the parameters provided to the insert method.
         """
-        self.rect_quadtree.delete_by_object(obj=item)
+        self._qt.delete(id(item), bbox)
+
+        # Pops
+        self._id_to_obj.pop(id(item), None)
 
     def intersect(self, bbox):
         """
@@ -123,5 +126,6 @@ class Index:
         Returns:
         - A list of inserted items whose bounding boxes intersect with the input bbox.
         """
-        out = list(self.rect_quadtree.query(bbox, as_items=True))
-        return [item.obj for item in out]
+        results = self._qt.query(bbox)
+        # result = (id, x0, y0, x1, y1)
+        return [self._id_to_obj[result[0]] for result in results]
