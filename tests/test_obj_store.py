@@ -51,7 +51,7 @@ def test_add_append_fill_hole_and_replace_removes_old_reverse_map():
 
     # pop to create a hole at 0, then fill the hole (old had obj, new has None)
     popped = s.pop_id(0)
-    assert popped.obj == "a"
+    assert popped.obj == "a"  # type: ignore
     assert len(s) == 1
     assert s.by_obj("a") is None
     assert s.contains_id(0) is False
@@ -82,8 +82,8 @@ def test_alloc_id_and_lifo_free_reuse():
     s.add(DummyItem(2, "c"))
 
     # free 2 then 1
-    assert s.pop_id(2).obj == "c"
-    assert s.pop_id(1).obj == "b"
+    assert s.pop_id(2).obj == "c"  # type: ignore
+    assert s.pop_id(1).obj == "b"  # type: ignore
 
     # alloc should reuse in LIFO order
     assert s.alloc_id() == 1

@@ -20,10 +20,10 @@ from fastquadtree import QuadTree
 # 1) Make a tree that covers your world
 qt = QuadTree(bounds=(0, 0, 1000, 1000), capacity=20)
 
-# 2) Add some stuff
-a = qt.insert((10, 10))                 # auto id
-b = qt.insert((200, 300))               # auto id
-_ = qt.insert((999, 500), id_=42)       # you can choose ids too
+# 2) Add some stuff (a, b, and c are auto-generated ids)
+a = qt.insert((10, 10))                 
+b = qt.insert((200, 300))              
+c = qt.insert((999, 500))     
 
 # 3) Ask spatial questions
 print("Range hits:", qt.query((0, 0, 250, 350)))  # -> [(id, x, y), ...]
@@ -100,7 +100,7 @@ Tip: leave `track_objects=False` for max speed when you do not need object mappi
 Keep the same `QuadTree` instance alive for UIs or game loops. Wipe contents and optionally reset ids.
 
 ```python
-qt.clear(reset_ids=True)  # tree is empty, auto ids start again at 1
+qt.clear()  # tree is empty, auto ids start again at 0, all objects forgotten
 ```
 
 ---

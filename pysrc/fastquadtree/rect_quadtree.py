@@ -30,7 +30,6 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         capacity: Max number of points per node before splitting.
         max_depth: Optional max tree depth. If omitted, engine decides.
         track_objects: Enable id <-> object mapping inside Python.
-        start_id: Starting auto-assigned id when you omit id on insert.
 
     Raises:
         ValueError: If parameters are invalid or inserts are out of bounds.

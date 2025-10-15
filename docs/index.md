@@ -52,8 +52,10 @@ See examples of how fastquadtree can be used in the [runnables](runnables.md) se
 pip install fastquadtree
 ```
 
+## Import
+
 ```python
 from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
-from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree
+from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree (6.567x faster while keeping the same API)
 ```

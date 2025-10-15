@@ -112,11 +112,10 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
     def insert_many(self, geoms: list[G], objs: list[Any] | None = None) -> int:
         """
-        Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.
+        Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
 
-        If tracking is enabled, this uses contiguous ids starting at the current end
-        of the dense store. If there are free slots, we fall back to per-item inserts
-        to preserve reuse semantics.
+        If tracking is enabled, the objects will be bulk stored internally.
+        If no objects are provided, the items will have obj=None (if tracking).
 
         Args:
             geoms: List of geometries.

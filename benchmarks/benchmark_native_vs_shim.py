@@ -58,10 +58,10 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     )
     if with_objs:
         for i, p in enumerate(points):
-            qt.insert(p, id_=i, obj=i)  # store a tiny object
+            qt.insert(p, obj=i)  # store a tiny object
     else:
-        for i, p in enumerate(points):
-            qt.insert(p, id_=i)
+        for _, p in enumerate(points):
+            qt.insert(p)
     t_build = now() - t0
 
     t0 = now()
@@ -213,7 +213,7 @@ Adding the object map tends to only impact the build time, not the query time.
 ### Summary
 
 If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of {fmt(fqt_build)}s and query time of {fmt(fqt_query)}s.
-This is a total speedup of {fmt((p_build + p_query) / (fqt_build + fqt_query))}x compared to the original pyqtree and requires no code changes.
+This is a **total speedup of {fmt((p_build + p_query) / (fqt_build + fqt_query))}x** compared to the original pyqtree and requires no code changes.
 
 """
     print(md.strip())

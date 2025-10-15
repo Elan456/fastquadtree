@@ -47,6 +47,7 @@ pip install fastquadtree
 ```python
 from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
+from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (6.567x faster while keeping the same API)
 ```
 
 ## Benchmarks
