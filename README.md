@@ -9,6 +9,7 @@ Rust-optimized quadtree with a clean Python API
 [![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total%20Downloads)](https://pepy.tech/projects/fastquadtree)
 [![Build](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml/badge.svg)](https://github.com/Elan456/fastquadtree/actions/workflows/release.yml)
+![No runtime deps](https://img.shields.io/badge/deps-none-success)
 
 [![PyO3](https://img.shields.io/badge/Rust-core%20via%20PyO3-orange)](https://pyo3.rs/)
 [![maturin](https://img.shields.io/badge/Built%20with-maturin-1f6feb)](https://www.maturin.rs/)
@@ -23,7 +24,7 @@ Rust-optimized quadtree with a clean Python API
 
 ## Why use fastquadtree
 
-- Clean [Python API](https://elan456.github.io/fastquadtree/api/quadtree/) with modern typing hints
+- Clean [Python API](https://elan456.github.io/fastquadtree/api/quadtree/) with no external dependencies and modern typing hints
 - The fastest quadtree Python package ([>10x faster](https://elan456.github.io/fastquadtree/benchmark/) than pyqtree)
 - Prebuilt wheels for Windows, macOS, and Linux
 - Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
