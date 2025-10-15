@@ -23,17 +23,22 @@ class Item:
     __slots__ = ("geom", "id_", "obj")
 
     def __init__(self, id_: int, geom: Point | Bounds, obj: Any | None = None):
-        self.id_ = id_
-        self.geom = geom
-        self.obj = obj
+        self.id_: int = id_
+        self.geom: Point | Bounds = geom
+        self.obj: Any | None = obj
 
 
 class PointItem(Item):
     """
     Lightweight point item wrapper for tracking and as_items results.
+
+    Attributes:
+        id_: Integer identifier.
+        geom: The point geometry as (x, y).
+        obj: The attached Python object if available, else None.
     """
 
-    __slots__ = ("geom", "id_", "obj", "x", "y")
+    __slots__ = ("x", "y")
 
     def __init__(self, id_: int, geom: Point, obj: Any | None = None):
         super().__init__(id_, geom, obj)
@@ -43,9 +48,14 @@ class PointItem(Item):
 class RectItem(Item):
     """
     Lightweight rectangle item wrapper for tracking and as_items results.
+
+    Attributes:
+        id_: Integer identifier.
+        geom: The rectangle geometry as (min_x, min_y, max_x, max_y
+        obj: The attached Python object if available, else None.
     """
 
-    __slots__ = ("geom", "id_", "max_x", "max_y", "min_x", "min_y", "obj")
+    __slots__ = ("max_x", "max_y", "min_x", "min_y")
 
     def __init__(self, id_: int, geom: Bounds, obj: Any | None = None):
         super().__init__(id_, geom, obj)

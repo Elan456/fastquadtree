@@ -15,10 +15,18 @@ theme:
     - toc.integrate
     - search.suggest
     - search.highlight
+    - content.tooltips
   palette:
     - scheme: slate
       primary: indigo
       accent: deep orange
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+extra_css:
+  - styles/overrides.css
+
 
 plugins:
   - search
@@ -36,6 +44,11 @@ plugins:
             separate_signature: true
             line_length: 88
             heading_level: 2
+            filters:  # Exclude __slots__ and __len__ and anything with a single underscore prefix
+              - "!__slots__"
+              - "!__len__"
+              - "!_.*"
+              
   - autorefs
   - git-revision-date-localized:
       fallback_to_build_date: true
@@ -68,6 +81,7 @@ nav:
   - Quickstart: quickstart.md
   - Runnables: runnables.md
   - Benchmark: benchmark.md
+  - Future Features: future_features.md
   - API:
       - QuadTree: api/quadtree.md
       - RectQuadTree: api/rect_quadtree.md
@@ -83,5 +97,4 @@ extra:
       link: https://pypi.org/project/fastquadtree/
 
 # Build options
-extra_css: []
 extra_javascript: []
