@@ -66,7 +66,7 @@ def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
 
     t0 = now()
     for q in queries:
-        _ = qt.query(q)  # tuples path for speed
+        _ = qt.query(q, as_items=track_objects)  # tuples path for speed
     t_query = now() - t0
     return t_build, t_query
 
@@ -188,18 +188,33 @@ def main():
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
 | Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
 | Shim (tracking) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
-| pyqtree (fastquadtree) | {fmt(fqt_build)} | {fmt(fqt_query)} | {fmt(fqt_build + fqt_query)} |
-| pyqtree (original) | {fmt(p_build)} | {fmt(p_query)} | {fmt(p_build + p_query)} |
 
 ### Summary
 
 Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
 **Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
 
+Adding the object map tends to only impact the build time, not the query time.
+
+## pyqtree drop-in shim performance gains
+
+### Configuration
+- Points: {args.points:,}
+- Queries: {args.queries}
+- Repeats: {args.repeats}
+
+### Results
+
+| Variant | Build | Query | Total |
+|---|---:|---:|---:|
+| pyqtree (fastquadtree) | {fmt(fqt_build)} | {fmt(fqt_query)} | {fmt(fqt_build + fqt_query)} |
+| pyqtree (original) | {fmt(p_build)} | {fmt(p_query)} | {fmt(p_build + p_query)} |
+
+### Summary
+
 If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of {fmt(fqt_build)}s and query time of {fmt(fqt_query)}s.
 This is a total speedup of {fmt((p_build + p_query) / (fqt_build + fqt_query))}x compared to the original pyqtree and requires no code changes.
 
-Adding the object map only impacts the build time, not the query time.
 """
     print(md.strip())
 

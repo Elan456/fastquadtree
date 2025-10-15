@@ -148,6 +148,14 @@ impl PyRectQuadTree {
         PyList::new(py, &tuples).expect("Failed to create Python list")
     }
 
+    /// Query IDs only. Returns list[id, ...]
+    /// Faster than query() if you only need IDs.
+    pub fn query_ids<'py>(&self, py: Python<'py>, rect: (f32, f32, f32, f32)) -> Bound<'py, PyList> {
+        let (min_x, min_y, max_x, max_y) = rect;
+        let ids: Vec<u64> = self.inner.query(Rect { min_x, min_y, max_x, max_y }).into_iter().map(|(id, _)| id).collect();
+        PyList::new(py, &ids).expect("Failed to create Python list")
+    }
+
     /// Collect all node boundaries for visualization or debugging.
     pub fn get_all_node_boundaries(&self) -> Vec<(f32, f32, f32, f32)> {
         self.inner

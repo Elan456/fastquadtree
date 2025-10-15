@@ -5,6 +5,7 @@ drop-in replacement to fastquadtree.
 
 from __future__ import annotations
 
+from operator import itemgetter
 from typing import Any, Tuple
 
 from ._native import RectQuadTree
@@ -16,11 +17,28 @@ MAX_ITEMS = 10
 MAX_DEPTH = 20
 
 
+# Helper to gather objects by ids in chunks
+# Performance improvement over list comprehension for large result sets
+# 2.945 median query time --> 2.030 median query time (500k items, 500 queries)
+def gather_objs(objs, ids, chunk=2048):
+    out = []
+    for i in range(0, len(ids), chunk):
+        getter = itemgetter(*ids[i : i + chunk])
+        vals = getter(objs)  # tuple or single object
+        if isinstance(vals, tuple):
+            out.extend(vals)
+        else:
+            out.append(vals)
+    return out
+
+
 class Index:
     """
     The class below is taken from the pyqtree package, but the implementation
     has been modified to use the fastquadtree package as a backend instead of
     the original pure-python implementation.
+    Based on the benchmarks, this gives a overall performance boost of 6.514x.
+    See the benchmark section of the docs for more details and the latest numbers.
 
 
     The top spatial index to be created by the user. Once created it can be
@@ -39,6 +57,8 @@ class Index:
     >>> sorted(results)
     ['duck', 'python']
     """
+
+    __slots__ = ("_qt", "_objects", "_item_to_id", "_free")
 
     def __init__(
         self,
@@ -87,7 +107,9 @@ class Index:
                 "Either the bbox argument must be set, or the x, y, width, and height arguments must be set"
             )
 
-        self._id_to_obj: dict[int, Any] = {}
+        self._objects = []
+        self._free = []
+        self._item_to_id = {}
 
     def insert(self, item: Any, bbox):  # pyright: ignore[reportIncompatibleMethodOverride]
         """
@@ -97,8 +119,14 @@ class Index:
         - **item**: The item to insert into the index, which will be returned by the intersection method
         - **bbox**: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
         """
-        self._id_to_obj[id(item)] = item
-        self._qt.insert(id(item), bbox)
+        if self._free:
+            rid = self._free.pop()
+            self._objects[rid] = item
+        else:
+            rid = len(self._objects)
+            self._objects.append(item)
+        self._qt.insert(rid, bbox)
+        self._item_to_id[id(item)] = rid
 
     def remove(self, item, bbox):
         """
@@ -110,10 +138,10 @@ class Index:
 
         Both parameters need to exactly match the parameters provided to the insert method.
         """
-        self._qt.delete(id(item), bbox)
-
-        # Pops
-        self._id_to_obj.pop(id(item), None)
+        rid = self._item_to_id.pop(id(item))
+        self._qt.delete(rid, bbox)
+        self._objects[rid] = None
+        self._free.append(rid)
 
     def intersect(self, bbox):
         """
@@ -126,6 +154,6 @@ class Index:
         Returns:
         - A list of inserted items whose bounding boxes intersect with the input bbox.
         """
-        results = self._qt.query(bbox)
-        # result = (id, x0, y0, x1, y1)
-        return [self._id_to_obj[result[0]] for result in results]
+        result = self._qt.query_ids(bbox)
+        # result = [id1, id2, ...]
+        return gather_objs(self._objects, result)

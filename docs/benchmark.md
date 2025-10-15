@@ -46,16 +46,35 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.181 | 2.024 | 2.205 |
-| Shim (no map) | 0.301 | 1.883 | 2.184 |
-| Shim (track+objs) | 0.651 | 2.016 | 2.667 |
+| Native | 0.136 | 1.717 | 1.852 |
+| Shim (no tracking) | 0.264 | 1.731 | 1.995 |
+| Shim (tracking) | 0.702 | 7.433 | 8.135 |
 
 ### Summary
 
-Using the shim with object tracking increases build time by 3.604x and query time by 0.996x.
-**Total slowdown = 1.210x.**
+Using the shim with object tracking increases build time by 5.177x and query time by 4.330x.
+**Total slowdown = 4.392x.**
 
-Adding the object map only impacts the build time, not the query time.
+Adding the object map increases the build and query time significantly.
+
+## pyqtree drop-in shim performance gains
+
+### Configuration
+- Points: 500,000
+- Queries: 500
+- Repeats: 5
+
+### Results
+
+| Variant | Build | Query | Total |
+|---|---:|---:|---:|
+| pyqtree (fastquadtree) | 0.446 | 2.125 | 2.571 |
+| pyqtree (original) | 3.328 | 13.085 | 16.413 |
+
+### Summary
+
+If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.446s and query time of 2.125s.
+This is a total speedup of 6.384x compared to the original pyqtree and requires no code changes.
 
 ---------
 
