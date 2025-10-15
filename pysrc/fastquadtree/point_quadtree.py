@@ -42,14 +42,12 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         *,
         max_depth: int | None = None,
         track_objects: bool = False,
-        start_id: int = 1,
     ):
         super().__init__(
             bounds,
             capacity,
             max_depth=max_depth,
             track_objects=track_objects,
-            start_id=start_id,
         )
 
     @overload
@@ -72,20 +70,11 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             If as_items is False: list of (id, x, y) tuples.
             If as_items is True: list of Item objects.
         """
-        raw = self._native.query(rect)
         if not as_items:
-            return raw
-        if self._items is None:
+            return self._native.query(rect)
+        if self._store is None:
             raise ValueError("Cannot return results as items with track_objects=False")
-        out: list[PointItem] = []
-        for id_, _x, _y in raw:
-            it = self._items.by_id(id_)
-            if it is None:
-                raise RuntimeError(
-                    f"Internal error: id {id_} present in native tree but missing from tracker."
-                )
-            out.append(it)
-        return out
+        return self._store.get_many_by_ids(self._native.query_ids(rect))
 
     @overload
     def nearest_neighbor(
@@ -111,10 +100,10 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         t = self._native.nearest_neighbor(xy)
         if t is None or not as_item:
             return t
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot return result as item with track_objects=False")
         id_, _x, _y = t
-        it = self._items.by_id(id_)
+        it = self._store.by_id(id_)
         if it is None:
             raise RuntimeError("Internal error: missing tracked item")
         return it
@@ -142,11 +131,11 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:
             return raw
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot return results as items with track_objects=False")
         out: list[PointItem] = []
         for id_, _x, _y in raw:
-            it = self._items.by_id(id_)
+            it = self._store.by_id(id_)
             if it is None:
                 raise RuntimeError("Internal error: missing tracked item")
             out.append(it)

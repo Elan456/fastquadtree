@@ -58,7 +58,7 @@ class Index:
     ['duck', 'python']
     """
 
-    __slots__ = ("_qt", "_objects", "_item_to_id", "_free")
+    __slots__ = ("_free", "_item_to_id", "_objects", "_qt")
 
     def __init__(
         self,

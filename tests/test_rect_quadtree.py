@@ -120,7 +120,7 @@ def test_insert_delete_and_count_and_len_no_tracking():
 
     # Insert inside bounds
     id1 = qt.insert(b(10, 10, 20, 20))
-    assert id1 == 1
+    assert id1 == 0
     assert len(qt) == 1
     assert qt.count_items() == 1
 
@@ -159,30 +159,7 @@ def test_query_paths_without_tracking_raw_and_as_items():
     assert ids == [a, b_id]
 
     # as_items branch when _items is None -> build RectItem instances (obj=None)
-    items = qt.query(b(0, 0, 10, 10), as_items=True)
-    assert {it.id_ for it in items} == {a, b_id}
-    assert all(it.obj is None for it in items)
-
-
-def test_query_with_tracking_ok_and_missing_item_raises():
-    qt = rq.RectQuadTree(b(0, 0, 10, 10), 8, track_objects=True)
-
-    # insert via wrapper so tracker is populated
-    i1 = qt.insert(b(1, 1, 2, 2), obj={"name": "A"})
-    i2 = qt.insert(b(3, 3, 4, 4), obj="B")
-
-    # as_items -> pulls existing tracked objects
-    got = qt.query(b(0, 0, 10, 10), as_items=True)
-    got_ids = sorted(it.id_ for it in got)
-    assert got_ids == [i1, i2]
-    # ensure objects are preserved
-    d = {it.id_: it.obj for it in got}
-    assert d[i1] == {"name": "A"}
-    assert d[i2] == "B"
-
-    # Now create a "native-only" id that is missing from tracker to hit RuntimeError
-    qt._native._force_raw(999, b(0.5, 0.5, 0.6, 0.6))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         qt.query(b(0, 0, 10, 10), as_items=True)
 
 
@@ -197,3 +174,30 @@ def test_node_boundaries_and_delete_miss():
 
     # delete miss (wrong rect)
     assert qt.delete(a, b(1, 1, 3, 3)) is False
+
+
+def test_accurate_obj_output_with_tracking():
+    qt = rq.RectQuadTree(b(0, 0, 10, 10), 8, track_objects=True)
+    id1 = qt.insert(b(1, 1, 2, 2), obj="first")
+    qt.insert(b(5, 5, 6, 6), obj={"name": "second"})
+
+    items = qt.query(b(0, 0, 10, 10), as_items=True)
+    assert len(items) == 2
+    assert "first" in [it.obj for it in items]
+    assert {"name": "second"} in [it.obj for it in items]
+
+    # Small query that only hits one
+    items1 = qt.query(b(0, 0, 3, 3), as_items=True)
+    assert len(items1) == 1
+    assert items1[0].obj == "first"
+    assert items1[0].id_ == id1
+    assert items1[0].min_x == 1.0
+    assert items1[0].min_y == 1.0
+    assert items1[0].max_x == 2.0
+    assert items1[0].max_y == 2.0
+
+    # delete one and query again
+    assert qt.delete(id1, b(1, 1, 2, 2)) is True
+    items2 = qt.query(b(0, 0, 10, 10), as_items=True)
+    assert len(items2) == 1
+    assert items2[0].obj == {"name": "second"}

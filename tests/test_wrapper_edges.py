@@ -25,7 +25,7 @@ def test_delete_returns_native_result_even_if_bimap_missing():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     id_ = qt.insert((50, 50))
     # remove bimap entry to simulate drift
-    qt._items.pop_id(id_)  # type: ignore[attr-defined]
+    qt._store.pop_id(id_)  # type: ignore[attr-defined]
 
     assert qt.delete(id_, (50, 50)) is True
     assert qt.count_items() == 0
@@ -70,9 +70,9 @@ def test_query_as_items_does_not_mutate_bimap_when_inserts_are_wrapped():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     ids = [qt.insert((10, 10)), qt.insert((20, 20)), qt.insert((30, 30))]
     # Snapshot of Item object identities in the BiMap
-    before = {i: qt._items.by_id(i) for i in ids}  # type: ignore[attr-defined]
+    before = {i: qt._store.by_id(i) for i in ids}  # type: ignore[attr-defined]
     its = qt.query((0, 0, 40, 40), as_items=True)
-    after = {i: qt._items.by_id(i) for i in ids}  # type: ignore[attr-defined]
+    after = {i: qt._store.by_id(i) for i in ids}  # type: ignore[attr-defined]
     # Items are the same objects. Query did not create new Items.
     assert [it.id_ for it in its] == ids
     assert before == after
@@ -87,21 +87,6 @@ def test_nearest_neighbor_as_item_requires_seeded_items():
     it = qt.nearest_neighbor((101, 101), as_item=True)
     assert it is not None
     assert (it.id_, it.x, it.y) == got
-
-
-def test_invariant_violation_raises_on_query_as_items_when_native_bypassed():
-    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    # Bypass wrapper to simulate a bug or misuse
-    assert qt._native.insert(42, (500, 500))  # type: ignore[attr-defined]
-    with pytest.raises(RuntimeError):
-        qt.query((400, 400, 600, 600), as_items=True)
-
-
-def test_invariant_violation_raises_on_nearest_as_item_when_native_bypassed():
-    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    assert qt._native.insert(77, (200, 200))  # type: ignore[attr-defined]
-    with pytest.raises(RuntimeError):
-        qt.nearest_neighbor((201, 201), as_item=True)
 
 
 def test_gets_query_items_without_tracking():
@@ -151,34 +136,6 @@ def test_out_of_bounds_insert():
         qt.get_all_objects()
 
 
-def test_native_insert_causes_obj_tracker_runtime_error():
-    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    qt._native.insert(1, (10, 10))  # type: ignore[attr-defined]
-    qt.insert((20, 20), id_=2)  # normal insert
-
-    # Query as items should cause runtime error
-    with pytest.raises(RuntimeError):
-        qt.query(BOUNDS, as_items=True)
-
-    # Query without items should work
-    results = qt.query(BOUNDS, as_items=False)
-    assert len(results) == 2
-
-    # KNN stuff should also raise
-    with pytest.raises(RuntimeError):
-        qt.nearest_neighbor((15, 15), as_item=True)
-
-    with pytest.raises(RuntimeError):
-        qt.nearest_neighbors((15, 15), 2, as_items=True)
-
-    # Attach should also raise
-    with pytest.raises(KeyError):
-        qt.attach(1, {"name": "point1"})
-
-    assert len(qt.get_all_objects()) == 0
-    assert len(qt.get_all_items()) == 1
-
-
 def test_get_all_items_returns_tracked_items():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     obj1 = {"name": "point1"}
@@ -206,20 +163,3 @@ def test_insert_many_exception_for_out_of_bounds():
 
     with pytest.raises(ValueError):
         qt.insert_many(points)
-
-
-def test_auto_id_collision_prevention():
-    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
-    id1 = qt.insert((10, 10))  # auto ID
-
-    id2 = qt.insert((20, 20), id_=200)  # Large ID
-
-    # Next auto ID should be 201
-    id3 = qt.insert((30, 30))  # auto ID
-
-    assert id3 == 201
-    assert len(qt) == 3
-    assert id1 != id2 != id3
-
-    id4 = qt.insert((40, 40), id_=150)  # Manual ID lower than current auto ID
-    assert id4 == 150

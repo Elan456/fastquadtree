@@ -2,36 +2,36 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Tuple, TypeVar
+from typing import Any, Generic, Iterable, Tuple, TypeVar
 
-from ._bimap import BiMap
 from ._item import Item  # base class for PointItem and RectItem
+from ._obj_store import ObjStore
 
 Bounds = Tuple[float, float, float, float]
 
 # Generic parameters
 G = TypeVar("G")  # geometry type, e.g. Point or Bounds
 HitT = TypeVar("HitT")  # raw native tuple, e.g. (id,x,y) or (id,x0,y0,x1,y1)
-ItemType = TypeVar(
-    "ItemType", bound=Item
-)  # Python Item subtype, e.g. PointItem or RectItem
+ItemType = TypeVar("ItemType", bound=Item)  # e.g. PointItem or RectItem
 
 
 class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     """
     Shared logic for Python QuadTree wrappers over native Rust engines.
 
-    Concrete subclasses must implement the few native hooks and item builders.
+    Concrete subclasses must implement:
+      - _new_native(bounds, capacity, max_depth)
+      - _make_item(id_, geom, obj)
     """
 
     __slots__ = (
         "_bounds",
         "_capacity",
         "_count",
-        "_items",
         "_max_depth",
         "_native",
         "_next_id",
+        "_store",
         "_track_objects",
     )
 
@@ -54,78 +54,116 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         *,
         max_depth: int | None = None,
         track_objects: bool = False,
-        start_id: int = 1,
     ):
         self._bounds = bounds
         self._max_depth = max_depth
         self._capacity = capacity
         self._native = self._new_native(bounds, capacity, max_depth)
-        # typed item map if tracking enabled
+
         self._track_objects = bool(track_objects)
-        self._items: BiMap[ItemType] | None = BiMap() if track_objects else None
-        self._next_id = int(start_id)
+        self._store: ObjStore[ItemType] | None = ObjStore() if track_objects else None
+
+        # Auto ids when not using ObjStore.free slots
+        self._next_id = 0
         self._count = 0
 
-    # ---- shared helpers ----
+    # ---- internal helper ----
 
-    def _alloc_id(self, id_: int | None) -> int:
-        if id_ is None:
-            nid = self._next_id
-            self._next_id += 1
-            return nid
-        if id_ >= self._next_id:
-            self._next_id = id_ + 1
-        return id_
+    def _ids_to_objects(self, ids: Iterable[int]) -> list[Any]:
+        """Map ids -> Python objects via ObjStore in a batched way."""
+        if self._store is None:
+            raise ValueError("Cannot map ids to objects when track_objects=False")
+        return self._store.get_many_objects(list(ids))
 
-    def insert(self, geom: G, *, id_: int | None = None, obj: Any = None) -> int:
+    # ---- shared API ----
+
+    def insert(self, geom: G, *, obj: Any | None = None) -> int:
         """
-        Insert a single item
+        Insert a single item.
 
         Args:
             geom: Point (x, y) or Rect (x0, y0, x1, y1) depending on quadtree type.
-            id_: Optional integer id. If None, an auto id is assigned.
-            obj: Optional Python object to associate with id. Stored only if
-                object tracking is enabled.
+            obj: Optional Python object to associate with id if tracking is enabled.
 
         Returns:
             The id used for this insert.
 
         Raises:
-            ValueError: If the point is outside tree bounds.
+            ValueError: If geometry is outside the tree bounds.
         """
-        use_id = self._alloc_id(id_)
-        if not self._native.insert(use_id, geom):
+        if self._store is not None:
+            # Reuse a dense free slot if available, else append
+            rid = self._store.alloc_id()
+        else:
+            rid = self._next_id
+            self._next_id += 1
+
+        if not self._native.insert(rid, geom):
             bx0, by0, bx1, by1 = self._bounds
             raise ValueError(
                 f"Geometry {geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
             )
 
-        if self._items is not None:
-            self._items.add(self._make_item(use_id, geom, obj))
+        if self._store is not None:
+            self._store.add(self._make_item(rid, geom, obj))
 
         self._count += 1
-        return use_id
+        return rid
 
-    def insert_many(self, geoms: list[G]) -> int:
+    def insert_many(self, geoms: list[G], objs: list[Any] | None = None) -> int:
         """
-        Bulk insert items with auto-assigned ids. Faster than inserting one at a time.
+        Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.
+
+        If tracking is enabled, this uses contiguous ids starting at the current end
+        of the dense store. If there are free slots, we fall back to per-item inserts
+        to preserve reuse semantics.
 
         Args:
-            geoms: List of geometries. Either Points (x, y) or Rects (x0, y0, x1, y1) depending on quadtree type.
+            geoms: List of geometries.
+            objs: Optional list of Python objects aligned with geoms.
 
         Returns:
-            The number of items inserted
+            Number of items inserted.
+
+        Raises:
+            ValueError: If any geometry is outside bounds.
         """
-        start_id = self._next_id
+        if not geoms:
+            return 0
+
+        if self._store is None:
+            # Simple contiguous path with native bulk insert
+            start_id = self._next_id
+            last_id = self._native.insert_many(start_id, geoms)
+            num = last_id - start_id + 1
+            if num < len(geoms):
+                raise ValueError("One or more items are outside tree bounds")
+            self._next_id = last_id + 1
+            self._count += num
+            return num
+
+        # With tracking enabled:
+        start_id = len(self._store._arr)  # contiguous tail position
         last_id = self._native.insert_many(start_id, geoms)
         num = last_id - start_id + 1
         if num < len(geoms):
             raise ValueError("One or more items are outside tree bounds")
 
-        self._next_id = last_id + 1
-        if self._items is not None:
-            for i, id_ in enumerate(range(start_id, last_id + 1)):
-                self._items.add(self._make_item(id_, geoms[i], None))
+        # Add items to the store in one pass
+        if objs is None:
+            for off, geom in enumerate(geoms):
+                id_ = start_id + off
+                self._store.add(self._make_item(id_, geom, None))
+        else:
+            if len(objs) != len(geoms):
+                raise ValueError("objs length must match geoms length")
+            for off, (geom, o) in enumerate(zip(geoms, objs)):
+                id_ = start_id + off
+                self._store.add(self._make_item(id_, geom, o))
+
+        # Keep _next_id monotonic for the non-tracking path
+        self._next_id = max(self._next_id, last_id + 1)
+
         self._count += num
         return num
 
@@ -133,107 +171,72 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         Delete an item by id and exact geometry.
 
-        Args:
-            id_: Integer id to remove.
-            geom: Exact geometry to remove. Either Point (x, y) or Rect (x0, y0, x1, y1) depending on quadtree type.
-
         Returns:
-            True if the item was found and deleted, else False.
+            True if the item was found and deleted.
         """
         deleted = self._native.delete(id_, geom)
         if deleted:
             self._count -= 1
-            if self._items is not None:
-                self._items.pop_id(id_)
+            if self._store is not None:
+                self._store.pop_id(id_)
         return deleted
 
     def attach(self, id_: int, obj: Any) -> None:
         """
         Attach or replace the Python object for an existing id.
         Tracking must be enabled.
-
-        Args:
-            id_: Target id.
-            obj: Object to associate with id.
         """
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot attach objects when track_objects=False")
-        it = self._items.by_id(id_)
+        it = self._store.by_id(id_)
         if it is None:
             raise KeyError(f"Id {id_} not found in quadtree")
         # Preserve geometry from existing item
-        self._items.add(self._make_item(id_, it.geom, obj))  # type: ignore[attr-defined]
+        self._store.add(self._make_item(id_, it.geom, obj))  # type: ignore[attr-defined]
 
     def delete_by_object(self, obj: Any) -> bool:
         """
-        Delete an item by Python object.
-
-        Requires object tracking to be enabled. Performs an O(1) reverse
-        lookup to get the id, then deletes that entry at the given location.
-
-        Args:
-            obj: The tracked Python object to remove.
-
-        Returns:
-            True if the item was found and deleted, else False.
-
-        Raises:
-            ValueError: If object tracking is disabled.
+        Delete an item by Python object identity. Tracking must be enabled.
         """
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot delete by object when track_objects=False")
-        it = self._items.by_obj(obj)
+        it = self._store.by_obj(obj)
         if it is None:
             return False
-        # type of geom is determined by concrete Item subtype
         return self.delete(it.id_, it.geom)  # type: ignore[arg-type]
 
-    def clear(self, *, reset_ids: bool = False) -> None:
+    def clear(self) -> None:
         """
-        Empty the tree in place, preserving bounds/capacity/max_depth.
+        Empty the tree in place, preserving bounds, capacity, and max_depth.
 
-        Args:
-            reset_ids: If True, restart auto-assigned ids from 1.
+        If tracking is enabled, the id -> object mapping is also cleared.
+        The ids are reset to start at zero again.
         """
         self._native = self._new_native(self._bounds, self._capacity, self._max_depth)
         self._count = 0
-        if self._items is not None:
-            self._items.clear()
-        if reset_ids:
-            self._next_id = 1
+        if self._store is not None:
+            self._store.clear()
+        self._next_id = 0
 
     def get_all_objects(self) -> list[Any]:
         """
         Return all tracked Python objects in the tree.
-
-        Returns:
-            List of objects.
-        Raises:
-            ValueError: If object tracking is disabled.
         """
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot get objects when track_objects=False")
-        return [t.obj for t in self._items.items() if t.obj is not None]
+        return [t.obj for t in self._store.items() if t.obj is not None]
 
     def get_all_items(self) -> list[ItemType]:
         """
         Return all Item wrappers in the tree.
-
-        Returns:
-            List of Item objects.
-        Raises:
-            ValueError: If object tracking is disabled.
         """
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot get items when track_objects=False")
-        return list(self._items.items())
+        return list(self._store.items())
 
     def get_all_node_boundaries(self) -> list[Bounds]:
         """
-        Return all node boundaries in the tree. Great for visualizing the tree structure.
-
-        Returns:
-            List of (min_x, min_y, max_x, max_y) for each node in the tree.
+        Return all node boundaries in the tree. Useful for visualization.
         """
         return self._native.get_all_node_boundaries()
 
@@ -241,21 +244,14 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         Return the object associated with id, if tracking is enabled.
         """
-        if self._items is None:
+        if self._store is None:
             raise ValueError("Cannot get objects when track_objects=False")
-        item = self._items.by_id(id_)
+        item = self._store.by_id(id_)
         return None if item is None else item.obj
 
     def count_items(self) -> int:
         """
-        Return the number of items currently in the tree.
-
-        Note:
-            Performs a full scan of tree to count up every item.
-            Use the `len()` function or `len(tree)` for O(1) access.
-
-        Returns:
-            Number of items in the tree.
+        Return the number of items currently in the tree (native count).
         """
         return self._native.count_items()
 

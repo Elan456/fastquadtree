@@ -65,6 +65,14 @@ impl PyQuadTree {
         PyList::new(py, &tuples).expect("Failed to create Python list")
     }
 
+    /// Returns list[id, ...]
+    /// Faster for Python to process if you only need IDs.
+    pub fn query_ids<'py>(&self, py: Python<'py>, rect: (f32, f32, f32, f32)) -> Bound<'py, PyList> {
+        let (min_x, min_y, max_x, max_y) = rect;
+        let ids: Vec<u64> = self.inner.query(Rect { min_x, min_y, max_x, max_y }).into_iter().map(|it| it.0).collect();
+        PyList::new(py, &ids).expect("Failed to create Python list")
+    }
+
     pub fn nearest_neighbor(&self, xy: (f32, f32)) -> Option<(u64, f32, f32)> {
         let (x, y) = xy;
         self.inner.nearest_neighbor(Point { x, y }).map(item_to_tuple)

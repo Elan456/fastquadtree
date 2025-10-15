@@ -50,19 +50,18 @@ def test_clear_reset_ids_behavior_false_then_true():
     id1 = qt.insert((1, 1), obj="x")
     id2 = qt.insert((2, 2), obj="y")
     id3 = qt.insert((3, 3), obj="z")
-    assert [id1, id2, id3] == [1, 2, 3]
+    assert [id1, id2, id3] == [0, 1, 2]
 
-    # clear with default reset_ids=False, next id should continue at 4
     qt.clear()
     id4 = qt.insert((4, 4), obj="w")
-    assert id4 == 4
+    assert id4 == 0
     assert qt.count_items() == 1
     assert len(qt) == 1
 
-    # Now clear and reset ids back to 1
-    qt.clear(reset_ids=True)
+    # Now clear and reset ids back to 0 again
+    qt.clear()
     id1_again = qt.insert((10, 10), obj="again")
-    assert id1_again == 1
+    assert id1_again == 0
     assert qt.count_items() == 1
     assert len(qt) == 1
 
@@ -86,7 +85,7 @@ def test_clear_keeps_config_and_bounds(with_max_depth, track_objects):
     with pytest.raises(ValueError, match="outside bounds"):
         qt.insert((200, 200))
     ok2 = qt.insert((51, 51))  # still in-bounds
-    assert ok2 >= 1
+    assert ok2 >= 0
     assert qt.count_items() == 1
 
 
@@ -107,7 +106,7 @@ def test_clear_with_multiple_references_observe_empty_state():
 
     # Can insert again after clear
     nid = qt.insert((30, 30), obj="c")
-    assert nid >= 1
+    assert nid >= 0
     assert alias.count_items() == 1
 
 
