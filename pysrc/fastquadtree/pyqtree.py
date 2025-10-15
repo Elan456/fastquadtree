@@ -48,14 +48,17 @@ class Index:
     all the quad instances and lets you access their properties.
 
     Example usage:
+    ```python
+    from fastquadtree.pyqtree import Index
 
-    >>> spindex = Index(bbox=(0, 0, 100, 100))
-    >>> spindex.insert('duck', (50, 30, 53, 60))
-    >>> spindex.insert('cookie', (10, 20, 15, 25))
-    >>> spindex.insert('python', (40, 50, 95, 90))
-    >>> results = spindex.intersect((51, 51, 86, 86))
-    >>> sorted(results)
-    ['duck', 'python']
+
+    spindex = Index(bbox=(0, 0, 100, 100))
+    spindex.insert('duck', (50, 30, 53, 60))
+    spindex.insert('cookie', (10, 20, 15, 25))
+    spindex.insert('python', (40, 50, 95, 90))
+    results = spindex.intersect((51, 51, 86, 86))
+    sorted(results) # ['duck', 'python']
+    ```
     """
 
     __slots__ = ("_free", "_item_to_id", "_objects", "_qt")
