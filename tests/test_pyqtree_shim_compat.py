@@ -8,6 +8,8 @@ from fastquadtree.pyqtree import Index as FQTIndex
 
 WORLD = (0.0, 0.0, 100.0, 100.0)
 
+EPS = 1e-6  # Floating point tolerance for edge cases
+
 
 def rand_rect(rng, world=WORLD, min_size=1.0, max_size=20.0):
     x1 = rng.uniform(world[0], world[2] - min_size)
@@ -246,3 +248,98 @@ def test_free_slot_reuse_no_growth_under_churn():
     # None of the removed items should be found
     for obj, box in removed:
         assert obj not in idx.intersect(box)
+
+
+def _boxes_touching_edges_and_corners():
+    # World is (0,0,100,100). Partition lines around 50 are common split lines.
+    return [
+        ("left_edge", (0.0, 10.0, 5.0, 20.0)),  # touches world min-x
+        ("right_edge", (95.0, 10.0, 100.0, 20.0)),  # touches world max-x
+        ("bottom_edge", (10.0, 0.0, 20.0, 5.0)),  # touches world min-y
+        ("top_edge", (10.0, 95.0, 20.0, 100.0)),  # touches world max-y
+        ("bottom_left_pt", (0.0, 0.0, 5.0, 5.0)),  # corner touch
+        ("top_right_pt", (95.0, 95.0, 100.0, 100.0)),
+        # Straddle the vertical split line x=50 with tiny thickness
+        ("straddle_x50", (50.0 - EPS, 40.0, 50.0 + EPS, 60.0)),
+        # Straddle the horizontal split line y=50 with tiny thickness
+        ("straddle_y50", (40.0, 50.0 - EPS, 60.0, 50.0 + EPS)),
+        # Very thin but > 0 width and height
+        ("thin_horizontal", (20.0, 33.333, 80.0, 33.333 + 1e-5)),
+        ("thin_vertical", (33.333, 20.0, 33.333 + 1e-5, 80.0)),
+        # Boxes that just touch each other at an edge or corner
+        ("touch_A", (30.0, 30.0, 40.0, 40.0)),
+        ("touch_B", (40.0, 30.0, 50.0, 40.0)),  # shares an edge with A
+        ("touch_C", (40.0, 40.0, 50.0, 50.0)),  # touches B at one corner
+    ]
+
+
+def _queries_covering_touch_cases():
+    return [
+        (0.0, 0.0, 100.0, 100.0),  # world
+        (0.0, 10.0, 5.0, 20.0),  # exact edge box
+        (95.0, 10.0, 100.0, 20.0),
+        (10.0, 0.0, 20.0, 5.0),
+        (10.0, 95.0, 20.0, 100.0),
+        (30.0, 30.0, 50.0, 40.0),  # spans touch_A and touch_B shared edge
+        (39.9999, 39.9999, 40.0001, 40.0001),  # tiny around touching corner
+        (50.0 - 2 * EPS, 49.0, 50.0 + 2 * EPS, 51.0),  # around x=50 straddle
+        (49.0, 50.0 - 2 * EPS, 51.0, 50.0 + 2 * EPS),  # around y=50 straddle
+        (20.0, 33.333 - 1e-4, 80.0, 33.333 + 1e-4),  # thin horizontal
+        (33.333 - 1e-4, 20.0, 33.333 + 1e-4, 80.0),  # thin vertical
+    ]
+
+
+@pytest.mark.parametrize("ctor", ["bbox", "xywh"])
+def test_edge_and_boundary_semantics_match_pyqtree(ctor):
+    items = _boxes_touching_edges_and_corners()
+    fqt, pyq = build_indices(items, ctor=ctor)
+
+    # Check that every crafted query matches exactly
+    for q in _queries_covering_touch_cases():
+        results_match_exact(fqt, pyq, q)
+
+    # Add a few more probes around the partition lines to stress boundary math
+    for dx in (-EPS, 0.0, EPS):
+        for dy in (-EPS, 0.0, EPS):
+            q = (50.0 + dx - 1.0, 50.0 + dy - 1.0, 50.0 + dx + 1.0, 50.0 + dy + 1.0)
+            results_match_exact(fqt, pyq, q)
+
+
+def test_dense_targets_along_partition_lines_match_pyqtree():
+    """
+    Insert many small rectangles centered along x=50 and y=50 to stress
+    splitting and equality on boundary math.
+    """
+    objs = []
+    boxes = []
+
+    # 40 tiny boxes along x=50 at different y
+    for i in range(40):
+        y = 2.0 + i * 2.4  # spread across the world
+        boxes.append((50.0 - 0.25, y - 0.25, 50.0 + 0.25, y + 0.25))
+        objs.append(f"vx_{i}")
+
+    # 40 tiny boxes along y=50 at different x
+    for i in range(40):
+        x = 2.0 + i * 2.4
+        boxes.append((x - 0.25, 50.0 - 0.25, x + 0.25, 50.0 + 0.25))
+        objs.append(f"hy_{i}")
+
+    items = list(zip(objs, boxes))
+    fqt, pyq = build_indices(items, ctor="bbox")
+
+    # Probe a grid of queries around the center to catch any off by epsilon
+    for cx in (49.5, 50.0, 50.5):
+        for cy in (49.5, 50.0, 50.5):
+            q = (cx - 1.0, cy - 1.0, cx + 1.0, cy + 1.0)
+            results_match_exact(fqt, pyq, q)
+
+    # Also check a sweep of thin queries that align to the lines
+    thin_queries = [
+        (49.9, 0.0, 50.1, 100.0),
+        (0.0, 49.9, 100.0, 50.1),
+        (49.999, 10.0, 50.001, 90.0),
+        (10.0, 49.999, 90.0, 50.001),
+    ]
+    for q in thin_queries:
+        results_match_exact(fqt, pyq, q)
