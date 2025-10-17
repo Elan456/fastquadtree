@@ -122,6 +122,9 @@ class Index:
         - **item**: The item to insert into the index, which will be returned by the intersection method
         - **bbox**: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
         """
+        if type(bbox) is list:  # Handle list input
+            bbox = tuple(bbox)
+
         if self._free:
             rid = self._free.pop()
             self._objects[rid] = item
@@ -141,6 +144,9 @@ class Index:
 
         Both parameters need to exactly match the parameters provided to the insert method.
         """
+        if type(bbox) is list:  # Handle list input
+            bbox = tuple(bbox)
+
         rid = self._item_to_id.pop(id(item))
         self._qt.delete(rid, bbox)
         self._objects[rid] = None

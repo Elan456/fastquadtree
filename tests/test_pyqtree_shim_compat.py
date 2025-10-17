@@ -362,3 +362,42 @@ def test_query_list_and_tuple_equivalence():
     results_from_list = idx.intersect(query_list)
 
     assert results_from_tuple == results_from_list == [obj1]
+
+
+def test_remove_list_and_tuple_equivalence():
+    """Test that both list and tuple inputs for bbox work the same in remove."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1, box1 = "obj1", (10.0, 10.0, 20.0, 20.0)
+    obj2, box2 = "obj2", (30.0, 30.0, 40.0, 40.0)
+
+    idx.insert(obj1, box1)
+    idx.insert(obj2, box2)
+
+    # Remove using tuple
+    idx.remove(obj1, box1)
+
+    # Remove using list
+    box2_list = [30.0, 30.0, 40.0, 40.0]
+    idx.remove(obj2, box2_list)
+
+    # Both objects should be removed
+    assert idx.intersect((0.0, 0.0, 100.0, 100.0)) == []
+
+
+def test_insert_list_and_tuple_equivalence():
+    """Test that both list and tuple inputs for bbox work the same in insert."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1, box1 = "obj1", (10.0, 10.0, 20.0, 20.0)
+    obj2, box2 = "obj2", [30.0, 30.0, 40.0, 40.0]  # box2 as list
+
+    # Insert using tuple
+    idx.insert(obj1, box1)
+
+    # Insert using list
+    idx.insert(obj2, box2)
+
+    # Both objects should be present
+    results = idx.intersect((0.0, 0.0, 100.0, 100.0))
+    assert set(results) == {obj1, obj2}
