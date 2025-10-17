@@ -40,7 +40,7 @@ class Index:
     Based on the benchmarks, this gives a overall performance boost of 6.514x.
     See the benchmark section of the docs for more details and the latest numbers.
 
-
+    Original docstring from pyqtree follows:
     The top spatial index to be created by the user. Once created it can be
     populated with geographically placed members that can later be tested for
     intersection with a user inputted geographic bounding box. Note that the
@@ -157,6 +157,8 @@ class Index:
         Returns:
         - A list of inserted items whose bounding boxes intersect with the input bbox.
         """
+        if type(bbox) is list:  # Handle list input
+            bbox = tuple(bbox)
         result = self._qt.query_ids(bbox)
         # result = [id1, id2, ...]
         return gather_objs(self._objects, result)

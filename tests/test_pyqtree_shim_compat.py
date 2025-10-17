@@ -343,3 +343,22 @@ def test_dense_targets_along_partition_lines_match_pyqtree():
     ]
     for q in thin_queries:
         results_match_exact(fqt, pyq, q)
+
+
+def test_query_list_and_tuple_equivalence():
+    """Test that both list and tuple inputs for bbox work the same."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1, box1 = "obj1", (10.0, 10.0, 20.0, 20.0)
+    obj2, box2 = "obj2", (30.0, 30.0, 40.0, 40.0)
+
+    idx.insert(obj1, box1)
+    idx.insert(obj2, box2)
+
+    query_tuple = (15.0, 15.0, 25.0, 25.0)
+    query_list = [15.0, 15.0, 25.0, 25.0]
+
+    results_from_tuple = idx.intersect(query_tuple)
+    results_from_list = idx.intersect(query_list)
+
+    assert results_from_tuple == results_from_list == [obj1]
