@@ -76,6 +76,26 @@ Adding the object map tends to impact the build time more than query time.
 If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.443s and query time of 2.007s.
 This is a **total speedup of 6.567x** compared to the original pyqtree and requires no code changes.
 
+## NumPy Bulk Insert vs Python List Insert
+Configuration:  
+- Points: 500,000  
+- Repeats: 5  
+- Dtype: float32  
+- Track objects: False  
+
+Results (median of repeats)
+
+| Variant | Build time |
+|---|---:|
+| NumPy array direct | 511.8 ms |
+| Python list insert only | 490.5 ms |
+| Python list including conversion | 1.376 s |
+
+Key:  
+
+- *NumPy array direct*: Using the `insert_many` method with a NumPy array of shape (N, 2).  
+- *Python list insert only*: Using the `insert_many` method with a Python list of tuples.  
+- *Python list including conversion*: Time taken to convert a NumPy array to a Python list of tuples, then inserting.  
 ---------
 
 ## System Info

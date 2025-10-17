@@ -8,6 +8,8 @@ pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use pyo3::exceptions::PyValueError;
+use numpy::PyReadonlyArray2;
 
 fn item_to_tuple(it: Item) -> (u64, f32, f32) {
     (it.id, it.point.x, it.point.y)
@@ -51,6 +53,28 @@ impl PyQuadTree {
             }
         }
         id.saturating_sub(1)
+    }
+
+    /// Assume (n x 2) numpy array of float32 points [[x, y], ...]
+    pub fn insert_many_np<'py>(
+        &mut self,
+        start_id: u64,
+        points: PyReadonlyArray2<'py, f32>,
+    ) -> PyResult<u64> {
+        let view = points.as_array();
+        if view.ncols() != 2 {
+            return Err(PyValueError::new_err("points must have shape (N, 2)"));
+        }
+
+        let mut id = start_id;
+        for row in view.outer_iter() {
+            let x = row[0];
+            let y = row[1];
+            if self.inner.insert(Item { id, point: Point { x, y } }) {
+                id += 1;
+            }
+        }
+        Ok(id.saturating_sub(1))
     }
 
     pub fn delete(&mut self, id: u64, xy: (f32, f32)) -> bool {
@@ -136,6 +160,30 @@ impl PyRectQuadTree {
             }
         }
         id.saturating_sub(1)
+    }
+
+    /// Assume (n x 4) numpy array of float32 box [[min_x, min_y, max_x, max_y], ...]
+    pub fn insert_many_np<'py>(
+        &mut self,
+        start_id: u64,
+        points: PyReadonlyArray2<'py, f32>,
+    ) -> PyResult<u64> {
+        let view = points.as_array();
+        if view.ncols() != 4 {
+            return Err(PyValueError::new_err("points must have shape (N, 4)"));
+        }
+
+        let mut id = start_id;
+        for row in view.outer_iter() {
+            let min_x = row[0];
+            let min_y = row[1];
+            let max_x = row[2];
+            let max_y = row[3];
+            if self.inner.insert(RectItem { id, rect: Rect { min_x, min_y, max_x, max_y } }) {
+                id += 1;
+            }
+        }
+        Ok(id.saturating_sub(1))
     }
 
     /// Delete by id and exact rect.
