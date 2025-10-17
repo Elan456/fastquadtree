@@ -58,6 +58,7 @@ impl PyQuadTree {
     /// Assume (n x 2) numpy array of float32 points [[x, y], ...]
     pub fn insert_many_np<'py>(
         &mut self,
+        py: Python<'py>, // Allow releasing the GIL during insertion
         start_id: u64,
         points: PyReadonlyArray2<'py, f32>,
     ) -> PyResult<u64> {
@@ -67,13 +68,19 @@ impl PyQuadTree {
         }
 
         let mut id = start_id;
-        for row in view.outer_iter() {
-            let x = row[0];
-            let y = row[1];
-            if self.inner.insert(Item { id, point: Point { x, y } }) {
-                id += 1;
+        py.detach(|| {
+            if let Some(slice) = view.as_slice() {
+                for ch in slice.chunks_exact(2) {
+                    let (x, y) = (ch[0], ch[1]);
+                    if self.inner.insert(Item { id, point: Point { x, y } }) { id += 1; }
+                }
+            } else {
+                for row in view.outer_iter() {
+                    let (x, y) = (row[0], row[1]);
+                    if self.inner.insert(Item { id, point: Point { x, y } }) { id += 1; }
+                }
             }
-        }
+        });
         Ok(id.saturating_sub(1))
     }
 

@@ -163,9 +163,8 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
             if geoms.size == 0:
                 return 0
 
-            # Cast the numpy array to f32
             if geoms.dtype != _np.float32:
-                geoms = geoms.astype(_np.float32)
+                raise TypeError("Numpy array must use dtype float32")
 
         if self._store is None:
             # Simple contiguous path with native bulk insert
