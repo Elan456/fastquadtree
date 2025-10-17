@@ -133,9 +133,12 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def insert_many(
         self, geoms: NDArray[Any], objs: list[Any] | None = None
     ) -> int: ...
-    def insert_many(self, geoms: Any, objs: list[Any] | None = None) -> int:
+    def insert_many(
+        self, geoms: NDArray[Any] | Sequence[G], objs: list[Any] | None = None
+    ) -> int:
         """
         Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
+        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with dtype float32.
 
         If tracking is enabled, the objects will be bulk stored internally.
         If no objects are provided, the items will have obj=None (if tracking).

@@ -44,11 +44,11 @@ plugins:
             separate_signature: true
             line_length: 88
             heading_level: 2
-            filters:  # Exclude __slots__ and __len__ and anything with a single underscore prefix
+            filters:  # Exclude __slots__ and __len__ and anything with a single underscore prefix (don't filter insert_many even though it has a single underscore)
               - "!__slots__"
               - "!__len__"
-              - "!_.*"
-              
+              - "!^_[^_]"
+
   - autorefs
   - git-revision-date-localized:
       fallback_to_build_date: true

@@ -11,6 +11,7 @@ repos:
       # Code formatter (Black replacement)
       - id: ruff-format
         name: ruff (format)
+        fail_fast: true
 
   # Local hooks that run in sequence and do not receive file args
   - repo: local
