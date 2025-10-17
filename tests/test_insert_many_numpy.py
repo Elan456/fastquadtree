@@ -167,3 +167,17 @@ def test_rect_query_accuracy_robust_numpy():
                 int(rect[2]),
                 int(rect[3]),
             ) in queried_rects_set
+
+
+def test_insert_objects_numpy():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    qt.insert_many(
+        np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32),
+        objs=[{"name": "A"}, {"name": "B"}, {"name": "C"}],
+    )
+
+    items = qt.query((0, 0, 40, 40), as_items=True)
+    assert len(items) == 3
+
+    names = {item.obj["name"] for item in items if item.obj is not None}
+    assert names == {"A", "B", "C"}

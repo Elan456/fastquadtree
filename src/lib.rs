@@ -172,6 +172,7 @@ impl PyRectQuadTree {
     /// Assume (n x 4) numpy array of float32 box [[min_x, min_y, max_x, max_y], ...]
     pub fn insert_many_np<'py>(
         &mut self,
+        py: Python<'py>, // Allow releasing the GIL during insertion
         start_id: u64,
         points: PyReadonlyArray2<'py, f32>,
     ) -> PyResult<u64> {
@@ -181,15 +182,19 @@ impl PyRectQuadTree {
         }
 
         let mut id = start_id;
-        for row in view.outer_iter() {
-            let min_x = row[0];
-            let min_y = row[1];
-            let max_x = row[2];
-            let max_y = row[3];
-            if self.inner.insert(RectItem { id, rect: Rect { min_x, min_y, max_x, max_y } }) {
-                id += 1;
+        py.detach(|| {
+            if let Some(slice) = view.as_slice() {
+                for ch in slice.chunks_exact(4) {
+                    let r = Rect { min_x: ch[0], min_y: ch[1], max_x: ch[2], max_y: ch[3] };
+                    if self.inner.insert(RectItem { id, rect: r }) { id += 1; }
+                }
+            } else {
+                for row in view.outer_iter() {
+                    let r = Rect { min_x: row[0], min_y: row[1], max_x: row[2], max_y: row[3] };
+                    if self.inner.insert(RectItem { id, rect: r }) { id += 1; }
+                }
             }
-        }
+        });
         Ok(id.saturating_sub(1))
     }
 
