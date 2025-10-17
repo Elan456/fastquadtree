@@ -79,6 +79,7 @@ dev = [
   "mkdocs-minify-plugin",
   "maturin>=1.5",  # build Rust wheels
   "pyqtree==1.0.0", # for comparison in tests
+  "numpy",
 ]
 
 [tool.ruff]

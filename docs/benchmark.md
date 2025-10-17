@@ -57,6 +57,8 @@ Using the shim with object tracking increases build time by 5.345x and query tim
 
 Adding the object map tends to impact the build time more than query time.
 
+-----------
+
 ## pyqtree drop-in shim performance gains
 
 ### Configuration
@@ -75,6 +77,33 @@ Adding the object map tends to impact the build time more than query time.
 
 If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.443s and query time of 2.007s.
 This is a **total speedup of 6.567x** compared to the original pyqtree and requires no code changes.
+
+---------
+
+## NumPy Bulk Insert vs Python List Insert
+### Configuration
+
+- Points: 500,000
+- Repeats: 5
+- Dtype: float32
+- Track objects: False
+
+### Results (median of repeats)
+
+| Variant | Build time |
+|---|---:|
+| NumPy array direct | 42.8 ms |
+| Python list insert only | 51.1 ms |
+| Python list including conversion | 540.2 ms |
+
+Key:  
+
+- *NumPy array direct*: Using the `insert_many` method with a NumPy array of shape (N, 2).  
+- *Python list insert only*: Using the `insert_many` method with a Python list of tuples.  
+- *Python list including conversion*: Time taken to convert a NumPy array to a Python list of tuples, then inserting.  
+
+### Summary
+If your data is already in a NumPy array, using the `insert_many` method directly with the array is significantly faster than converting to a Python list first.
 
 ---------
 
@@ -97,6 +126,7 @@ Then run:
 ```bash
 python benchmarks/cross_library_bench.py
 python benchmarks/benchmark_native_vs_shim.py 
+python benchmarks/benchmark_np_vs_list.py 
 ```
 
 Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.

@@ -2,10 +2,22 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Iterable, Tuple, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Iterable,
+    Sequence,
+    Tuple,
+    TypeVar,
+    overload,
+)
 
 from ._item import Item  # base class for PointItem and RectItem
 from ._obj_store import ObjStore
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 Bounds = Tuple[float, float, float, float]
 
@@ -13,6 +25,11 @@ Bounds = Tuple[float, float, float, float]
 G = TypeVar("G")  # geometry type, e.g. Point or Bounds
 HitT = TypeVar("HitT")  # raw native tuple, e.g. (id,x,y) or (id,x0,y0,x1,y1)
 ItemType = TypeVar("ItemType", bound=Item)  # e.g. PointItem or RectItem
+
+
+def _is_np_array(x: Any) -> bool:
+    mod = getattr(x.__class__, "__module__", "")
+    return mod.startswith("numpy") and hasattr(x, "ndim") and hasattr(x, "shape")
 
 
 class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
@@ -110,9 +127,18 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         self._count += 1
         return rid
 
-    def insert_many(self, geoms: list[G], objs: list[Any] | None = None) -> int:
+    @overload
+    def insert_many(self, geoms: Sequence[G], objs: list[Any] | None = None) -> int: ...
+    @overload
+    def insert_many(
+        self, geoms: NDArray[Any], objs: list[Any] | None = None
+    ) -> int: ...
+    def insert_many(
+        self, geoms: NDArray[Any] | Sequence[G], objs: list[Any] | None = None
+    ) -> int:
         """
         Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
+        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with dtype float32.
 
         If tracking is enabled, the objects will be bulk stored internally.
         If no objects are provided, the items will have obj=None (if tracking).
@@ -127,13 +153,30 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         Raises:
             ValueError: If any geometry is outside bounds.
         """
-        if not geoms:
+        if type(geoms) is list and len(geoms) == 0:
             return 0
+
+        if _is_np_array(geoms):
+            import numpy as _np
+        else:
+            _np = None
+
+        # Early return if the numpy array is empty
+        if _np is not None and isinstance(geoms, _np.ndarray):
+            if geoms.size == 0:
+                return 0
+
+            if geoms.dtype != _np.float32:
+                raise TypeError("Numpy array must use dtype float32")
 
         if self._store is None:
             # Simple contiguous path with native bulk insert
             start_id = self._next_id
-            last_id = self._native.insert_many(start_id, geoms)
+
+            if _np is not None:
+                last_id = self._native.insert_many_np(start_id, geoms)
+            else:
+                last_id = self._native.insert_many(start_id, geoms)
             num = last_id - start_id + 1
             if num < len(geoms):
                 raise ValueError("One or more items are outside tree bounds")
@@ -143,7 +186,10 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         # With tracking enabled:
         start_id = len(self._store._arr)  # contiguous tail position
-        last_id = self._native.insert_many(start_id, geoms)
+        if _np is not None:
+            last_id = self._native.insert_many_np(start_id, geoms)
+        else:
+            last_id = self._native.insert_many(start_id, geoms)
         num = last_id - start_id + 1
         if num < len(geoms):
             raise ValueError("One or more items are outside tree bounds")

@@ -8,6 +8,8 @@ pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use pyo3::exceptions::PyValueError;
+use numpy::PyReadonlyArray2;
 
 fn item_to_tuple(it: Item) -> (u64, f32, f32) {
     (it.id, it.point.x, it.point.y)
@@ -51,6 +53,35 @@ impl PyQuadTree {
             }
         }
         id.saturating_sub(1)
+    }
+
+    /// Assume (n x 2) numpy array of float32 points [[x, y], ...]
+    pub fn insert_many_np<'py>(
+        &mut self,
+        py: Python<'py>, // Allow releasing the GIL during insertion
+        start_id: u64,
+        points: PyReadonlyArray2<'py, f32>,
+    ) -> PyResult<u64> {
+        let view = points.as_array();
+        if view.ncols() != 2 {
+            return Err(PyValueError::new_err("points must have shape (N, 2)"));
+        }
+
+        let mut id = start_id;
+        py.detach(|| {
+            if let Some(slice) = view.as_slice() {
+                for ch in slice.chunks_exact(2) {
+                    let (x, y) = (ch[0], ch[1]);
+                    if self.inner.insert(Item { id, point: Point { x, y } }) { id += 1; }
+                }
+            } else {
+                for row in view.outer_iter() {
+                    let (x, y) = (row[0], row[1]);
+                    if self.inner.insert(Item { id, point: Point { x, y } }) { id += 1; }
+                }
+            }
+        });
+        Ok(id.saturating_sub(1))
     }
 
     pub fn delete(&mut self, id: u64, xy: (f32, f32)) -> bool {
@@ -136,6 +167,35 @@ impl PyRectQuadTree {
             }
         }
         id.saturating_sub(1)
+    }
+
+    /// Assume (n x 4) numpy array of float32 box [[min_x, min_y, max_x, max_y], ...]
+    pub fn insert_many_np<'py>(
+        &mut self,
+        py: Python<'py>, // Allow releasing the GIL during insertion
+        start_id: u64,
+        points: PyReadonlyArray2<'py, f32>,
+    ) -> PyResult<u64> {
+        let view = points.as_array();
+        if view.ncols() != 4 {
+            return Err(PyValueError::new_err("points must have shape (N, 4)"));
+        }
+
+        let mut id = start_id;
+        py.detach(|| {
+            if let Some(slice) = view.as_slice() {
+                for ch in slice.chunks_exact(4) {
+                    let r = Rect { min_x: ch[0], min_y: ch[1], max_x: ch[2], max_y: ch[3] };
+                    if self.inner.insert(RectItem { id, rect: r }) { id += 1; }
+                }
+            } else {
+                for row in view.outer_iter() {
+                    let r = Rect { min_x: row[0], min_y: row[1], max_x: row[2], max_y: row[3] };
+                    if self.inner.insert(RectItem { id, rect: r }) { id += 1; }
+                }
+            }
+        });
+        Ok(id.saturating_sub(1))
     }
 
     /// Delete by id and exact rect.
