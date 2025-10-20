@@ -59,6 +59,10 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""
 
+    @classmethod
+    def _new_native_from_bytes(cls, data: bytes) -> Any:
+        """Create the native engine instance from serialized bytes."""
+
     @staticmethod
     @abstractmethod
     def _make_item(id_: int, geom: G, obj: Any | None) -> ItemType:
