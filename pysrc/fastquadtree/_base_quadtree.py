@@ -8,6 +8,7 @@ from typing import (
     Any,
     Generic,
     Iterable,
+    Self,
     Sequence,
     Tuple,
     TypeVar,
@@ -136,7 +137,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         return pickle.dumps(self.to_dict())
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> _BaseQuadTree[G, HitT, ItemType]:
+    def from_bytes(cls, data: bytes) -> Self:
         """
         Deserialize a quadtree from bytes.
 

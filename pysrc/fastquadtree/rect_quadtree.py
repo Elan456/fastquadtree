@@ -50,18 +50,6 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             track_objects=track_objects,
         )
 
-    @classmethod
-    def from_bytes(cls, data: bytes) -> RectQuadTree:
-        """
-        Create a RectQuadTree instance from serialized bytes.
-
-        Args:
-            data: Serialized byte data from `to_bytes()`.
-        Returns:
-            A RectQuadTree instance.
-        """
-        return super().from_bytes(data)
-
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...

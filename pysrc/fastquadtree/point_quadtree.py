@@ -49,18 +49,6 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             track_objects=track_objects,
         )
 
-    @classmethod
-    def from_bytes(cls, data: bytes) -> QuadTree:
-        """
-        Create a QuadTree instance from serialized bytes.
-
-        Args:
-            data: Serialized byte data from `to_bytes()`.
-        Returns:
-            A QuadTree instance.
-        """
-        return super().from_bytes(data)
-
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
