@@ -100,7 +100,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         return {
             "core": core_bytes,
-            "store": self._store.to_dict() if self._store else None,
+            "store": self._store.to_dict() if self._store is not None else None,
             "bounds": self._bounds,
             "capacity": self._capacity,
             "max_depth": self._max_depth,
@@ -138,10 +138,8 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         if store_dict is not None:
             qt._store = ObjStore.from_dict(store_dict, qt._make_item)
-            qt._track_objects = True
         else:
             qt._store = None
-            qt._track_objects = False
 
         # Extract bounds, capacity, max_depth from native
         qt._bounds = in_dict["bounds"]
@@ -149,6 +147,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         qt._max_depth = in_dict["max_depth"]
         qt._next_id = in_dict["next_id"]
         qt._count = in_dict["count"]
+        qt._track_objects = in_dict["track_objects"]
 
         return qt
 

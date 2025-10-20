@@ -1,6 +1,7 @@
 import math
 import random
 from collections import deque
+from pathlib import Path
 
 import pygame
 
@@ -240,6 +241,7 @@ def hud(text_lines):
 # ------------------------------
 def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target):
     """Handle discrete events like key presses and mouse clicks."""
+    global qtree
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
             running = False
@@ -258,6 +260,21 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target
                 zoom_target = clamp(zoom_target * ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
             elif ev.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
                 zoom_target = clamp(zoom_target / ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
+            elif ev.key == pygame.K_c:
+                # Save quadtree state
+                data = qtree.to_bytes()
+                with Path("quadtree_state.bin").open("wb") as f:
+                    f.write(data)
+                print("Quadtree state saved to quadtree_state.bin")
+            elif ev.key == pygame.K_v:
+                # Load quadtree state
+                try:
+                    with Path("quadtree_state.bin").open("rb") as f:
+                        data = f.read()
+                    qtree = QuadTree.from_bytes(data)
+                    print("Quadtree state loaded from quadtree_state.bin")
+                except Exception as e:  # noqa: BLE001
+                    print(f"Failed to load quadtree state: {e}")
 
         elif ev.type == pygame.MOUSEWHEEL:
             if ev.y != 0:
@@ -436,6 +453,7 @@ def main():
                 f"zoom: {zoom:.2f}  target: {zoom_target:.2f}",
                 "WASD to pan. Mouse wheel or +/- to zoom.",
                 "arrow keys to resize rectangle.",
+                "c to save current state, v to load.",
                 "1 nodes. 2 NN rays. 3 trails. SPACE pause. L-click add. R-click remove (shift to repeat)",
             ]
         )

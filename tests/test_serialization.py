@@ -86,3 +86,29 @@ def test_serialization_with_objects_rect():
 
     assert type(rqt2.get_all_items()[0]) is type(rqt.get_all_items()[0])
     assert type(rqt2.get_all_items()[0].obj) is type(rqt.get_all_items()[0].obj)
+
+
+def test_serialization_perserves_ids():
+    """Test that serialization and deserialization preserves item ids."""
+    qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True)
+    items = [((10, 10), "A"), ((20, 20), "B"), ((30, 30), "C")]
+    for pt, obj in items:
+        qt.insert(pt, obj=obj)
+
+    original_ids = [item.id_ for item in qt.get_all_items()]
+
+    data = qt.to_bytes()
+    qt2 = QuadTree.from_bytes(data)
+
+    deserialized_ids = [item.id_ for item in qt2.get_all_items()]
+
+    assert sorted(original_ids) == sorted(deserialized_ids)
+
+    # Delete id 1
+    qt.delete(1, (20, 20))
+    ids_after_delete = [item.id_ for item in qt.get_all_items()]
+
+    qt3 = QuadTree.from_bytes(qt.to_bytes())
+    ids_after_delete_deserialized = [item.id_ for item in qt3.get_all_items()]
+    assert sorted(ids_after_delete) == [0, 2]
+    assert sorted(ids_after_delete_deserialized) == [0, 2]

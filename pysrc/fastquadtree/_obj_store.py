@@ -35,7 +35,7 @@ class ObjStore(Generic[TItem]):
 
         if items:
             for it in items:
-                self.add(it)
+                self.add(it, handle_out_of_order=True)
 
     # ---- Serialization ----
     def to_dict(self) -> dict[str, Any]:
@@ -68,7 +68,7 @@ class ObjStore(Generic[TItem]):
 
     # -------- core --------
 
-    def add(self, item: TItem) -> None:
+    def add(self, item: TItem, handle_out_of_order: bool = False) -> None:
         """
         Insert or replace the mapping at item.id_. Reverse map updated so obj points to id.
         """
@@ -77,9 +77,14 @@ class ObjStore(Generic[TItem]):
 
         # ids must be dense and assigned by the caller
         if id_ > len(self._arr):
-            raise AssertionError(
-                "ObjStore.add received an out-of-order id, use alloc_id() to get the next available id"
-            )
+            if not handle_out_of_order:
+                raise AssertionError(
+                    "ObjStore.add received an out-of-order id, use alloc_id() to get the next available id"
+                )
+            # fill holes with None
+            while len(self._arr) < id_:
+                self._arr.append(None)
+                self._objs.append(None)
 
         if id_ == len(self._arr):
             # append
