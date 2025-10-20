@@ -41,6 +41,7 @@
 - Support for [inserting bounding boxes](api/rect_quadtree.md) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
+- Fast [serialization](benchmark.md#serialization-vs-rebuild) to/from bytes
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
 
 ## Examples

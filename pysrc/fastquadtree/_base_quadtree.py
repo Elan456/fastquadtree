@@ -93,7 +93,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         Serialize the quadtree to a dict suitable for JSON or other serialization.
 
         Returns:
-            A dict with 'core' and 'store' keys.
+            Includes a binary 'core' key for the native engine state, plus other metadata such as bounds and capacity and the obj store if tracking is enabled.
         """
 
         core_bytes = self._native.to_bytes()
@@ -114,7 +114,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         Serialize the quadtree to bytes.
 
         Returns:
-            Bytes representing the serialized quadtree.
+            Bytes representing the serialized quadtree. Can be saved as a file or loaded with `from_bytes()`.
         """
         return pickle.dumps(self.to_dict())
 
@@ -124,10 +124,10 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         Deserialize a quadtree from bytes.
 
         Args:
-            data: Bytes representing the serialized quadtree.
+            data: Bytes representing the serialized quadtree from `to_bytes()`.
 
         Returns:
-            A new quadtree instance.
+            A new quadtree instance with the same state as when serialized.
         """
         in_dict = pickle.loads(data)
         core_bytes = in_dict["core"]

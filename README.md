@@ -30,6 +30,7 @@ Rust-optimized quadtree with a clean Python API
 - Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
+- Fast [serialization](https://elan456.github.io/fastquadtree/benchmark/#serialization-vs-rebuild) to/from bytes
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
 - Offers a drop-in [pyqtree shim](https://elan456.github.io/fastquadtree/benchmark/#pyqtree-drop-in-shim-performance-gains) that is 6.567x faster while keeping the same API
 

@@ -7,7 +7,7 @@ If you have any suggestions or would like to contribute, please feel free to ope
 
 ## Planned Features
 
-### 1. Quadtree serialization
+### 1. [COMPLETE] Quadtree serialization
 
 By serializing the quadtree, we can save its state to a file and load it later. This will allow us to persist the quadtree structure and data across sessions. For example, you could pre build a quadtree with all the walls in your video game level, serialize it to a file, and then load it when the game starts. This will heavily reduce the game load time since you won't have to rebuild the quadtree from scratch every time.
 
