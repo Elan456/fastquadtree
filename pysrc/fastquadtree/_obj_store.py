@@ -37,6 +37,35 @@ class ObjStore(Generic[TItem]):
             for it in items:
                 self.add(it)
 
+    # ---- Serialization ----
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize to a dict suitable for JSON or other serialization.
+
+        Returns:
+            A dict with 'items' key containing list of serialized items.
+        """
+        items = [it.to_dict() for it in self._arr if it is not None]
+        return {"items": items}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any], item_factory: Any) -> ObjStore[TItem]:
+        """
+        Deserialize from a dict.
+
+        Args:
+            data: A dict with 'items' key containing list of serialized items.
+            item_factory: A callable that takes (id, obj) and returns an Item.
+
+        Returns:
+            An ObjStore instance populated with the deserialized items.
+        """
+        items = []
+        for item_data in data.get("items", []):
+            item = Item.from_dict(item_data)
+            items.append(item_factory(item.id_, item.geom, item.obj))
+        return cls(items)
+
     # -------- core --------
 
     def add(self, item: TItem) -> None:

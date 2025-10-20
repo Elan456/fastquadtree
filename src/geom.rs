@@ -1,10 +1,12 @@
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Rect {
     pub min_x: f32,
     pub min_y: f32,

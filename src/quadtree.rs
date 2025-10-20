@@ -1,14 +1,17 @@
 use std::collections::HashSet;
 use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
 use smallvec::SmallVec;
+use serde::{Serialize, Deserialize};
+use bincode::config::standard;
+use bincode::serde::{encode_to_vec, decode_from_slice};
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct Item {
     pub id: u64,
     pub point: Point, 
 }
 
-
+#[derive(Serialize, Deserialize)]
 pub struct QuadTree {
     pub boundary: Rect,
     pub items: Vec<Item>,
@@ -53,6 +56,14 @@ impl QuadTree {
             depth: 0,
             max_depth: max_depth,
         }
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        encode_to_vec(self, standard())
+    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, bincode::error::DecodeError> {
+        let (qt, _len): (Self, usize) = decode_from_slice(bytes, standard())?;
+        Ok(qt)
     }
 
     pub fn new_child(boundary: Rect, capacity: usize, depth: usize, max_depth: usize) -> Self {

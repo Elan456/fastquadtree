@@ -1,6 +1,7 @@
 # _abc_quadtree.py
 from __future__ import annotations
 
+import pickle
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
@@ -58,8 +59,9 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""
 
+    @staticmethod
     @abstractmethod
-    def _make_item(self, id_: int, geom: G, obj: Any | None) -> ItemType:
+    def _make_item(id_: int, geom: G, obj: Any | None) -> ItemType:
         """Build an ItemType from id, geometry, and optional object."""
 
     # ---- ctor ----
@@ -83,6 +85,72 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         # Auto ids when not using ObjStore.free slots
         self._next_id = 0
         self._count = 0
+
+    # ---- serialization ----
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize the quadtree to a dict suitable for JSON or other serialization.
+
+        Returns:
+            A dict with 'core' and 'store' keys.
+        """
+
+        core_bytes = self._native.to_bytes()
+
+        return {
+            "core": core_bytes,
+            "store": self._store.to_dict() if self._store else None,
+            "bounds": self._bounds,
+            "capacity": self._capacity,
+            "max_depth": self._max_depth,
+            "track_objects": self._track_objects,
+            "next_id": self._next_id,
+            "count": self._count,
+        }
+
+    def to_bytes(self) -> bytes:
+        """
+        Serialize the quadtree to bytes.
+
+        Returns:
+            Bytes representing the serialized quadtree.
+        """
+        return pickle.dumps(self.to_dict())
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> _BaseQuadTree[G, HitT, ItemType]:
+        """
+        Deserialize a quadtree from bytes.
+
+        Args:
+            data: Bytes representing the serialized quadtree.
+
+        Returns:
+            A new quadtree instance.
+        """
+        in_dict = pickle.loads(data)
+        core_bytes = in_dict["core"]
+        store_dict = in_dict["store"]
+
+        qt = cls.__new__(cls)  # type: ignore[call-arg]
+        qt._native = cls._new_native_from_bytes(core_bytes)
+
+        if store_dict is not None:
+            qt._store = ObjStore.from_dict(store_dict, qt._make_item)
+            qt._track_objects = True
+        else:
+            qt._store = None
+            qt._track_objects = False
+
+        # Extract bounds, capacity, max_depth from native
+        qt._bounds = in_dict["bounds"]
+        qt._capacity = in_dict["capacity"]
+        qt._max_depth = in_dict["max_depth"]
+        qt._next_id = in_dict["next_id"]
+        qt._count = in_dict["count"]
+
+        return qt
 
     # ---- internal helper ----
 

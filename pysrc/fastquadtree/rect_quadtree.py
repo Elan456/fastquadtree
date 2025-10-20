@@ -50,6 +50,18 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             track_objects=track_objects,
         )
 
+    @classmethod
+    def from_bytes(cls, data: bytes) -> RectQuadTree:
+        """
+        Create a RectQuadTree instance from serialized bytes.
+
+        Args:
+            data: Serialized byte data from `to_bytes()`.
+        Returns:
+            A RectQuadTree instance.
+        """
+        return super().from_bytes(data)
+
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
@@ -81,5 +93,11 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             return _RustRectQuadTree(bounds, capacity)
         return _RustRectQuadTree(bounds, capacity, max_depth=max_depth)
 
-    def _make_item(self, id_: int, geom: Bounds, obj: Any | None) -> RectItem:
+    @classmethod
+    def _new_native_from_bytes(cls, data: bytes) -> Any:
+        """Create a new native engine instance from serialized bytes."""
+        return _RustRectQuadTree.from_bytes(data)
+
+    @staticmethod
+    def _make_item(id_: int, geom: Bounds, obj: Any | None) -> RectItem:
         return RectItem(id_, geom, obj)

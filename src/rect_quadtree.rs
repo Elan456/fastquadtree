@@ -1,12 +1,16 @@
 use smallvec::SmallVec;
 use crate::geom::Rect;
+use serde::{Serialize, Deserialize};
+use bincode::config::standard;
+use bincode::serde::{encode_to_vec, decode_from_slice};
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
+#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 pub struct RectItem {
     pub id: u64,
     pub rect: Rect,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct RectQuadTree {
     pub boundary: Rect,
     pub items: Vec<RectItem>,
@@ -66,6 +70,14 @@ impl RectQuadTree {
             depth: 0,
             max_depth,
         }
+    }
+
+    pub fn to_bytes(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        encode_to_vec(self, standard())
+    }
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, bincode::error::DecodeError> {
+        let (qt, _len): (Self, usize) = decode_from_slice(bytes, standard())?;
+        Ok(qt)
     }
 
     fn new_child(boundary: Rect, capacity: usize, depth: usize, max_depth: usize) -> Self {

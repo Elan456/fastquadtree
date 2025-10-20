@@ -27,6 +27,35 @@ class Item:
         self.geom: Point | Bounds = geom
         self.obj: Any | None = obj
 
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Serialize the item to a dictionary.
+
+        Returns:
+            A dictionary with 'id', 'geom', and 'obj' keys.
+        """
+        return {
+            "id": self.id_,
+            "geom": self.geom,
+            "obj": self.obj,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Item:
+        """
+        Deserialize an item from a dictionary.
+
+        Args:
+            data: A dictionary with 'id', 'geom', and 'obj' keys.
+
+        Returns:
+            An Item instance populated with the deserialized data.
+        """
+        id_ = data["id"]
+        geom = data["geom"]
+        obj = data["obj"]
+        return cls(id_, geom, obj)
+
 
 class PointItem(Item):
     """

@@ -8,6 +8,7 @@ pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
 use pyo3::prelude::*;
 use pyo3::types::PyList;
+use pyo3::types::PyBytes;
 use pyo3::exceptions::PyValueError;
 use numpy::PyReadonlyArray2;
 
@@ -36,6 +37,23 @@ impl PyQuadTree {
             None => QuadTree::new(rect, capacity),
         };
         Self { inner }
+    }
+
+    // Return Python bytes
+    pub fn to_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        let buf = self
+            .inner
+            .to_bytes()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("serialize failed: {e}")))?;
+        Ok(PyBytes::new(py, &buf))
+    }
+
+    // Construct from Python bytes
+    #[staticmethod]
+    pub fn from_bytes(bytes: &Bound<PyBytes>) -> PyResult<Self> {
+        let inner = QuadTree::from_bytes(bytes.as_bytes())
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("deserialize failed: {e}")))?;
+        Ok(Self { inner })
     }
 
     pub fn insert(&mut self, id: u64, xy: (f32, f32)) -> bool {
@@ -150,6 +168,23 @@ impl PyRectQuadTree {
             None => RectQuadTree::new(rect, capacity),
         };
         Self { inner }
+    }
+
+    // Return Python bytes
+    pub fn to_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
+        let buf = self
+            .inner
+            .to_bytes()
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("serialize failed: {e}")))?;
+        Ok(PyBytes::new(py, &buf))
+    }
+
+    // Construct from Python bytes
+    #[staticmethod]
+    pub fn from_bytes(bytes: &Bound<PyBytes>) -> PyResult<Self> {
+        let inner = RectQuadTree::from_bytes(bytes.as_bytes())
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(format!("deserialize failed: {e}")))?;
+        Ok(Self { inner })
     }
 
     /// Insert one AABB by id.

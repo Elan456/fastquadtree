@@ -49,6 +49,18 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             track_objects=track_objects,
         )
 
+    @classmethod
+    def from_bytes(cls, data: bytes) -> QuadTree:
+        """
+        Create a QuadTree instance from serialized bytes.
+
+        Args:
+            data: Serialized byte data from `to_bytes()`.
+        Returns:
+            A QuadTree instance.
+        """
+        return super().from_bytes(data)
+
     @overload
     def query(
         self, rect: Bounds, *, as_items: Literal[False] = ...
@@ -145,5 +157,11 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             return _RustQuadTree(bounds, capacity)
         return _RustQuadTree(bounds, capacity, max_depth=max_depth)
 
-    def _make_item(self, id_: int, geom: Point, obj: Any | None) -> PointItem:
+    @classmethod
+    def _new_native_from_bytes(cls, data: bytes) -> Any:
+        """Create a new native engine instance from serialized bytes."""
+        return _RustQuadTree.from_bytes(data)
+
+    @staticmethod
+    def _make_item(id_: int, geom: Point, obj: Any | None) -> PointItem:
         return PointItem(id_, geom, obj)
