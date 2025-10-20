@@ -11,7 +11,7 @@ readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 dependencies = [] # No runtime dependencies
 license = { file = "LICENSE" }
-authors = [{ name = "Ethan Anderson" }]
+authors = [{ name = "Ethan Anderson & Kyle Zheng" }]
 keywords = ["quadtree", "spatial-index", "geometry", "rust", "pyo3", "nearest-neighbor", "k-nn"]
 classifiers = [
   "Programming Language :: Python :: 3",
