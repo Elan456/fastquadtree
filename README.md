@@ -3,7 +3,7 @@
 <img src="https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png"
      alt="Interactive Screenshot" align="right" width="420">
 
-Rust-optimized quadtree with a clean Python API
+### Rust-optimized quadtree with a clean Python API
 
 ### 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
 [![PyPI](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
