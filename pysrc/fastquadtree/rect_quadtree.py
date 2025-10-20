@@ -81,6 +81,13 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         Returns:
             If as_items is False: list of (id, x0, y0, x1, y1) tuples.
             If as_items is True: list of Item objects.
+
+        Example:
+            ```python
+            results = rqt.query((10.0, 10.0, 20.0, 20.0), as_items=True)
+            for item in results:
+                print(f"Found rect id={item.id_} at {item.geom} with obj={item.obj}")
+            ```
         """
         if not as_items:
             return self._native.query(rect)

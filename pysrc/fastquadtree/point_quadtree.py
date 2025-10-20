@@ -80,6 +80,13 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         Returns:
             If as_items is False: list of (id, x, y) tuples.
             If as_items is True: list of Item objects.
+
+        Example:
+            ```python
+            results = qt.query((10.0, 10.0, 20.0, 20.0), as_items=True)
+            for item in results:
+                print(f"Found point id={item.id_} at {item.geom} with obj={item.obj}")
+            ```
         """
         if not as_items:
             return self._native.query(rect)

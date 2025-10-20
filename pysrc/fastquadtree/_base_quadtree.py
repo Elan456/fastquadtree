@@ -94,6 +94,12 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Returns:
             Includes a binary 'core' key for the native engine state, plus other metadata such as bounds and capacity and the obj store if tracking is enabled.
+
+        Example:
+            ```python
+            state = qt.to_dict()
+            assert "core" in state and "bounds" in state
+            ```
         """
 
         core_bytes = self._native.to_bytes()
@@ -115,6 +121,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Returns:
             Bytes representing the serialized quadtree. Can be saved as a file or loaded with `from_bytes()`.
+
+        Example:
+            ```python
+            blob = qt.to_bytes()
+            with open("tree.fqt", "wb") as f:
+                f.write(blob)
+            ```
         """
         return pickle.dumps(self.to_dict())
 
@@ -128,6 +141,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Returns:
             A new quadtree instance with the same state as when serialized.
+
+        Example:
+            ```python
+            blob = qt.to_bytes()
+            qt2 = type(qt).from_bytes(blob)
+            assert qt2.count_items() == qt.count_items()
+            ```
         """
         in_dict = pickle.loads(data)
         core_bytes = in_dict["core"]
@@ -174,6 +194,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Raises:
             ValueError: If geometry is outside the tree bounds.
+
+        Example:
+            ```python
+            id0 = point_qt.insert((10.0, 20.0))  # for point trees
+            id1 = rect_qt.insert((0.0, 0.0, 5.0, 5.0), obj="box")  # for rect trees
+            assert isinstance(id0, int) and isinstance(id1, int)
+            ```
         """
         if self._store is not None:
             # Reuse a dense free slot if available, else append
@@ -219,6 +246,17 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Raises:
             ValueError: If any geometry is outside bounds.
+
+        Example:
+            ```python
+            n = qt.insert_many([(1.0, 1.0), (2.0, 2.0)])
+            assert n == 2
+
+            import numpy as np
+            arr = np.array([[3.0, 3.0], [4.0, 4.0]], dtype=np.float32)
+            n2 = qt.insert_many(arr)
+            assert n2 == 2
+            ```
         """
         if type(geoms) is list and len(geoms) == 0:
             return 0
@@ -283,8 +321,19 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         Delete an item by id and exact geometry.
 
+        Args:
+            id_: The id of the item to delete.
+            geom: The geometry of the item to delete.
+
         Returns:
             True if the item was found and deleted.
+
+        Example:
+            ```python
+            i = qt.insert((1.0, 2.0))
+            ok = qt.delete(i, (1.0, 2.0))
+            assert ok is True
+            ```
         """
         deleted = self._native.delete(id_, geom)
         if deleted:
@@ -297,6 +346,17 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         Attach or replace the Python object for an existing id.
         Tracking must be enabled.
+
+        Args:
+            id_: The id of the item to attach the object to.
+            obj: The Python object to attach.
+
+        Example:
+            ```python
+            i = qt.insert((2.0, 3.0), obj=None)
+            qt.attach(i, {"meta": 123})
+            assert qt.get(i) == {"meta": 123}
+            ```
         """
         if self._store is None:
             raise ValueError("Cannot attach objects when track_objects=False")
@@ -309,6 +369,16 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def delete_by_object(self, obj: Any) -> bool:
         """
         Delete an item by Python object identity. Tracking must be enabled.
+
+        Args:
+            obj: The Python object to delete.
+
+        Example:
+            ```python
+            i = qt.insert((3.0, 4.0), obj="tag")
+            ok = qt.delete_by_object("tag")
+            assert ok is True
+            ```
         """
         if self._store is None:
             raise ValueError("Cannot delete by object when track_objects=False")
@@ -323,6 +393,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         If tracking is enabled, the id -> object mapping is also cleared.
         The ids are reset to start at zero again.
+
+        Example:
+            ```python
+            _ = qt.insert((5.0, 6.0))
+            qt.clear()
+            assert qt.count_items() == 0 and len(qt) == 0
+            ```
         """
         self._native = self._new_native(self._bounds, self._capacity, self._max_depth)
         self._count = 0
@@ -333,6 +410,14 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def get_all_objects(self) -> list[Any]:
         """
         Return all tracked Python objects in the tree.
+
+        Example:
+            ```python
+            _ = qt.insert((7.0, 8.0), obj="a")
+            _ = qt.insert((9.0, 1.0), obj="b")
+            objs = qt.get_all_objects()
+            assert set(objs) == {"a", "b"}
+            ```
         """
         if self._store is None:
             raise ValueError("Cannot get objects when track_objects=False")
@@ -341,6 +426,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def get_all_items(self) -> list[ItemType]:
         """
         Return all Item wrappers in the tree.
+
+         Example:
+            ```python
+            _ = qt.insert((1.0, 1.0), obj=None)
+            items = qt.get_all_items()
+            assert hasattr(items[0], "id_") and hasattr(items[0], "geom")
+            ```
         """
         if self._store is None:
             raise ValueError("Cannot get items when track_objects=False")
@@ -349,12 +441,25 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def get_all_node_boundaries(self) -> list[Bounds]:
         """
         Return all node boundaries in the tree. Useful for visualization.
+
+        Example:
+            ```python
+            bounds = qt.get_all_node_boundaries()
+            assert isinstance(bounds, list)
+            ```
         """
         return self._native.get_all_node_boundaries()
 
     def get(self, id_: int) -> Any | None:
         """
         Return the object associated with id, if tracking is enabled.
+
+        Example:
+            ```python
+            i = qt.insert((1.0, 2.0), obj={"k": "v"})
+            obj = qt.get(i)
+            assert obj == {"k": "v"}
+            ```
         """
         if self._store is None:
             raise ValueError("Cannot get objects when track_objects=False")
@@ -364,6 +469,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     def count_items(self) -> int:
         """
         Return the number of items currently in the tree (native count).
+
+        Example:
+            ```python
+            before = qt.count_items()
+            _ = qt.insert((2.0, 2.0))
+            assert qt.count_items() == before + 1
+            ```
         """
         return self._native.count_items()
 
