@@ -5,6 +5,7 @@
 
 Rust-optimized quadtree with a clean Python API
 
+### 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
 [![PyPI](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total%20Downloads)](https://pepy.tech/projects/fastquadtree)
@@ -36,7 +37,6 @@ Rust-optimized quadtree with a clean Python API
 
 ----
 
-### 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
 
 ## Examples
 See examples of how fastquadtree can be used in the [runnables](https://elan456.github.io/fastquadtree/runnables/) section.
