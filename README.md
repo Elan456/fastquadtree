@@ -3,9 +3,10 @@
 <img src="https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png"
      alt="Interactive Screenshot" align="right" width="420">
 
-### Rust-optimized quadtree with a clean Python API
+Rust-optimized quadtree with a clean Python API
 
-### 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
+👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
+
 [![PyPI](https://img.shields.io/pypi/v/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Python versions](https://img.shields.io/pypi/pyversions/fastquadtree.svg)](https://pypi.org/project/fastquadtree/)
 [![Downloads](https://static.pepy.tech/personalized-badge/fastquadtree?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=BLUE&left_text=Total%20Downloads)](https://pepy.tech/projects/fastquadtree)
