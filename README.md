@@ -36,7 +36,7 @@ Rust-optimized quadtree with a clean Python API
 
 ----
 
-## 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
+### 👉 **Check out the Docs:** https://elan456.github.io/fastquadtree/
 
 ## Examples
 See examples of how fastquadtree can be used in the [runnables](https://elan456.github.io/fastquadtree/runnables/) section.
