@@ -107,6 +107,31 @@ If your data is already in a NumPy array, using the `insert_many` method directl
 
 ---------
 
+## Serialization vs Rebuild
+
+### Configuration
+- Points: 1,000,000
+- Capacity: 64
+- Max depth: 10
+- Repeats: 7
+
+### Results
+
+| Variant | Mean (s) | Stdev (s) |
+|---|---:|---:|
+| Serialize to bytes | 0.021356 | 0.000937 |
+| Rebuild from points | 0.106783 | 0.011430 |
+| Rebuild from bytes | 0.021754 | 0.001687 |
+| Rebuild from file | 0.024887 | 0.001846 |
+
+### Summary
+
+- Rebuild from bytes is **4.908747x** faster than reinserting points.
+- Rebuild from file is **4.290712x** faster than reinserting points.
+- Serialized blob size is **13,770,328 bytes**.
+
+----------------
+
 ## System Info
 - **OS**: Windows 11 AMD64
 - **Python**: CPython 3.12.2
@@ -127,6 +152,7 @@ Then run:
 python benchmarks/cross_library_bench.py
 python benchmarks/benchmark_native_vs_shim.py 
 python benchmarks/benchmark_np_vs_list.py 
+python benchmarks/benchmark_serialization_vs_rebuild.py
 ```
 
 Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
