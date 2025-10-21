@@ -8,7 +8,7 @@ name = "fastquadtree"
 dynamic = ["version"]
 description = "Rust-accelerated quadtree for Python with fast inserts, range queries, and k-NN search."
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [] # No runtime dependencies
 license = { file = "LICENSE" }
 authors = [{ name = "Ethan Anderson" }]
