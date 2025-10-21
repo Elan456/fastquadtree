@@ -26,7 +26,7 @@ Rust-optimized quadtree with a clean Python API
 
 ## Why use fastquadtree
 
-- Clean [Python API](https://elan456.github.io/fastquadtree/api/quadtree/) with no external dependencies and modern typing hints
+- Clean [Python API](https://elan456.github.io/fastquadtree/api/quadtree/) with **no external dependencies** and modern typing hints
 - The fastest quadtree Python package ([>10x faster](https://elan456.github.io/fastquadtree/benchmark/) than pyqtree)
 - Prebuilt wheels for Windows, macOS, and Linux
 - Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
