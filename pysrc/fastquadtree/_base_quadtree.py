@@ -8,7 +8,6 @@ from typing import (
     Any,
     Generic,
     Iterable,
-    Self,
     Sequence,
     Tuple,
     TypeVar,
@@ -19,6 +18,8 @@ from ._item import Item  # base class for PointItem and RectItem
 from ._obj_store import ObjStore
 
 if TYPE_CHECKING:
+    from typing import Self  # Only in Python 3.11+
+
     from numpy.typing import NDArray
 
 Bounds = Tuple[float, float, float, float]
