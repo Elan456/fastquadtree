@@ -42,6 +42,7 @@
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
 - Fast [serialization](benchmark.md#serialization-vs-rebuild) to/from bytes
+- Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
 
 ## Examples
