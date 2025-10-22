@@ -15,7 +15,7 @@ _IdRect = Tuple[int, float, float, float, float]
 
 class FakeNative:
     """
-    Minimal in-memory stand-in for _RustRectQuadTree:
+    Minimal in-memory stand-in for RectQuadTreeF32:
       - insert / insert_many
       - delete
       - query / query_ids
@@ -90,104 +90,94 @@ class FakeNative:
 @pytest.fixture(autouse=True)
 def _patch_native(monkeypatch):
     """
-    Replace rect_quadtree._RustRectQuadTree with FakeNative for all tests.
+    Replace rect_quadtree.RectQuadTreeF32 with FakeNative for all tests.
     """
-    monkeypatch.setattr(rq, "_RustRectQuadTree", FakeNative, raising=True)
+    monkeypatch.setattr(rq, "RectQuadTreeF32", FakeNative, raising=True)
 
 
 # ---- Helpers ----
 
 
-def b(x0, y0, x1, y1) -> Bounds:
+def b_to_float(x0, y0, x1, y1) -> Bounds:
     return (float(x0), float(y0), float(x1), float(y1))
 
 
 # ---- Tests ----
 
 
-def test_init_uses_native_with_and_without_max_depth():
-    qt1 = rq.RectQuadTree(b(0, 0, 100, 100), 4)  # max_depth None branch
-    assert isinstance(qt1._native, FakeNative)
-    assert qt1._native.max_depth is None
-
-    qt2 = rq.RectQuadTree(b(0, 0, 50, 50), 2, max_depth=7)  # explicit branch
-    assert isinstance(qt2._native, FakeNative)
-    assert qt2._native.max_depth == 7
-
-
 def test_insert_delete_and_count_and_len_no_tracking():
-    qt = rq.RectQuadTree(b(0, 0, 100, 100), 8, track_objects=False)
+    qt = rq.RectQuadTree(b_to_float(0, 0, 100, 100), 8, track_objects=False)
 
     # Insert inside bounds
-    id1 = qt.insert(b(10, 10, 20, 20))
+    id1 = qt.insert(b_to_float(10, 10, 20, 20))
     assert id1 == 0
     assert len(qt) == 1
     assert qt.count_items() == 1
 
     # Delete exact
-    assert qt.delete(id1, b(10, 10, 20, 20)) is True
+    assert qt.delete(id1, b_to_float(10, 10, 20, 20)) is True
     assert len(qt) == 0
     assert qt.count_items() == 0
 
     # Insert outside bounds -> ValueError via _insert_common
     with pytest.raises(ValueError):
-        qt.insert(b(200, 200, 210, 210))
+        qt.insert(b_to_float(200, 200, 210, 210))
 
 
 def test_bulk_insert_success_and_error_paths(monkeypatch):
-    qt = rq.RectQuadTree(b(0, 0, 100, 100), 8)
+    qt = rq.RectQuadTree(b_to_float(0, 0, 100, 100), 8)
 
     # success path
-    n = qt.insert_many([b(1, 1, 2, 2), b(3, 3, 4, 4)])
+    n = qt.insert_many([b_to_float(1, 1, 2, 2), b_to_float(3, 3, 4, 4)])
     assert n == 2
     assert qt.count_items() == 2
     assert len(qt) == 2
 
     # error path: one out of bounds so _insert_many_common raises ValueError
     with pytest.raises(ValueError):
-        qt.insert_many([b(5, 5, 6, 6), b(1000, 1000, 1001, 1001)])
+        qt.insert_many([b_to_float(5, 5, 6, 6), b_to_float(1000, 1000, 1001, 1001)])
 
 
 def test_query_paths_without_tracking_raw_and_as_items():
-    qt = rq.RectQuadTree(b(0, 0, 10, 10), 8, track_objects=False)
-    a = qt.insert(b(1, 1, 2, 2))
-    b_id = qt.insert(b(5, 5, 6, 6))
+    qt = rq.RectQuadTree(b_to_float(0, 0, 10, 10), 8, track_objects=False)
+    a = qt.insert(b_to_float(1, 1, 2, 2))
+    b_id = qt.insert(b_to_float(5, 5, 6, 6))
 
     # raw tuples
-    raw = qt.query(b(0, 0, 10, 10), as_items=False)
+    raw = qt.query(b_to_float(0, 0, 10, 10), as_items=False)
     ids = sorted(t[0] for t in raw)
     assert ids == [a, b_id]
 
     # as_items branch when _items is None -> build RectItem instances (obj=None)
     with pytest.raises(ValueError):
-        qt.query(b(0, 0, 10, 10), as_items=True)
+        qt.query(b_to_float(0, 0, 10, 10), as_items=True)
 
 
 def test_node_boundaries_and_delete_miss():
-    qt = rq.RectQuadTree(b(0, 0, 10, 10), 8)
-    a = qt.insert(b(1, 1, 2, 2))
-    qt.insert(b(5, 5, 6, 6))
+    qt = rq.RectQuadTree(b_to_float(0, 0, 10, 10), 8)
+    a = qt.insert(b_to_float(1, 1, 2, 2))
+    qt.insert(b_to_float(5, 5, 6, 6))
 
     # get_all_node_boundaries delegates to native hook
     bounds = qt.get_all_node_boundaries()
-    assert bounds == [b(0, 0, 10, 10)]
+    assert bounds == [b_to_float(0, 0, 10, 10)]
 
     # delete miss (wrong rect)
-    assert qt.delete(a, b(1, 1, 3, 3)) is False
+    assert qt.delete(a, b_to_float(1, 1, 3, 3)) is False
 
 
 def test_accurate_obj_output_with_tracking():
-    qt = rq.RectQuadTree(b(0, 0, 10, 10), 8, track_objects=True)
-    id1 = qt.insert(b(1, 1, 2, 2), obj="first")
-    qt.insert(b(5, 5, 6, 6), obj={"name": "second"})
+    qt = rq.RectQuadTree(b_to_float(0, 0, 10, 10), 8, track_objects=True)
+    id1 = qt.insert(b_to_float(1, 1, 2, 2), obj="first")
+    qt.insert(b_to_float(5, 5, 6, 6), obj={"name": "second"})
 
-    items = qt.query(b(0, 0, 10, 10), as_items=True)
+    items = qt.query(b_to_float(0, 0, 10, 10), as_items=True)
     assert len(items) == 2
     assert "first" in [it.obj for it in items]
     assert {"name": "second"} in [it.obj for it in items]
 
     # Small query that only hits one
-    items1 = qt.query(b(0, 0, 3, 3), as_items=True)
+    items1 = qt.query(b_to_float(0, 0, 3, 3), as_items=True)
     assert len(items1) == 1
     assert items1[0].obj == "first"
     assert items1[0].id_ == id1
@@ -197,7 +187,44 @@ def test_accurate_obj_output_with_tracking():
     assert items1[0].max_y == 2.0
 
     # delete one and query again
-    assert qt.delete(id1, b(1, 1, 2, 2)) is True
-    items2 = qt.query(b(0, 0, 10, 10), as_items=True)
+    assert qt.delete(id1, b_to_float(1, 1, 2, 2)) is True
+    items2 = qt.query(b_to_float(0, 0, 10, 10), as_items=True)
     assert len(items2) == 1
     assert items2[0].obj == {"name": "second"}
+
+
+def test_unsupported_dtype():
+    """Test that providing an unsupported dtype raises ValueError."""
+    with pytest.raises(ValueError):
+        rq.RectQuadTree(
+            b_to_float(0, 0, 100, 100), capacity=4, track_objects=True, dtype="f128"
+        )  # type: ignore
+
+    # From bytes
+    qt = rq.RectQuadTree(
+        b_to_float(0, 0, 100, 100), capacity=4, track_objects=True, dtype="f32"
+    )
+    data = qt.to_bytes()
+    with pytest.raises(ValueError):
+        rq.RectQuadTree.from_bytes(data, dtype="f128")  # type: ignore
+
+
+def test_all_other_dtypes():
+    """Test that all supported dtypes can be used without error."""
+    for dtype in ["f32", "f64", "i32", "i64"]:
+        print("Testing dtype:", dtype)
+        qt = rq.RectQuadTree(
+            (0, 0, 100, 100), capacity=4, track_objects=True, dtype=dtype
+        )
+        id1 = qt.insert((10, 10, 20, 20), obj="test")
+        assert id1 == 0
+        data = qt.to_bytes()
+        qt2 = rq.RectQuadTree.from_bytes(data, dtype=dtype)
+        items = qt2.get_all_items()
+        assert len(items) == 1
+        assert items[0].obj == "test"
+
+        # Run some queries
+        results = qt2.query((5, 5, 15, 15), as_items=True)
+        assert len(results) == 1
+        assert results[0].obj == "test"

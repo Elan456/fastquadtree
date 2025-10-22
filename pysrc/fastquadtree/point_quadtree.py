@@ -5,9 +5,16 @@ from typing import Any, Literal, Tuple, overload
 
 from ._base_quadtree import Bounds, _BaseQuadTree
 from ._item import Point, PointItem
-from ._native import QuadTree as _RustQuadTree  # native point tree
+from ._native import QuadTree as QuadTreeF32, QuadTreeF64, QuadTreeI32, QuadTreeI64
 
 _IdCoord = Tuple[int, float, float]
+
+DTYPE_MAP = {
+    "f32": QuadTreeF32,
+    "f64": QuadTreeF64,
+    "i32": QuadTreeI32,
+    "i64": QuadTreeI64,
+}
 
 
 class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
@@ -29,6 +36,7 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         capacity: Max number of points per node before splitting.
         max_depth: Optional max tree depth. If omitted, engine decides.
         track_objects: Enable id <-> object mapping inside Python.
+        dtype: Data type for coordinates and ids in the native engine. Default is 'f32'. Options are 'f32', 'f64', 'i32', 'i64'.
 
     Raises:
         ValueError: If parameters are invalid or inserts are out of bounds.
@@ -41,12 +49,14 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         *,
         max_depth: int | None = None,
         track_objects: bool = False,
+        dtype: str = "f32",
     ):
         super().__init__(
             bounds,
             capacity,
             max_depth=max_depth,
             track_objects=track_objects,
+            dtype=dtype,
         )
 
     @overload
@@ -148,14 +158,19 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         return out
 
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
-        if max_depth is None:
-            return _RustQuadTree(bounds, capacity)
-        return _RustQuadTree(bounds, capacity, max_depth=max_depth)
+        """Create the native engine instance."""
+        rust_cls = DTYPE_MAP.get(self._dtype)
+        if rust_cls is None:
+            raise ValueError(f"Unsupported dtype: {self._dtype}")
+        return rust_cls(bounds, capacity, max_depth)
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes) -> Any:
+    def _new_native_from_bytes(cls, data: bytes, dtype: str = "f32") -> Any:
         """Create a new native engine instance from serialized bytes."""
-        return _RustQuadTree.from_bytes(data)
+        rust_cls = DTYPE_MAP.get(dtype)
+        if rust_cls is None:
+            raise ValueError(f"Unsupported dtype: {dtype}")
+        return rust_cls.from_bytes(data)
 
     @staticmethod
     def _make_item(id_: int, geom: Point, obj: Any | None) -> PointItem:

@@ -48,6 +48,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         "_bounds",
         "_capacity",
         "_count",
+        "_dtype",
         "_max_depth",
         "_native",
         "_next_id",
@@ -62,7 +63,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """Create the native engine instance."""
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes) -> Any:
+    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     @staticmethod
@@ -79,10 +80,12 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         *,
         max_depth: int | None = None,
         track_objects: bool = False,
+        dtype: str = "f32",
     ):
         self._bounds = bounds
         self._max_depth = max_depth
         self._capacity = capacity
+        self._dtype = dtype
         self._native = self._new_native(bounds, capacity, max_depth)
 
         self._track_objects = bool(track_objects)
@@ -138,12 +141,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         return pickle.dumps(self.to_dict())
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> Self:
+    def from_bytes(cls, data: bytes, dtype: str = "f32") -> Self:
         """
-        Deserialize a quadtree from bytes.
+        Deserialize a quadtree from bytes. Specifiy the dtype if the original tree that was serialized used a non-default dtype.
 
         Args:
             data: Bytes representing the serialized quadtree from `to_bytes()`.
+            dtype: The data type used in the native engine ('f32', 'f64', 'i32', 'i64') when saved to bytes.
 
         Returns:
             A new quadtree instance with the same state as when serialized.
@@ -160,7 +164,15 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         store_dict = in_dict["store"]
 
         qt = cls.__new__(cls)  # type: ignore[call-arg]
-        qt._native = cls._new_native_from_bytes(core_bytes)
+        try:
+            qt._native = cls._new_native_from_bytes(core_bytes, dtype=dtype)
+        except ValueError as ve:
+            raise ValueError(
+                "Failed to deserialize quadtree native core. "
+                "This may be due to a dtype mismatch. "
+                "Ensure the dtype used in from_bytes() matches the original tree. "
+                "Error details: " + str(ve)
+            ) from ve
 
         if store_dict is not None:
             qt._store = ObjStore.from_dict(store_dict, qt._make_item)
