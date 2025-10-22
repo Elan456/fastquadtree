@@ -27,6 +27,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
           cache: "pip"
+        
+      - name: Create venv for maturin develop
+        run: python -m venv .venv
 
       - name: Build with maturin into this Python
         uses: PyO3/maturin-action@v1
@@ -35,11 +38,20 @@ jobs:
           args: --release
           manylinux: manylinux2014
 
-      - name: Install Python test deps
-        run: pip install -e '.[dev]'
+      - name: Install Python test deps into .venv
+        run: |
+          . .venv/bin/activate
+          pip install -e '.[dev]'
 
       - name: Run Python tests
-        run: pytest
+        run: |
+          . .venv/bin/activate
+          pytest
+
+      - name: Run Python tests
+        run: |
+          . .venv/bin/activate
+          pytest
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
