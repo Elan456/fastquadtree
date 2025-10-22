@@ -80,6 +80,7 @@ dev = [
   "maturin>=1.5",  # build Rust wheels
   "pyqtree==1.0.0", # for comparison in tests
   "numpy",
+  "pre-commit",
 ]
 
 [tool.ruff]

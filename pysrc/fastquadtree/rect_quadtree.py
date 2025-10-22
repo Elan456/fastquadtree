@@ -12,7 +12,7 @@ from ._native import (
     RectQuadTreeI64,
 )
 
-_IdRect = Tuple[int, float | int, float | int, float | int, float | int]
+_IdRect = Tuple[int, float, float, float, float]
 
 DTYPE_MAP = {
     "f32": RectQuadTreeF32,

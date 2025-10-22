@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from typing import Any, Tuple
 
-Bounds = Tuple[float | int, float | int, float | int, float | int]
+Bounds = Tuple[float, float, float, float]
 """Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
 
-Point = Tuple[float | int, float | int]
+Point = Tuple[float, float]
 """2D point as (x, y)."""
 
 
