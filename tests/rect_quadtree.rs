@@ -2,15 +2,15 @@
 
 use fastquadtree::{Rect, RectQuadTree, RectItem};
 
-fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect<f32> {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
 
-fn item(id: u64, x0: f32, y0: f32, x1: f32, y1: f32) -> RectItem {
+fn item(id: u64, x0: f32, y0: f32, x1: f32, y1: f32) -> RectItem<f32> {
     RectItem { id, rect: r(x0, y0, x1, y1) }
 }
 
-fn ids(v: &[(u64, Rect)]) -> Vec<u64> {
+fn ids(v: &[(u64, Rect<f32>)]) -> Vec<u64> {
     let mut out: Vec<u64> = v.iter().map(|it| it.0).collect();
     out.sort_unstable();
     out

@@ -1,10 +1,10 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect<f32> {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
 
-fn pt(x: f32, y: f32) -> Point { Point { x, y } }
+fn pt(x: f32, y: f32) -> Point<f32> { Point { x, y } }
 
 #[test]
 fn rect_contains_half_open() {

@@ -2,7 +2,7 @@ pub mod geom;
 pub mod quadtree;
 pub mod rect_quadtree;
 
-pub use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
+pub use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points, Coord, mid};
 pub use crate::quadtree::{Item, QuadTree};
 pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
@@ -12,21 +12,21 @@ use pyo3::types::PyBytes;
 use pyo3::exceptions::PyValueError;
 use numpy::PyReadonlyArray2;
 
-fn item_to_tuple(it: Item) -> (u64, f32, f32) {
+fn item_to_tuple<T: Coord>(it: Item<T>) -> (u64, T, T) {
     (it.id, it.point.x, it.point.y)
 }
 
-fn rect_to_tuple(r: Rect) -> (f32, f32, f32, f32) {
+fn rect_to_tuple<T: Coord>(r: Rect<T>) -> (T, T, T, T) {
     (r.min_x, r.min_y, r.max_x, r.max_y)
 }
 
 #[pyclass(name = "QuadTree")]
-pub struct PyQuadTree {
-    inner: QuadTree,
+pub struct PyQuadTreeF32 {
+    inner: QuadTree<f32>,
 }
 
 #[pymethods]
-impl PyQuadTree {
+impl PyQuadTreeF32 {
     #[new]
     #[pyo3(signature = (bounds, capacity, max_depth=None))]
     pub fn new(bounds: (f32, f32, f32, f32), capacity: usize, max_depth: Option<usize>) -> Self {
@@ -152,12 +152,12 @@ impl PyQuadTree {
 }
 
 #[pyclass(name = "RectQuadTree")]
-pub struct PyRectQuadTree {
-    inner: RectQuadTree,
+pub struct PyRectQuadTreeF32 {
+    inner: RectQuadTree<f32>,
 }
 
 #[pymethods]
-impl PyRectQuadTree {
+impl PyRectQuadTreeF32 {
     #[new]
     #[pyo3(signature = (bounds, capacity, max_depth=None))]
     pub fn new(bounds: (f32, f32, f32, f32), capacity: usize, max_depth: Option<usize>) -> Self {
@@ -276,7 +276,7 @@ impl PyRectQuadTree {
 
 #[pymodule]
 fn _native(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<PyQuadTree>()?;
-    m.add_class::<PyRectQuadTree>()?;
+    m.add_class::<PyQuadTreeF32>()?;
+    m.add_class::<PyRectQuadTreeF32>()?;
     Ok(())
 }

@@ -1,15 +1,15 @@
 use fastquadtree::{Point, Rect, Item, QuadTree};
 
-fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect {
+fn r(x0: f32, y0: f32, x1: f32, y1: f32) -> Rect<f32> {
     Rect { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
-fn pt(x: f32, y: f32) -> Point { Point { x, y } }
-fn ids(v: &[Item]) -> Vec<u64> {
+fn pt(x: f32, y: f32) -> Point<f32> { Point { x, y } }
+fn ids(v: &[Item<f32>]) -> Vec<u64> {
     let mut out: Vec<u64> = v.iter().map(|it| it.id).collect();
     out.sort_unstable();
     out
 }
-fn dist2(a: Point, b: Point) -> f32 {
+fn dist2(a: Point<f32>, b: Point<f32>) -> f32 {
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     dx * dx + dy * dy

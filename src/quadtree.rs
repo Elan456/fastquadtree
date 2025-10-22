@@ -1,22 +1,23 @@
-use std::collections::HashSet;
-use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points};
+use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points, Coord, mid};
 use smallvec::SmallVec;
 use serde::{Serialize, Deserialize};
 use bincode::config::standard;
 use bincode::serde::{encode_to_vec, decode_from_slice};
 
 #[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-pub struct Item {
+#[serde(bound(serialize = "", deserialize = ""))]
+pub struct Item<T: Coord> {
     pub id: u64,
-    pub point: Point, 
+    pub point: Point<T>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct QuadTree {
-    pub boundary: Rect,
-    pub items: Vec<Item>,
+#[serde(bound(serialize = "", deserialize = ""))]
+pub struct QuadTree<T: Coord> {
+    pub boundary: Rect<T>,
+    pub items: Vec<Item<T>>,
     pub capacity: usize,
-    pub children: Option<Box<[QuadTree; 4]>>,
+    pub children: Option<Box<[QuadTree<T>; 4]>>,
     depth: usize,
     max_depth: usize,
 }
@@ -27,16 +28,16 @@ pub struct QuadTree {
 // 2: (x < cx, y >= cy)
 // 3: (x >= cx, y >= cy)
 #[inline(always)]
-fn child_index_for_point(b: &Rect, p: &Point) -> usize {
-    let cx = 0.5 * (b.min_x + b.max_x);
-    let cy = 0.5 * (b.min_y + b.max_y);
+fn child_index_for_point<T: Coord>(b: &Rect<T>, p: &Point<T>) -> usize {
+    let cx = mid(b.min_x, b.max_x);
+    let cy = mid(b.min_y, b.max_y);
     let x_ge = (p.x >= cx) as usize; // right half-bit
     let y_ge = (p.y >= cy) as usize; // upper or lower half-bit
     (y_ge << 1) | x_ge
 }
 
-impl QuadTree {
-    pub fn new(boundary: Rect, capacity: usize) -> Self {
+impl<T: Coord> QuadTree<T> {
+    pub fn new(boundary: Rect<T>, capacity: usize) -> Self {
         QuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -47,7 +48,7 @@ impl QuadTree {
         }
     }
 
-    pub fn new_with_max_depth(boundary: Rect, capacity: usize, max_depth: usize) -> Self {
+    pub fn new_with_max_depth(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
         QuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -66,7 +67,7 @@ impl QuadTree {
         Ok(qt)
     }
 
-    pub fn new_child(boundary: Rect, capacity: usize, depth: usize, max_depth: usize) -> Self {
+    pub fn new_child(boundary: Rect<T>, capacity: usize, depth: usize, max_depth: usize) -> Self {
         QuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -78,7 +79,7 @@ impl QuadTree {
     }
 
     // Returns True if the item is inserted successfully
-    pub fn insert(&mut self, item: Item) -> bool {
+    pub fn insert(&mut self, item: Item<T>) -> bool {
         if !self.boundary.contains(&item.point) {
             return false;
         }
@@ -106,8 +107,8 @@ impl QuadTree {
 
     pub fn split(&mut self){
         // Create child rectangles
-        let cx = 0.5 * (self.boundary.min_x + self.boundary.max_x);
-        let cy = 0.5 * (self.boundary.min_y + self.boundary.max_y);
+        let cx = mid(self.boundary.min_x, self.boundary.max_x);
+        let cy = mid(self.boundary.min_y, self.boundary.max_y);
 
         let quads = [
             Rect { min_x: self.boundary.min_x, min_y: self.boundary.min_y, max_x: cx,               max_y: cy               }, // 0
@@ -118,7 +119,7 @@ impl QuadTree {
 
         // Allocate children
         let d = self.depth + 1;
-        let mut kids: [QuadTree; 4] = [
+        let mut kids: [QuadTree<T>; 4] = [
             QuadTree::new_child(quads[0], self.capacity, d, self.max_depth),
             QuadTree::new_child(quads[1], self.capacity, d, self.max_depth),
             QuadTree::new_child(quads[2], self.capacity, d, self.max_depth),
@@ -133,12 +134,12 @@ impl QuadTree {
     }
 
     #[inline(always)]
-    fn rect_contains_rect(a: &Rect, b: &Rect) -> bool {
+    fn rect_contains_rect(a: &Rect<T>, b: &Rect<T>) -> bool {
         a.min_x <= b.min_x && a.min_y <= b.min_y &&
         a.max_x >= b.max_x && a.max_y >= b.max_y
     }
 
-    pub fn query(&self, range: Rect) -> Vec<(u64, f32, f32)> {
+    pub fn query(&self, range: Rect<T>) -> Vec<(u64, T, T)> {
         #[derive(Copy, Clone)]
         enum Mode { Filter, ReportAll }
 
@@ -148,8 +149,8 @@ impl QuadTree {
         let rx1 = range.max_x;
         let ry1 = range.max_y;
 
-        let mut out: Vec<(u64, f32, f32)> = Vec::with_capacity(128);
-        let mut stack: SmallVec<[(&QuadTree, Mode); 64]> = SmallVec::new();
+        let mut out: Vec<(u64, T, T)> = Vec::with_capacity(128);
+        let mut stack: SmallVec<[(&QuadTree<T>, Mode); 64]> = SmallVec::new();
         stack.push((self, Mode::Filter));
 
         while let Some((node, mode)) = stack.pop() {
@@ -212,50 +213,67 @@ impl QuadTree {
         out
     }
 
-    pub fn nearest_neighbor(&self, point: Point) -> Option<Item> {
-        self.nearest_neighbors_within(point, 1, f32::INFINITY)
+     // Default: unbounded search when max_distance == 0
+    pub fn nearest_neighbor(&self, point: Point<T>) -> Option<Item<T>> {
+        self.nearest_neighbors_within(point, 1, T::zero())
             .into_iter()
             .next()
     }
 
-    pub fn nearest_neighbors(&self, point: Point, k: usize) -> Vec<Item> {
-        self.nearest_neighbors_within(point, k, f32::INFINITY)
+    // Default: unbounded search when max_distance == 0
+    pub fn nearest_neighbors(&self, point: Point<T>, k: usize) -> Vec<Item<T>> {
+        self.nearest_neighbors_within(point, k, T::zero())
     }
 
-    pub fn nearest_neighbors_within(&self, point: Point, k: usize, max_distance: f32) -> Vec<Item> {
+    // If max_distance == 0, treat as "no max"
+    pub fn nearest_neighbors_within(
+        &self,
+        point: Point<T>,
+        k: usize,
+        max_distance: T,
+    ) -> Vec<Item<T>> {
         if k == 0 {
             return Vec::new();
         }
 
-        let mut picked = HashSet::<u64>::new();
+        let mut picked = std::collections::HashSet::<u64>::new();
         let mut out = Vec::with_capacity(k);
-        let max_d2 = max_distance * max_distance;
+
+        // Fixed cap for all iterations
+        let cap2: Option<T> = if max_distance == T::zero() {
+            None
+        } else {
+            Some(max_distance * max_distance)
+        };
 
         for _ in 0..k {
             // stack holds (node_ref, bbox_distance_sq)
-            let mut stack: Vec<(&QuadTree, f32)> = Vec::new();
+            let mut stack: Vec<(&QuadTree<T>, T)> = Vec::new();
             stack.push((self, dist_sq_point_to_rect(&point, &self.boundary)));
 
-            let mut best: Option<Item> = None;
-            let mut best_d2 = max_d2;
+            let mut best: Option<Item<T>> = None;
+            // Best for this iteration, starts at the cap (or None for unbounded)
+            let mut best_d2: Option<T> = cap2;
 
             while let Some((node, node_d2)) = stack.pop() {
-                // prune by bbox distance vs current best
-                if node_d2 >= best_d2 {
-                    continue;
+                // prune if strictly farther than current best
+                if let Some(b) = best_d2 {
+                    if node_d2 > b {
+                        continue;
+                    }
                 }
 
                 if let Some(children) = node.children.as_ref() {
-                    // compute and sort children by bbox distance, push farthest first
-                    let mut kids: Vec<(&QuadTree, f32)> = children
+                    // Push children farthest-first so nearest is popped first
+                    let mut kids: Vec<(&QuadTree<T>, T)> = children
                         .iter()
                         .map(|c| (c, dist_sq_point_to_rect(&point, &c.boundary)))
-                        .filter(|(_, d2)| *d2 < best_d2)
+                        .filter(|&(_, d2)| best_d2.map(|b| d2 < b).unwrap_or(true))
                         .collect();
 
-                    kids.sort_unstable_by(|a, b| b.1.total_cmp(&a.1));
-                    for entry in kids {
-                        stack.push(entry);
+                    kids.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                    for e in kids {
+                        stack.push(e);
                     }
                 } else {
                     // leaf scan
@@ -264,8 +282,9 @@ impl QuadTree {
                             continue;
                         }
                         let d2 = dist_sq_points(&point, &it.point);
-                        if d2 < best_d2 {
-                            best_d2 = d2;
+                        // strict < keeps cap exclusive and picks exactly one per iteration
+                        if best_d2.map(|b| d2 < b).unwrap_or(true) {
+                            best_d2 = Some(d2);
                             best = Some(*it);
                         }
                     }
@@ -275,8 +294,9 @@ impl QuadTree {
             if let Some(it) = best {
                 picked.insert(it.id);
                 out.push(it);
+                // Note: do NOT tighten cap here
             } else {
-                break; // no more neighbors that beat the cap
+                break;
             }
         }
 
@@ -284,14 +304,14 @@ impl QuadTree {
     }
 
     // Traverses the entire quadtree and returns a list of all rectangle boundaries.
-    pub fn get_all_node_boundaries(&self) -> Vec<Rect> {
+    pub fn get_all_node_boundaries(&self) -> Vec<Rect<T>> {
         let mut rectangles = Vec::new();
         self.collect_rectangles(&mut rectangles);
         rectangles
     }
 
     // Helper method to recursively collect all rectangle boundaries
-    fn collect_rectangles(&self, rectangles: &mut Vec<Rect>) {
+    fn collect_rectangles(&self, rectangles: &mut Vec<Rect<T>>) {
         // Add this node's boundary
         rectangles.push(self.boundary);
         
@@ -304,7 +324,7 @@ impl QuadTree {
     }
 
     // Deletes an item by ID and location. Returns true if removed.
-    pub fn delete(&mut self, id: u64, point: Point) -> bool {
+    pub fn delete(&mut self, id: u64, point: Point<T>) -> bool {
         if !self.boundary.contains(&point) {
             return false;
         }
@@ -312,7 +332,7 @@ impl QuadTree {
         self.delete_internal(id, point)
     }
 
-    fn delete_internal(&mut self, id: u64, point: Point) -> bool {
+    fn delete_internal(&mut self, id: u64, point: Point<T>) -> bool {
         // Leaf: remove in-place
         if self.children.is_none() {
             if let Some(pos) = self.items.iter().position(|it|

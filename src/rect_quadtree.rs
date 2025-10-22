@@ -1,21 +1,23 @@
 use smallvec::SmallVec;
-use crate::geom::Rect;
+use crate::geom::{Rect, Coord, mid};
 use serde::{Serialize, Deserialize};
 use bincode::config::standard;
 use bincode::serde::{encode_to_vec, decode_from_slice};
 
 #[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-pub struct RectItem {
+#[serde(bound(serialize = "", deserialize = ""))]
+pub struct RectItem<T: Coord> {
     pub id: u64,
-    pub rect: Rect,
+    pub rect: Rect<T>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RectQuadTree {
-    pub boundary: Rect,
-    pub items: Vec<RectItem>,
+#[serde(bound(serialize = "", deserialize = ""))]
+pub struct RectQuadTree<T: Coord> {
+    pub boundary: Rect<T>,
+    pub items: Vec<RectItem<T>>,
     pub capacity: usize,
-    pub children: Option<Box<[RectQuadTree; 4]>>,
+    pub children: Option<Box<[RectQuadTree<T>; 4]>>,
     depth: usize,
     max_depth: usize,
 }
@@ -26,9 +28,9 @@ pub struct RectQuadTree {
 // 2: left,  top
 // 3: right, top
 #[inline(always)]
-fn child_index_for_rect(boundary: &Rect, r: &Rect) -> Option<usize> {
-    let cx = 0.5 * (boundary.min_x + boundary.max_x);
-    let cy = 0.5 * (boundary.min_y + boundary.max_y);
+fn child_index_for_rect<T: Coord>(boundary: &Rect<T>, r: &Rect<T>) -> Option<usize> {
+    let cx = mid(boundary.min_x, boundary.max_x);
+    let cy = mid(boundary.min_y, boundary.max_y);
 
     // fits entirely on one side per axis?
     let fits_x = r.max_x <= cx || r.min_x >= cx;
@@ -43,14 +45,14 @@ fn child_index_for_rect(boundary: &Rect, r: &Rect) -> Option<usize> {
 }
 
 #[inline(always)]
-fn rects_touch_or_intersect(a: &Rect, b: &Rect) -> bool {
+fn rects_touch_or_intersect<T: Coord>(a: &Rect<T>, b: &Rect<T>) -> bool {
     // Inclusive version so touching edges count
     a.min_x <= b.max_x && a.max_x >= b.min_x &&
     a.min_y <= b.max_y && a.max_y >= b.min_y
 }
 
-impl RectQuadTree {
-    pub fn new(boundary: Rect, capacity: usize) -> Self {
+impl<T: Coord> RectQuadTree<T> {
+    pub fn new(boundary: Rect<T>, capacity: usize) -> Self {
         RectQuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -61,7 +63,7 @@ impl RectQuadTree {
         }
     }
 
-    pub fn new_with_max_depth(boundary: Rect, capacity: usize, max_depth: usize) -> Self {
+    pub fn new_with_max_depth(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
         RectQuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -80,7 +82,7 @@ impl RectQuadTree {
         Ok(qt)
     }
 
-    fn new_child(boundary: Rect, capacity: usize, depth: usize, max_depth: usize) -> Self {
+    fn new_child(boundary: Rect<T>, capacity: usize, depth: usize, max_depth: usize) -> Self {
         RectQuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -92,7 +94,7 @@ impl RectQuadTree {
     }
 
     /// Insert a rectangle. Returns true if inserted into the tree.
-    pub fn insert(&mut self, item: RectItem) -> bool {
+    pub fn insert(&mut self, item: RectItem<T>) -> bool {
         // Discard if completely outside this subtree
         if !rects_touch_or_intersect(&self.boundary, &item.rect) {
             return false;
@@ -120,8 +122,8 @@ impl RectQuadTree {
     }
 
     fn split(&mut self) {
-        let cx = 0.5 * (self.boundary.min_x + self.boundary.max_x);
-        let cy = 0.5 * (self.boundary.min_y + self.boundary.max_y);
+    let cx = mid(self.boundary.min_x, self.boundary.max_x);
+    let cy = mid(self.boundary.min_y, self.boundary.max_y);
 
         let quads = [
             Rect { min_x: self.boundary.min_x, min_y: self.boundary.min_y, max_x: cx,                    max_y: cy },
@@ -131,7 +133,7 @@ impl RectQuadTree {
         ];
 
         let d = self.depth + 1;
-        let mut kids: [RectQuadTree; 4] = [
+        let mut kids: [RectQuadTree<T>; 4] = [
             RectQuadTree::new_child(quads[0], self.capacity, d, self.max_depth),
             RectQuadTree::new_child(quads[1], self.capacity, d, self.max_depth),
             RectQuadTree::new_child(quads[2], self.capacity, d, self.max_depth),
@@ -155,19 +157,19 @@ impl RectQuadTree {
     }
 
     #[inline(always)]
-    fn rect_contains_rect_inclusive(a: &Rect, b: &Rect) -> bool {
+    fn rect_contains_rect_inclusive(a: &Rect<T>, b: &Rect<T>) -> bool {
         a.min_x <= b.min_x && a.min_y <= b.min_y &&
         a.max_x >= b.max_x && a.max_y >= b.max_y
     }
 
     /// Query for all rectangles that touch or intersect the given range.
     /// Returns a Vec of (id, Rect).
-    pub fn query(&self, range: Rect) -> Vec<(u64, Rect)> {
+    pub fn query(&self, range: Rect<T>) -> Vec<(u64, Rect<T>)> {
         #[derive(Copy, Clone)]
         enum Mode { Filter, ReportAll }
 
-        let mut out: SmallVec<[(u64, Rect); 128]> = SmallVec::new();
-        let mut stack: SmallVec<[(&RectQuadTree, Mode); 64]> = SmallVec::new();
+        let mut out: SmallVec<[(u64, Rect<T>); 128]> = SmallVec::new();
+        let mut stack: SmallVec<[(&RectQuadTree<T>, Mode); 64]> = SmallVec::new();
         stack.push((self, Mode::Filter));
 
         while let Some((node, mode)) = stack.pop() {
@@ -224,19 +226,19 @@ impl RectQuadTree {
     }
 
     /// Convenience if you only want ids.
-    pub fn query_ids(&self, range: Rect) -> Vec<u64> {
+    pub fn query_ids(&self, range: Rect<T>) -> Vec<u64> {
         self.query(range).into_iter().map(|(id, _)| id).collect()
     }
 
     /// Delete an item by id and rect. Returns true if removed.
-    pub fn delete(&mut self, id: u64, rect: Rect) -> bool {
+    pub fn delete(&mut self, id: u64, rect: Rect<T>) -> bool {
         if !rects_touch_or_intersect(&self.boundary, &rect) {
             return false;
         }
         self.delete_internal(id, rect)
     }
 
-    fn delete_internal(&mut self, id: u64, rect: Rect) -> bool {
+    fn delete_internal(&mut self, id: u64, rect: Rect<T>) -> bool {
         // Try children if the rect fully fits one
         if let Some(children) = self.children.as_mut() {
             if let Some(idx) = child_index_for_rect(&self.boundary, &rect) {
@@ -285,13 +287,13 @@ impl RectQuadTree {
     }
 
     /// Debug helper: collect all node boundaries in this subtree.
-    pub fn get_all_node_boundaries(&self) -> Vec<Rect> {
+    pub fn get_all_node_boundaries(&self) -> Vec<Rect<T>> {
         let mut rects = Vec::new();
         self.collect_boundaries(&mut rects);
         rects
     }
 
-    fn collect_boundaries(&self, out: &mut Vec<Rect>) {
+    fn collect_boundaries(&self, out: &mut Vec<Rect<T>>) {
         out.push(self.boundary);
         if let Some(children) = self.children.as_ref() {
             for child in children.iter() {
