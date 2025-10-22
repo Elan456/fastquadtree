@@ -5,13 +5,13 @@ from fastquadtree import QuadTree
 
 def test_unsupported_dtype():
     """Test that providing an unsupported dtype raises ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="f128")  # type: ignore
 
     # From bytes
     qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="f32")
     data = qt.to_bytes()
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         QuadTree.from_bytes(data, dtype="f128")  # type: ignore
 
 

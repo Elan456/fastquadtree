@@ -29,6 +29,14 @@ G = TypeVar("G")  # geometry type, e.g. Point or Bounds
 HitT = TypeVar("HitT")  # raw native tuple, e.g. (id,x,y) or (id,x0,y0,x1,y1)
 ItemType = TypeVar("ItemType", bound=Item)  # e.g. PointItem or RectItem
 
+# Quadtree dtype to numpy dtype mapping
+QUADTREE_DTYPE_TO_NP_DTYPE = {
+    "f32": "float32",
+    "f64": "float64",
+    "i32": "int32",
+    "i64": "int64",
+}
+
 
 def _is_np_array(x: Any) -> bool:
     mod = getattr(x.__class__, "__module__", "")
@@ -250,7 +258,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
     ) -> int:
         """
         Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
-        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with dtype float32.
+        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with a dtype that matches the quadtree's dtype.
 
         If tracking is enabled, the objects will be bulk stored internally.
         If no objects are provided, the items will have obj=None (if tracking).
@@ -289,8 +297,12 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
             if geoms.size == 0:
                 return 0
 
-            if geoms.dtype != _np.float32:
-                raise TypeError("Numpy array must use dtype float32")
+            # Check if dtype matches quadtree dtype
+            expected_np_dtype = QUADTREE_DTYPE_TO_NP_DTYPE.get(self._dtype)
+            if geoms.dtype != expected_np_dtype:
+                raise TypeError(
+                    f"Numpy array dtype {geoms.dtype} does not match quadtree dtype {self._dtype}"
+                )
 
         if self._store is None:
             # Simple contiguous path with native bulk insert

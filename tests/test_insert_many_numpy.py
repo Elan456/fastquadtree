@@ -52,6 +52,48 @@ def test_type_error_on_wrong_dtype():
     assert len(qt) == 0
 
 
+def test_non_default_dtype_insert_many():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True, dtype="f64")
+    points = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float64)
+    n = qt.insert_many(points)
+    assert n == 3
+    assert len(qt) == 3
+
+    raw = qt.query((0, 0, 40, 40), as_items=False)
+
+    assert len(raw) == 3
+    # ids and positions match
+    m_raw = {t[0]: (t[1], t[2]) for t in raw}
+    for t in raw:
+        assert (t[1], t[2]) == m_raw[t[0]]
+
+
+def test_non_default_quadtree_dtype_with_default_numpy_dtype_raises():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True, dtype="f64")
+    points = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32)  # Wrong dtype
+    with pytest.raises(TypeError):
+        qt.insert_many(points)
+    assert len(qt) == 0
+
+
+def test_unspported_quadtree_dtype_insert_many_raises():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True, dtype="i32")
+    points = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32)  # Wrong dtype
+    with pytest.raises(TypeError):
+        qt.insert_many(points)
+    assert len(qt) == 0
+
+    points = np.array(
+        [[10, 10], [20, 20], [30, 30]], dtype=np.uint32
+    )  # unsupported dtype
+    with pytest.raises(TypeError):
+        qt.insert_many(points)
+
+    # QT is also unsupported
+    with pytest.raises(TypeError):
+        qt = QuadTree(BOUNDS, capacity=8, track_objects=True, dtype="u32")
+
+
 def test_insert_empty_numpy_array():
     qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
     points = np.empty((0, 2), dtype=np.float32)

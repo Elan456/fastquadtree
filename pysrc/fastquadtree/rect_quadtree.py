@@ -101,7 +101,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         """Create the native engine instance."""
         rust_cls = DTYPE_MAP.get(self._dtype)
         if rust_cls is None:
-            raise ValueError(f"Unsupported dtype: {self._dtype}")
+            raise TypeError(f"Unsupported dtype: {self._dtype}")
         return rust_cls(bounds, capacity, max_depth)
 
     @classmethod
@@ -109,7 +109,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         """Create a new native engine instance from serialized bytes."""
         rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
-            raise ValueError(f"Unsupported dtype: {dtype}")
+            raise TypeError(f"Unsupported dtype: {dtype}")
         return rust_cls.from_bytes(data)
 
     @staticmethod

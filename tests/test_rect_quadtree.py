@@ -195,7 +195,7 @@ def test_accurate_obj_output_with_tracking():
 
 def test_unsupported_dtype():
     """Test that providing an unsupported dtype raises ValueError."""
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         rq.RectQuadTree(
             b_to_float(0, 0, 100, 100), capacity=4, track_objects=True, dtype="f128"
         )  # type: ignore
@@ -205,7 +205,7 @@ def test_unsupported_dtype():
         b_to_float(0, 0, 100, 100), capacity=4, track_objects=True, dtype="f32"
     )
     data = qt.to_bytes()
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         rq.RectQuadTree.from_bytes(data, dtype="f128")  # type: ignore
 
 
