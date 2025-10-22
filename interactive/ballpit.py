@@ -246,7 +246,7 @@ def main():
 
     running = True
     while running:
-        dt_ms = clock.tick(60)  # target 60 fps
+        dt_ms = clock.tick(200)  # target 200 FPS
         dt = dt_ms / 1000.0
 
         for event in pygame.event.get():
