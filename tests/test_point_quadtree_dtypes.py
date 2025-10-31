@@ -34,6 +34,28 @@ def test_all_other_dtypes():
         assert results[0].obj == "test"
 
 
+def test_all_other_dtypes_implicit():
+    """Test that all supported dtypes can be used without error."""
+    # Leave it at as f32
+    qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True)
+    id1 = qt.insert((10, 10), obj="test_int")
+    id2 = qt.insert((20.5, 20.5), obj="test_float")
+    assert id1 == 0
+    assert id2 == 1
+    data = qt.to_bytes()
+    qt2 = QuadTree.from_bytes(data)
+    items = qt2.get_all_items()
+    assert len(items) == 2
+    assert items[0].obj == "test_int"
+    assert items[1].obj == "test_float"
+
+    # Run some queries
+    results = qt2.query((5, 5, 20.6, 20.6), as_items=True)
+    assert len(results) == 2
+    assert results[0].obj == "test_int"
+    assert results[1].obj == "test_float"
+
+
 def test_from_bytes_with_mismatched_dtype():
     """Test that providing a different dtype in from_bytes raises ValueError."""
     qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="f32")

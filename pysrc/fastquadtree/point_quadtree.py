@@ -1,13 +1,13 @@
 # point_quadtree.py
 from __future__ import annotations
 
-from typing import Any, Literal, Tuple, overload
+from typing import Any, Literal, SupportsFloat, Tuple, overload
 
 from ._base_quadtree import Bounds, _BaseQuadTree
 from ._item import Point, PointItem
 from ._native import QuadTree as QuadTreeF32, QuadTreeF64, QuadTreeI32, QuadTreeI64
 
-_IdCoord = Tuple[int, float, float]
+_IdCoord = Tuple[int, SupportsFloat, SupportsFloat]
 
 DTYPE_MAP = {
     "f32": QuadTreeF32,

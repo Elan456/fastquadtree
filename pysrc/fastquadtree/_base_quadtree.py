@@ -9,6 +9,7 @@ from typing import (
     Generic,
     Iterable,
     Sequence,
+    SupportsFloat,
     Tuple,
     TypeVar,
     overload,
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-Bounds = Tuple[float, float, float, float]
+Bounds = Tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
 
 # Generic parameters
 G = TypeVar("G")  # geometry type, e.g. Point or Bounds

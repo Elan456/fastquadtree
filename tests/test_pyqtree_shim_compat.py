@@ -471,3 +471,18 @@ def non_tuple_intersect_and_non_tuple_remove_handled():
 
     idx.remove(obj1, remove_box_iterator())
     assert idx.intersect((0.0, 0.0, 100.0, 100.0)) == []
+
+
+def test_insert_integers_as_floats():
+    """Test that integer coordinates are accepted and treated as floats."""
+    idx = FQTIndex(bbox=(0, 0, 100, 100))  # integers in bbox
+
+    obj1, box1 = "obj1", (10, 10, 20, 20)  # integers in box
+
+    idx.insert(obj1, box1)
+
+    results = idx.intersect((0, 0, 100, 100))  # integers in query
+    assert results == [obj1]
+
+    idx.remove(obj1, box1)  # integers in remove
+    assert idx.intersect((0, 0, 100, 100)) == []

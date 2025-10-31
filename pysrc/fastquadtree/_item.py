@@ -1,12 +1,12 @@
 # item.py
 from __future__ import annotations
 
-from typing import Any, Tuple
+from typing import Any, SupportsFloat, Tuple
 
-Bounds = Tuple[float, float, float, float]
+Bounds = Tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
 """Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
 
-Point = Tuple[float, float]
+Point = Tuple[SupportsFloat, SupportsFloat]
 """2D point as (x, y)."""
 
 

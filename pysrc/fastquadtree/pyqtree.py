@@ -11,7 +11,7 @@ from typing import Any, SupportsFloat, Tuple
 
 from ._native import RectQuadTree
 
-Point = Tuple[float, float]  # only for type hints in docstrings
+Point = Tuple[SupportsFloat, SupportsFloat]  # only for type hints in docstrings
 
 # Default parameters from pyqtree
 MAX_ITEMS = 10

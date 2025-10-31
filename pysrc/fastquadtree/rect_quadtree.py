@@ -1,7 +1,7 @@
 # rect_quadtree.py
 from __future__ import annotations
 
-from typing import Any, Literal, Tuple, overload
+from typing import Any, Literal, SupportsFloat, Tuple, overload
 
 from ._base_quadtree import Bounds, _BaseQuadTree
 from ._item import RectItem
@@ -12,7 +12,7 @@ from ._native import (
     RectQuadTreeI64,
 )
 
-_IdRect = Tuple[int, float, float, float, float]
+_IdRect = Tuple[int, SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
 
 DTYPE_MAP = {
     "f32": RectQuadTreeF32,
