@@ -401,3 +401,73 @@ def test_insert_list_and_tuple_equivalence():
     # Both objects should be present
     results = idx.intersect((0.0, 0.0, 100.0, 100.0))
     assert set(results) == {obj1, obj2}
+
+
+def test_insert_non_list_non_tuple_iterator():
+    """Test that any iterable (not just list/tuple) works for bbox in insert."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1, box1 = "obj1", (10.0, 10.0, 20.0, 20.0)
+
+    obj2 = "obj2"
+
+    def obj2_box2_iterator():
+        yield 30.0
+        yield 30.0
+        yield 40.0
+        yield 40.0
+
+    # Insert using tuple
+    idx.insert(obj1, box1)
+
+    # Insert using range iterator
+    idx.insert(obj2, obj2_box2_iterator())
+
+    # Both objects should be present
+    results = idx.intersect((0.0, 0.0, 100.0, 100.0))
+    assert set(results) == {obj1, obj2}
+
+    # Try Range
+    obj3 = "obj3"
+    box3_range = range(50, 54)  # 50, 51, 52, 53
+    idx.insert(obj3, box3_range)
+    results = idx.intersect((0.0, 0.0, 100.0, 100.0))
+    assert set(results) == {obj1, obj2, obj3}
+
+
+def test_insert_fails_on_tuple_too_long():
+    """Test that insert fails when bbox tuple is too long."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1 = "obj1"
+    box1 = (10.0, 10.0, 20.0, 20.0, 30.0)  # This should fail
+
+    with pytest.raises(ValueError):
+        idx.insert(obj1, box1)
+
+
+def non_tuple_intersect_and_non_tuple_remove_handled():
+    """Test that intersect and remove accept any iterable (not just list/tuple)."""
+    idx = FQTIndex(bbox=WORLD)
+
+    obj1, box1 = "obj1", (10.0, 10.0, 20.0, 20.0)
+
+    idx.insert(obj1, box1)
+
+    def query_iterator():
+        yield 15.0
+        yield 15.0
+        yield 25.0
+        yield 25.0
+
+    results = idx.intersect(query_iterator())
+    assert results == [obj1]
+
+    def remove_box_iterator():
+        yield 10.0
+        yield 10.0
+        yield 20.0
+        yield 20.0
+
+    idx.remove(obj1, remove_box_iterator())
+    assert idx.intersect((0.0, 0.0, 100.0, 100.0)) == []

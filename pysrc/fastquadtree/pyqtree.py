@@ -5,8 +5,9 @@ drop-in replacement to fastquadtree.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from operator import itemgetter
-from typing import Any, Tuple
+from typing import Any, SupportsFloat, Tuple
 
 from ._native import RectQuadTree
 
@@ -34,18 +35,18 @@ def gather_objs(objs, ids, chunk=2048):
 
 class Index:
     """
-    The class below is taken from the pyqtree package, but the implementation
+    The interface of the class below is taken from the pyqtree package, but the implementation
     has been modified to use the fastquadtree package as a backend instead of
     the original pure-python implementation.
     Based on the benchmarks, this gives a overall performance boost of 6.514x.
     See the benchmark section of the docs for more details and the latest numbers.
 
-    Original docstring from pyqtree follows:
-    The top spatial index to be created by the user. Once created it can be
-    populated with geographically placed members that can later be tested for
-    intersection with a user inputted geographic bounding box. Note that the
-    index can be iterated through in a for-statement, which loops through all
-    all the quad instances and lets you access their properties.
+    Index is  the top-level class for creating and using a quadtree spatial index
+    with the original pyqtree interface. If you are not migrating from pyqtree,
+    consider using the RectQuadTree class for detailed control and better performance.
+
+    This class wraps a RectQuadTree instance and provides methods to insert items with bounding boxes,
+    remove items, and query for items intersecting a given bounding box.
 
     Example usage:
     ```python
@@ -65,32 +66,36 @@ class Index:
 
     def __init__(
         self,
-        bbox=None,
-        x=None,
-        y=None,
-        width=None,
-        height=None,
-        max_items=MAX_ITEMS,
-        max_depth=MAX_DEPTH,
+        bbox: Iterable[SupportsFloat] | None = None,
+        x: float | int | None = None,
+        y: float | int | None = None,
+        width: float | int | None = None,
+        height: float | int | None = None,
+        max_items: int = MAX_ITEMS,
+        max_depth: int = MAX_DEPTH,
     ):
         """
         Initiate by specifying either 1) a bbox to keep track of, or 2) with an xy centerpoint and a width and height.
 
-        Parameters:
-        - **bbox**: The coordinate system bounding box of the area that the quadtree should
+        Args:
+          bbox: The coordinate system bounding box of the area that the quadtree should
             keep track of, as a 4-length sequence (xmin,ymin,xmax,ymax)
-        - **x**:
+          x:
             The x center coordinate of the area that the quadtree should keep track of.
-        - **y**
+          y:
             The y center coordinate of the area that the quadtree should keep track of.
-        - **width**:
+          width:
             How far from the xcenter that the quadtree should look when keeping track.
-        - **height**:
+          height:
             How far from the ycenter that the quadtree should look when keeping track
-        - **max_items** (optional): The maximum number of items allowed per quad before splitting
-            up into four new subquads. Default is 10.
-        - **max_depth** (optional): The maximum levels of nested subquads, after which no more splitting
+          max_items (optional): The maximum number of items allowed per quad before splitting
+              up into four new subquads. Default is 10.
+          max_depth (optional): The maximum levels of nested subquads, after which no more splitting
             occurs and the bottommost quad nodes may grow indefinately. Default is 20.
+
+        Note:
+            Either the bbox argument must be set, or the x, y, width, and height
+            arguments must be set.
         """
         if bbox is not None:
             x1, y1, x2, y2 = bbox
@@ -114,15 +119,15 @@ class Index:
         self._free = []
         self._item_to_id = {}
 
-    def insert(self, item: Any, bbox):  # pyright: ignore[reportIncompatibleMethodOverride]
+    def insert(self, item: Any, bbox: Iterable[SupportsFloat]):
         """
         Inserts an item into the quadtree along with its bounding box.
 
-        Parameters:
-        - **item**: The item to insert into the index, which will be returned by the intersection method
-        - **bbox**: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
+        Args:
+          item: The item to insert into the index, which will be returned by the intersection method
+          bbox: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
         """
-        if type(bbox) is list:  # Handle list input
+        if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
 
         if self._free:
@@ -134,17 +139,18 @@ class Index:
         self._qt.insert(rid, bbox)
         self._item_to_id[id(item)] = rid
 
-    def remove(self, item, bbox):
+    def remove(self, item: Any, bbox: Iterable[SupportsFloat]):
         """
         Removes an item from the quadtree.
 
-        Parameters:
-        - **item**: The item to remove from the index
-        - **bbox**: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
+        Args:
+          item: The item to remove from the index
+          bbox: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
 
-        Both parameters need to exactly match the parameters provided to the insert method.
+        Note:
+            Both parameters need to exactly match the parameters provided to the insert method.
         """
-        if type(bbox) is list:  # Handle list input
+        if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
 
         rid = self._item_to_id.pop(id(item))
@@ -152,18 +158,18 @@ class Index:
         self._objects[rid] = None
         self._free.append(rid)
 
-    def intersect(self, bbox):
+    def intersect(self, bbox: Iterable[SupportsFloat]) -> list:
         """
-        Intersects an input boundingbox rectangle with all of the items
+        Intersects an input bounding box rectangle with all of the items
         contained in the quadtree.
 
-        Parameters:
-        - **bbox**: A spatial bounding box tuple with four members (xmin,ymin,xmax,ymax)
+        Args:
+          bbox: A spatial bounding box tuple with four members (xmin,ymin,xmax,ymax)
 
         Returns:
-        - A list of inserted items whose bounding boxes intersect with the input bbox.
+          A list of inserted items whose bounding boxes intersect with the input bbox.
         """
-        if type(bbox) is list:  # Handle list input
+        if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
         result = self._qt.query_ids(bbox)
         # result = [id1, id2, ...]
