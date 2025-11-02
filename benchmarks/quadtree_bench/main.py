@@ -12,6 +12,7 @@ from pathlib import Path
 from .engines import get_engines
 from .plotting import PlotManager
 from .runner import BenchmarkConfig, BenchmarkRunner
+from .optimizer import optimize
 
 
 def main():
@@ -83,7 +84,22 @@ def main():
         help="Bounding box for quadtrees",
     )
 
+    parser.add_argument(
+        "--optimize",
+        action="store_true",
+    )
+
     args = parser.parse_args()
+
+    if args.optimize:
+        print("Running optimization for max_points and max_depth...")
+        optimized_max_points, optimized_max_depth = optimize(
+            bounds=tuple(args.bounds),
+        )
+        args.max_points = optimized_max_points
+        args.max_depth = optimized_max_depth
+        print()
+        return
 
     # Create configuration
     config = BenchmarkConfig(

@@ -29,6 +29,7 @@ class BenchmarkConfig:
     repeats: int = 3  # median over repeats
     rng_seed: int = 42  # random seed for reproducibility
     max_experiment_points: int = 100_000
+    verbose: bool = True
 
     def __post_init__(self):
         """Generate experiment point sizes."""
@@ -146,7 +147,7 @@ class BenchmarkRunner:
             Dictionary containing benchmark results
         """
         # Warmup on a small set to JIT caches, etc.
-        print("Warming up engines...")
+        if self.config.verbose: print("Warming up engines...")
         warmup_points = self.generate_points(2_000)
         warmup_queries = self.generate_queries(self.config.n_queries)
         for engine in engines.values():
@@ -162,19 +163,23 @@ class BenchmarkRunner:
         }
 
         # Run experiments
-        print(
-            f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines..."
-        )
-        experiment_bar = tqdm(
-            self.config.experiments, desc="Experiments", unit="exp", position=0
-        )
+        if self.config.verbose:
+            print(
+                f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines..."
+            )
+        experiment_bar = self.config.experiments
+        
+        if self.config.verbose:
+            experiment_bar = tqdm(
+                experiment_bar, desc="Experiments", unit="exp", position=0
+            )
 
         for exp_idx, n in enumerate(experiment_bar):
-            experiment_bar.set_description(
-                f"Experiment {exp_idx + 1}/{len(self.config.experiments)}"
-            )
-            experiment_bar.set_postfix({"points": f"{n:,}"})
-
+            if self.config.verbose:
+                experiment_bar.set_description(
+                    f"Experiment {exp_idx + 1}/{len(self.config.experiments)}"
+                )
+                experiment_bar.set_postfix({"points": f"{n:,}"})
             # Generate data for this experiment
             exp_rng = random.Random(10_000 + n)
             points = self.generate_points(n, exp_rng)
@@ -250,9 +255,9 @@ class BenchmarkRunner:
                 results["query_rate"][name].append(query_rate)
 
             # Print intermediate results for this experiment
-            self._print_experiment_summary(n, results, exp_idx)
+            if self.config.verbose: self._print_experiment_summary(n, results, exp_idx)
 
-        experiment_bar.close()
+        if self.config.verbose: experiment_bar.close()
 
         # Add metadata to results
         results["engines"] = engines  # pyright: ignore[reportArgumentType]
