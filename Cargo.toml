@@ -1,6 +1,10 @@
 [package]
 name = "fastquadtree"
+<<<<<<< HEAD
 version = "1.3.3"
+=======
+version = "1.4.0"
+>>>>>>> de570fd (feat: add query_np for point and rect quadtree)
 edition = "2021"
 
 [lib]

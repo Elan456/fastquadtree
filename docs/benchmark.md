@@ -12,17 +12,17 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **250,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.100 s**
+- Fastest total: **fastquadtree** at **0.030 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.027 | 0.073 | 0.100 | 16.12× |
-| Shapely STRtree | 0.148 | 0.083 | 0.231 | 7.00× |
-| Rtree        | 0.814 | 0.245 | 1.059 | 1.53× |
-| nontree-QuadTree | 0.532 | 0.582 | 1.114 | 1.45× |
-| e-pyquadtree | 0.913 | 0.641 | 1.554 | 1.04× |
-| PyQtree      | 1.352 | 0.264 | 1.616 | 1.00× |
-| quads        | 1.231 | 0.465 | 1.695 | 0.95× |
+| fastquadtree | 0.023 | 0.007 | 0.030 | 41.31× |
+| Shapely STRtree | 0.094 | 0.049 | 0.143 | 8.67× |
+| nontree-QuadTree | 0.448 | 0.475 | 0.924 | 1.34× |
+| Rtree        | 0.801 | 0.225 | 1.025 | 1.21× |
+| e-pyquadtree | 0.666 | 0.451 | 1.117 | 1.11× |
+| PyQtree      | 1.066 | 0.175 | 1.241 | 1.00× |
+| quads        | 0.969 | 0.330 | 1.299 | 0.96× |
 
 #### Benchmark Configuration
 | Parameter | Value |
@@ -31,6 +31,8 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 | Max points per node | 128 |
 | Max depth | 16 |
 | Queries per experiment | 500 |
+
+> Fastquadtree is using query_np to return Numpy arrays rather than typical Python objects
 
 ---------
 

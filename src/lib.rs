@@ -7,9 +7,15 @@ pub use crate::quadtree::{Item, QuadTree};
 pub use crate::rect_quadtree::{RectItem, RectQuadTree};
 
 use numpy::PyReadonlyArray2;
+use numpy::PyArray1;
+use numpy::PyArray2;
+use numpy::PyArrayMethods;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyList};
+use pyo3::types::{PyBytes, PyList, PyModule, PyTuple};
+use pyo3::PyResult;
+use pyo3::ffi;
+use std::any::TypeId;
 
 fn item_to_tuple<T: Coord + Copy>(it: Item<T>) -> (u64, T, T) {
     (it.id, it.point.x, it.point.y)
@@ -109,15 +115,91 @@ macro_rules! define_point_quadtree_pyclass {
                 self.inner.delete(id, Point { x, y })
             }
 
-            /// Returns list[(id, x, y)]
             pub fn query<'py>(
                 &self,
                 py: Python<'py>,
                 rect: ($t, $t, $t, $t),
             ) -> Bound<'py, PyList> {
                 let (min_x, min_y, max_x, max_y) = rect;
-                let tuples = self.inner.query(Rect { min_x, min_y, max_x, max_y });
-                PyList::new(py, &tuples).expect("Failed to create Python list")
+
+                // Release the GIL during the Rust search
+                let tuples = py.detach(|| self.inner.query(Rect { min_x, min_y, max_x, max_y }));
+
+                unsafe {
+                    let len = tuples.len() as isize;
+                    let list_ptr = ffi::PyList_New(len);
+                    if list_ptr.is_null() {
+                        ffi::PyErr_NoMemory();
+                    }
+
+                    // preserve ints for integer trees, floats for float trees
+                    let is_float = TypeId::of::<$t>() == TypeId::of::<f32>()
+                        || TypeId::of::<$t>() == TypeId::of::<f64>();
+
+                    for (i, (id, x, y)) in tuples.into_iter().enumerate() {
+                        let tup_ptr = ffi::PyTuple_New(3);
+                        if tup_ptr.is_null() {
+                            ffi::PyErr_NoMemory();
+                        }
+
+                        let py_id = ffi::PyLong_FromUnsignedLongLong(id);
+                        let (py_x, py_y) = if is_float {
+                            (ffi::PyFloat_FromDouble(x as f64),
+                            ffi::PyFloat_FromDouble(y as f64))
+                        } else {
+                            (ffi::PyLong_FromLongLong(x as i64),
+                            ffi::PyLong_FromLongLong(y as i64))
+                        };
+
+                        // SetItem functions steal references
+                        ffi::PyTuple_SetItem(tup_ptr, 0, py_id);
+                        ffi::PyTuple_SetItem(tup_ptr, 1, py_x);
+                        ffi::PyTuple_SetItem(tup_ptr, 2, py_y);
+                        ffi::PyList_SetItem(list_ptr, i as isize, tup_ptr);
+                    }
+
+                    // Create Bound<PyAny> then downcast to Bound<PyList>
+                    Bound::from_owned_ptr(py, list_ptr).downcast_into_unchecked::<PyList>()
+                }
+            }
+
+            /// Returns (ids: np.ndarray[u64], points: np.ndarray[Nx2])
+            pub fn query_np<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+            ) -> PyResult<Bound<'py, PyTuple>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+                let (ids_vec, xs_vec, ys_vec) = py.detach(|| {
+                    let tuples = self.inner.query(Rect { min_x, min_y, max_x, max_y });
+                    let n = tuples.len();
+                    let mut ids = Vec::with_capacity(n);
+                    let mut xs  = Vec::with_capacity(n);
+                    let mut ys  = Vec::with_capacity(n);
+                    for (id, x, y) in tuples {
+                        ids.push(id);
+                        xs.push(x);
+                        ys.push(y);
+                    }
+                    (ids, xs, ys)
+                });
+
+                let n = ids_vec.len();
+                // Create NumPy arrays
+                let ids_arr = PyArray1::<u64>::from_vec(py, ids_vec);      // Bound<'py, PyArray1<u64>>
+
+                // Fill xy with no per element Python objects
+                unsafe {
+                    let xy_arr = PyArray2::<$t>::new(py, [n, 2], false);      // Bound<'py, PyArray2<$t>>
+                    let mut a = xy_arr.as_array_mut();
+                    for i in 0..n {
+                        a[[i, 0]] = xs_vec[i];
+                        a[[i, 1]] = ys_vec[i];
+                    }
+                    // Return a Python tuple (ids, xy)
+                    let out = PyTuple::new(py, &[ids_arr.as_any(), xy_arr.as_any()])?;
+                    Ok(out)
+                }
             }
 
             /// Returns list[id, ...]
@@ -275,6 +357,55 @@ macro_rules! define_rect_quadtree_pyclass {
                     .map(|(id, r)| (id, r.min_x, r.min_y, r.max_x, r.max_y))
                     .collect();
                 PyList::new(py, &tuples).expect("Failed to create Python list")
+            }
+
+            /// Returns (ids: np.ndarray[u64], rects: np.ndarray[Nx4])
+            pub fn query_np<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+            ) -> PyResult<Bound<'py, PyTuple>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // Run the Rust search without the GIL and collect into flat vectors
+                let (ids_vec, mins_x, mins_y, maxs_x, maxs_y) = py.detach(|| {
+                    let hits = self.inner.query(Rect { min_x, min_y, max_x, max_y });
+                    let n = hits.len();
+                    let mut ids    = Vec::with_capacity(n);
+                    let mut v_minx = Vec::with_capacity(n);
+                    let mut v_miny = Vec::with_capacity(n);
+                    let mut v_maxx = Vec::with_capacity(n);
+                    let mut v_maxy = Vec::with_capacity(n);
+
+                    for (id, r) in hits {
+                        ids.push(id);
+                        v_minx.push(r.min_x);
+                        v_miny.push(r.min_y);
+                        v_maxx.push(r.max_x);
+                        v_maxy.push(r.max_y);
+                    }
+                    (ids, v_minx, v_miny, v_maxx, v_maxy)
+                });
+
+                let n = ids_vec.len();
+
+                // ids: shape (N,)
+                let ids_arr = PyArray1::<u64>::from_vec(py, ids_vec);
+
+                // rects: shape (N,4) with columns [min_x, min_y, max_x, max_y]
+                unsafe {
+                    let rects_arr = PyArray2::<$t>::new(py, [n, 4], false);
+                    let mut a = rects_arr.as_array_mut();
+                    for i in 0..n {
+                        a[[i, 0]] = mins_x[i];
+                        a[[i, 1]] = mins_y[i];
+                        a[[i, 2]] = maxs_x[i];
+                        a[[i, 3]] = maxs_y[i];
+                    }
+                    // Return a Python tuple (ids, rects)
+                    let out = PyTuple::new(py, &[ids_arr.as_any(), rects_arr.as_any()])?;
+                    Ok(out)
+                }
             }
 
             /// Returns list[id, ...]

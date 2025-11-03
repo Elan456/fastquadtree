@@ -223,3 +223,24 @@ def test_insert_objects_numpy():
 
     names = {item.obj["name"] for item in items if item.obj is not None}
     assert names == {"A", "B", "C"}
+
+
+def test_query_as_np_accuracy():
+    qt = QuadTree(BOUNDS, capacity=4, track_objects=True)
+    points = np.array([[10, 10], [20, 20], [30, 30], [40, 40]], dtype=np.float32)
+    qt.insert_many(points)
+
+    ids_np, coords_np = qt.query_np((15, 15, 35, 35))
+
+    ids_list = ids_np.tolist()
+    coords_list = coords_np.tolist()
+
+    assert len(ids_list) == 2
+    assert set(ids_list) == {1, 2}  # IDs of points (20,20) and (30,30)
+
+    expected_coords = [(20.0, 20.0), (30.0, 30.0)]
+    for coord in coords_list:
+        assert tuple(coord) in expected_coords
+
+    # Check ids
+    assert set(ids_list) == {1, 2}

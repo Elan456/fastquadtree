@@ -10,9 +10,9 @@ import argparse
 from pathlib import Path
 
 from .engines import get_engines
+from .optimizer import optimize
 from .plotting import PlotManager
 from .runner import BenchmarkConfig, BenchmarkRunner
-from .optimizer import optimize
 
 
 def main():

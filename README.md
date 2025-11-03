@@ -66,17 +66,17 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **250,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.120 s**
+- Fastest total: **fastquadtree** at **0.030 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.031 | 0.089 | 0.120 | 14.64× |
-| Shapely STRtree | 0.179 | 0.100 | 0.279 | 6.29× |
-| nontree-QuadTree | 0.595 | 0.605 | 1.200 | 1.46× |
-| Rtree        | 0.961 | 0.300 | 1.261 | 1.39× |
-| e-pyquadtree | 1.005 | 0.660 | 1.665 | 1.05× |
-| PyQtree      | 1.492 | 0.263 | 1.755 | 1.00× |
-| quads        | 1.407 | 0.484 | 1.890 | 0.93× |
+| fastquadtree | 0.023 | 0.007 | 0.030 | 41.31× |
+| Shapely STRtree | 0.094 | 0.049 | 0.143 | 8.67× |
+| nontree-QuadTree | 0.448 | 0.475 | 0.924 | 1.34× |
+| Rtree        | 0.801 | 0.225 | 1.025 | 1.21× |
+| e-pyquadtree | 0.666 | 0.451 | 1.117 | 1.11× |
+| PyQtree      | 1.066 | 0.175 | 1.241 | 1.00× |
+| quads        | 0.969 | 0.330 | 1.299 | 0.96× |
 
 See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) for details, including configurations, system info, and native vs shim benchmarks.
 

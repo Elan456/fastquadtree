@@ -147,7 +147,8 @@ class BenchmarkRunner:
             Dictionary containing benchmark results
         """
         # Warmup on a small set to JIT caches, etc.
-        if self.config.verbose: print("Warming up engines...")
+        if self.config.verbose:
+            print("Warming up engines...")
         warmup_points = self.generate_points(2_000)
         warmup_queries = self.generate_queries(self.config.n_queries)
         for engine in engines.values():
@@ -168,14 +169,14 @@ class BenchmarkRunner:
                 f"\nRunning {len(self.config.experiments)} experiments with {len(engines)} engines..."
             )
         experiment_bar = self.config.experiments
-        
+
         if self.config.verbose:
             experiment_bar = tqdm(
                 experiment_bar, desc="Experiments", unit="exp", position=0
             )
 
         for exp_idx, n in enumerate(experiment_bar):
-            if self.config.verbose:
+            if self.config.verbose and type(experiment_bar) is tqdm:
                 experiment_bar.set_description(
                     f"Experiment {exp_idx + 1}/{len(self.config.experiments)}"
                 )
@@ -255,9 +256,11 @@ class BenchmarkRunner:
                 results["query_rate"][name].append(query_rate)
 
             # Print intermediate results for this experiment
-            if self.config.verbose: self._print_experiment_summary(n, results, exp_idx)
+            if self.config.verbose:
+                self._print_experiment_summary(n, results, exp_idx)
 
-        if self.config.verbose: experiment_bar.close()
+        if self.config.verbose and type(experiment_bar) is tqdm:
+            experiment_bar.close()
 
         # Add metadata to results
         results["engines"] = engines  # pyright: ignore[reportArgumentType]

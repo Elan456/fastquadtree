@@ -2,6 +2,7 @@ import math
 import random
 from dataclasses import dataclass
 from statistics import median
+
 from tqdm import tqdm
 
 from .engines import _create_fastquadtree_engine
@@ -9,29 +10,35 @@ from .runner import BenchmarkConfig, BenchmarkRunner
 
 # --------- helpers ---------
 
+
 def _latin_hypercube(n_samples: int, dims: int, rng: random.Random):
     """Return n_samples points in [0,1]^dims using a simple Latin Hypercube."""
     # One stratified coordinate per dim
-    cut = [ [(i + rng.random()) / n_samples for i in range(n_samples)] for _ in range(dims) ]
+    cut = [
+        [(i + rng.random()) / n_samples for i in range(n_samples)] for _ in range(dims)
+    ]
     # Shuffle each dimension independently
     for d in range(dims):
         rng.shuffle(cut[d])
     # Zip to points
-    return [ [cut[d][i] for d in range(dims)] for i in range(n_samples) ]
+    return [[cut[d][i] for d in range(dims)] for i in range(n_samples)]
+
 
 def _round_to_choice(x: float, choices: list[int]) -> int:
     return min(choices, key=lambda c: abs(c - x))
+
 
 def _powers_of_two_like(low: int, high: int) -> list[int]:
     """Generate a dense set skewed toward powers of two inside [low, high]."""
     s = set()
     # all powers of two in range
     p = 1
-    while p < low: p <<= 1
+    while p < low:
+        p <<= 1
     while p <= high:
         s.add(p)
         # also neighbors around each power of two for finesse
-        for k in (p//2, p//4, p + p//2, p + p//4):
+        for k in (p // 2, p // 4, p + p // 2, p + p // 4):
             if low <= k <= high:
                 s.add(k)
         p <<= 1
@@ -41,6 +48,7 @@ def _powers_of_two_like(low: int, high: int) -> list[int]:
         s.add(v)
     return sorted(s)
 
+
 def _median_of_means(times: list[float], groups: int = 3) -> float:
     """Robust aggregate: split into groups, average each, take median of those means."""
     if not times:
@@ -49,16 +57,19 @@ def _median_of_means(times: list[float], groups: int = 3) -> float:
     chunk = math.ceil(len(times) / g)
     means = []
     for i in range(0, len(times), chunk):
-        seg = times[i:i+chunk]
+        seg = times[i : i + chunk]
         means.append(sum(seg) / len(seg))
     return median(means)
+
 
 @dataclass(frozen=True)
 class QTConfig:
     max_points_per_leaf: int
     max_depth: int
 
+
 # --------- main optimizer ---------
+
 
 def optimize(bounds, *, rng_seed: int = 42):
     """
@@ -68,15 +79,15 @@ def optimize(bounds, *, rng_seed: int = 42):
     rng = random.Random(rng_seed)
 
     # Search space
-    mp_choices = _powers_of_two_like(4, 256)        # leaf capacity
-    md_choices = list(range(6, 25))                 # depth 6..24
+    mp_choices = _powers_of_two_like(4, 256)  # leaf capacity
+    md_choices = list(range(6, 25))  # depth 6..24
 
     # Multi-fidelity budgets: cheap -> medium -> full
     # You can tune these if your machine is faster/slower.
     budgets = [
-        dict(max_experiment_points=25_000, n_queries=200, repeats=1),
-        dict(max_experiment_points=50_000, n_queries=500, repeats=2),
-        dict(max_experiment_points=100_000, n_queries=1000, repeats=3),
+        {"max_experiment_points": 25_000, "n_queries": 200, "repeats": 1},
+        {"max_experiment_points": 50_000, "n_queries": 500, "repeats": 2},
+        {"max_experiment_points": 100_000, "n_queries": 1000, "repeats": 3},
     ]
 
     # Successive halving parameters
@@ -87,8 +98,12 @@ def optimize(bounds, *, rng_seed: int = 42):
     lhs = _latin_hypercube(n0, 2, rng)
     candidates = []
     for u, v in lhs:
-        mp = _round_to_choice(u * (mp_choices[-1] - mp_choices[0]) + mp_choices[0], mp_choices)
-        md = _round_to_choice(v * (md_choices[-1] - md_choices[0]) + md_choices[0], md_choices)
+        mp = _round_to_choice(
+            u * (mp_choices[-1] - mp_choices[0]) + mp_choices[0], mp_choices
+        )
+        md = _round_to_choice(
+            v * (md_choices[-1] - md_choices[0]) + md_choices[0], md_choices
+        )
         candidates.append(QTConfig(mp, md))
     # De-duplicate in case rounding collided
     candidates = list(dict.fromkeys(candidates))
@@ -100,7 +115,9 @@ def optimize(bounds, *, rng_seed: int = 42):
         stage_label = f"Stage {stage+1}/{len(budgets)}"
         scores = []
 
-        bar = tqdm(candidates, desc=f"{stage_label} evaluating {len(candidates)} configs")
+        bar = tqdm(
+            candidates, desc=f"{stage_label} evaluating {len(candidates)} configs"
+        )
         for cfg in bar:
             # Build a config per budget
             bc = BenchmarkConfig(
@@ -121,10 +138,14 @@ def optimize(bounds, *, rng_seed: int = 42):
             tries = 2 if stage < len(budgets) - 1 else 3
             for _ in range(tries):
                 runner = BenchmarkRunner(bc)
-                results = runner.run_benchmark({
-                    'fastquadtree': _create_fastquadtree_engine(bounds, cfg.max_points_per_leaf, cfg.max_depth)
-                })
-                t = results['total']['fastquadtree'][0]
+                results = runner.run_benchmark(
+                    {
+                        "fastquadtree": _create_fastquadtree_engine(
+                            bounds, cfg.max_points_per_leaf, cfg.max_depth
+                        )
+                    }
+                )
+                t = results["total"]["fastquadtree"][0]
                 run_times.append(t)
 
             score = _median_of_means(run_times)
@@ -134,7 +155,9 @@ def optimize(bounds, *, rng_seed: int = 42):
             if score < best_score:
                 best_score = score
                 best_cfg = cfg
-            bar.set_description(f"{stage_label}: best mp={best_cfg.max_points_per_leaf}, md={best_cfg.max_depth}, time={best_score:.4f}s")
+            bar.set_description(
+                f"{stage_label}: best mp={best_cfg.max_points_per_leaf}, md={best_cfg.max_depth}, time={best_score:.4f}s"
+            )
 
         # Prune to top ~1/eta for next stage, but always keep at least 6
         scores.sort(key=lambda x: x[0])
@@ -142,5 +165,7 @@ def optimize(bounds, *, rng_seed: int = 42):
         candidates = [cfg for _, cfg in scores[:keep]]
 
     # Final answer at full budget
-    print(f"Optimized max_points: {best_cfg.max_points_per_leaf}, max_depth: {best_cfg.max_depth} (time ~{best_score:.4f}s)")
+    print(
+        f"Optimized max_points: {best_cfg.max_points_per_leaf}, max_depth: {best_cfg.max_depth} (time ~{best_score:.4f}s)"
+    )
     return best_cfg.max_points_per_leaf, best_cfg.max_depth

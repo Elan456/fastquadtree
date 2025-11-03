@@ -92,6 +92,18 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             raise ValueError("Cannot return results as items with track_objects=False")
         return self._store.get_many_by_ids(self._native.query_ids(rect))
 
+    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+        """
+        Return all points inside an axis-aligned rectangle as NumPy arrays.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            Points: A tuple of two NumPy arrays: Shapes: (ids_np.shape == (k,), coords_np.shape == (k, 2)) where k is the number of hits.
+        """
+        return self._native.query_np(rect)
+
     @overload
     def nearest_neighbor(
         self, xy: Point, *, as_item: Literal[False] = ...
@@ -132,7 +144,9 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     def nearest_neighbors(
         self, xy: Point, k: int, *, as_items: Literal[True]
     ) -> list[PointItem]: ...
-    def nearest_neighbors(self, xy: Point, k: int, *, as_items: bool = False):
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: bool = False
+    ) -> list[PointItem] | list[_IdCoord]:
         """
         Return the k nearest neighbors to the query point in order of increasing distance.
 
@@ -140,9 +154,10 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             xy: Query point (x, y).
             k: Number of neighbors to return.
             as_items: If True, return Item wrappers. If False, return raw tuples.
+
         Returns:
-            If as_items is False: list of (id, x, y) tuples.
-            If as_items is True: list of Item objects.
+            If as_items is False: list of (id, x, y) tuples. <br>
+            If as_items is True: list of Item objects. <br>
         """
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:

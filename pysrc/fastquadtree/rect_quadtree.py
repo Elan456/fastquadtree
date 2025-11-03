@@ -97,6 +97,19 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             raise ValueError("Cannot return results as items with track_objects=False")
         return self._store.get_many_by_ids(self._native.query_ids(rect))
 
+    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+        """
+        Return all points inside an axis-aligned rectangle as NumPy arrays.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            Rects: Tuple of two NumPy arrays: (ids_np, rects_np). Shapes: (ids_np.shape == (k,), rects_np.shape == (k, 4)) where k is the number of hits.
+        """
+        ids_np, coords_np = self._native.query_np(rect)
+        return ids_np, coords_np
+
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""
         rust_cls = DTYPE_MAP.get(self._dtype)

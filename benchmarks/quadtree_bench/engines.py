@@ -109,7 +109,7 @@ def _create_fastquadtree_engine(
 
     def query(qt, queries):
         for q in queries:
-            _ = qt.query(q)
+            _ = qt.query_np(q)
 
     return Engine(
         "fastquadtree",
@@ -268,9 +268,8 @@ def _create_strtree_engine(
             # Shapely 2.x returns ndarray of indices for a single geometry
             res = tree.query(window)
             # Consume results without materializing to keep parity with other engines
-            if hasattr(res, "__iter__"):
-                for _ in res:
-                    pass
+            for _ in res:
+                pass
 
     return Engine("Shapely STRtree", "#7f7f7f", build, query)
 
