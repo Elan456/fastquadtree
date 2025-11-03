@@ -7,6 +7,7 @@ import random
 import statistics as stats
 from time import perf_counter as now
 
+import numpy as np
 from pyqtree import Index as PyQTreeIndex
 from system_info_collector import collect_system_info, format_system_info_markdown_lite
 from tqdm import tqdm
@@ -46,6 +47,20 @@ def bench_native(points, queries):
     t0 = now()
     for q in queries:
         _ = qt.query(q)
+    t_query = now() - t0
+    return t_build, t_query
+
+
+def bench_np_shim(points, queries):
+    # Convert points to numpy arrays
+    np_points = np.array(points, dtype=np.float32)
+    t0 = now()
+    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    qt.insert_many(np_points)
+    t_build = now() - t0
+    t0 = now()
+    for q in queries:
+        _ = qt.query_np(q)
     t_query = now() - t0
     return t_build, t_query
 
@@ -154,6 +169,13 @@ def main():
         args.repeats,
         desc="Shim (tracking)",
     )
+    np_build, np_query = median_times(
+        lambda pts, qs: bench_np_shim(pts, qs),
+        points,
+        queries,
+        args.repeats,
+        desc="Shim (numpy points)",
+    )
     p_build, p_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
         points,
@@ -188,11 +210,15 @@ def main():
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
 | Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
 | Shim (tracking) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
+| Shim (numpy points) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
 
 ### Summary
 
 Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
 **Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
+
+Using NumPy arrays for points improves performance, increasing build speed against the non-tracking shim by {fmt(s_build_no_map / np_build)}x and query speed by {fmt(s_query_no_map / np_query)}x.
+This results in a total speedup of {fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x compared to the non-tracking shim.
 
 Adding the object map tends to only impact the build time, not the query time.
 

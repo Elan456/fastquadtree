@@ -47,16 +47,20 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.134 | 1.873 | 2.007 |
-| Shim (no tracking) | 0.245 | 1.815 | 2.060 |
-| Shim (tracking) | 0.714 | 2.062 | 2.776 |
+| Native | 0.139 | 2.183 | 2.322 |
+| Shim (no tracking) | 0.219 | 2.078 | 2.297 |
+| Shim (tracking) | 0.627 | 1.726 | 2.353 |
+| Shim (numpy points) | 0.034 | 0.110 | 0.144 |
 
 ### Summary
 
-Using the shim with object tracking increases build time by 5.345x and query time by 1.101x.
-**Total slowdown = 1.383x.**
+Using the shim with object tracking increases build time by 4.503x and query time by 0.791x.
+**Total slowdown = 1.013x.**
 
-Adding the object map tends to impact the build time more than query time.
+Using NumPy arrays for points improves performance, increasing build speed against the non-tracking shim by 6.399x and query speed by 18.886x.
+This results in a total speedup of 15.925x compared to the non-tracking shim.
+
+Adding the object map tends to only impact the build time, not the query time.
 
 -----------
 
@@ -134,10 +138,10 @@ If your data is already in a NumPy array, using the `insert_many` method directl
 ----------------
 
 ## System Info
-- **OS**: Windows 11 AMD64
-- **Python**: CPython 3.12.2
+- **OS**: CachyOS 6.17.6-2-cachyos x86_64
+- **Python**: CPython 3.13.7
 - **CPU**: AMD Ryzen 7 3700X 8-Core Processor (16 threads)
-- **Memory**: 31.9 GB
+- **Memory**: 31.3 GB
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks
