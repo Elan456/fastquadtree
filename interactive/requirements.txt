@@ -1,3 +1,4 @@
 # Requirements for running the interactive quadtree demo
 pygame-ce
 fastquadtree
+pyqtree>=1.0.0 # Needed for ballpit comparison
