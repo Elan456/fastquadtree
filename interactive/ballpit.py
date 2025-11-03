@@ -1,10 +1,12 @@
 import contextlib
 import math
 import random
-from typing import List, Set, Tuple
+from typing import Iterable, List, Set, Tuple
 
 import pygame
+from pyqtree import Index as PyQIndex
 
+# Spatial backends -------------------------------------------------------------
 from fastquadtree import QuadTree
 
 # ---------------------------- Ball object ---------------------------- #
@@ -66,7 +68,7 @@ class Ball:
 
 
 def resolve_ball_ball(a: Ball, b: Ball):
-    """Generic elastic collision with positional correction and restitution."""
+    """Elastic collision with positional correction and restitution."""
     dx = b.x - a.x
     dy = b.y - a.y
     dist_sq = dx * dx + dy * dy
@@ -75,13 +77,10 @@ def resolve_ball_ball(a: Ball, b: Ball):
         return  # no collision
 
     dist = math.sqrt(dist_sq)
-    # Normalized normal
     nx = dx / dist if dist != 0 else 1.0
     ny = dy / dist if dist != 0 else 0.0
 
-    # Positional correction to remove overlap
     overlap = rsum - dist if dist != 0 else rsum
-    # Split correction by mass proportion
     inv_ma = 0.0 if a.mass == 0 else 1.0 / a.mass
     inv_mb = 0.0 if b.mass == 0 else 1.0 / b.mass
     inv_sum = inv_ma + inv_mb if (inv_ma + inv_mb) != 0 else 1.0
@@ -94,21 +93,16 @@ def resolve_ball_ball(a: Ball, b: Ball):
     b.x += nx * corr_b
     b.y += ny * corr_b
 
-    # Relative velocity along the normal
     rvx = b.vx - a.vx
     rvy = b.vy - a.vy
     vel_along_normal = rvx * nx + rvy * ny
     if vel_along_normal > 0:
         return  # separating
 
-    # Restitution
     e = min(a.restitution, b.restitution)
-
-    # Impulse scalar
     j = -(1 + e) * vel_along_normal
     j /= inv_sum
 
-    # Apply impulse
     impulse_x = j * nx
     impulse_y = j * ny
     a.vx -= impulse_x * inv_ma
@@ -117,18 +111,143 @@ def resolve_ball_ball(a: Ball, b: Ball):
     b.vy += impulse_y * inv_mb
 
 
+# -------------------------- Spatial strategies -------------------------- #
+
+
+class SpatialBase:
+    name = "base"
+
+    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+        raise NotImplementedError
+
+    def neighbors(self, b: Ball) -> Iterable[Ball]:
+        raise NotImplementedError
+
+
+class FastQTIndex(SpatialBase):
+    name = "fastquadtree"
+
+    def __init__(self, width: int, height: int, capacity: int = 16):
+        self.width = width
+        self.height = height
+        self.capacity = capacity
+        self.qt = QuadTree((0, 0, width, height), capacity, track_objects=True)
+
+    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+        if width != self.width or height != self.height:
+            self.width, self.height = width, height
+            self.qt = QuadTree((0, 0, width, height), self.capacity, track_objects=True)
+        else:
+            self.qt.clear()
+        for b in balls:
+            with contextlib.suppress(ValueError):
+                self.qt.insert((b.x, b.y), obj=b)
+
+    def neighbors(self, b: Ball) -> Iterable[Ball]:
+        r2 = 2 * b.r
+        x0, y0, x1, y1 = b.x - r2, b.y - r2, b.x + r2, b.y + r2
+        for it in self.qt.query((x0, y0, x1, y1), as_items=True):
+            other = it.obj
+            if other is not None and other is not b:
+                yield other
+
+
+class PyQTreeIndex(SpatialBase):
+    name = "pyqtree"
+
+    def __init__(
+        self, width: int, height: int, max_items: int = 16, max_depth: int = 20
+    ):
+        self.width = width
+        self.height = height
+        self.max_items = max_items
+        self.max_depth = max_depth
+        self.idx = PyQIndex(
+            bbox=(0, 0, width, height), max_items=max_items, max_depth=max_depth
+        )
+
+    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+        if width != self.width or height != self.height:
+            self.width, self.height = width, height
+            self.idx = PyQIndex(
+                bbox=(0, 0, width, height),
+                max_items=self.max_items,
+                max_depth=self.max_depth,
+            )
+        else:
+            # pyqtree has no clear, so rebuild a fresh tree
+            self.idx = PyQIndex(
+                bbox=(0, 0, width, height),
+                max_items=self.max_items,
+                max_depth=self.max_depth,
+            )
+        for b in balls:
+            self.idx.insert(b, b.aabb())
+
+    def neighbors(self, b: Ball) -> Iterable[Ball]:
+        r2 = 2 * b.r
+        qbox = (b.x - r2, b.y - r2, b.x + r2, b.y + r2)
+        # pyqtree returns stored objects directly
+        for other in self.idx.intersect(qbox):
+            if other is not b:
+                yield other
+
+
+class BruteIndex(SpatialBase):
+    name = "bruteforce"
+
+    def __init__(self, balls_ref: List[Ball]):
+        self._balls = balls_ref
+
+    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+        # Nothing to build
+        pass
+
+    def neighbors(self, b: Ball) -> Iterable[Ball]:
+        return (o for o in self._balls if o is not b)
+
+
 # ------------------------------ BallPit ------------------------------ #
 
 
 class BallPit:
+    MODES = ("fastquadtree", "pyqtree", "bruteforce")
+
     def __init__(self, screen, width, height):
         self.screen = screen
         self.width = width
         self.height = height
-        self.qt = QuadTree((0, 0, width, height), 16, track_objects=True)
+
         self.balls: List[Ball] = []
-        self.use_quadtree = True
         self.pair_checks = 0  # updated each frame
+
+        # Spatial backends
+        self.backends: dict[str, SpatialBase] = {}
+        self.backends["fastquadtree"] = FastQTIndex(width, height)
+        self.backends["pyqtree"] = PyQTreeIndex(width, height)
+        self.backends["bruteforce"] = BruteIndex(self.balls)
+
+        self.mode_idx = (
+            0
+            if "fastquadtree" in self.backends
+            else 1
+            if "pyqtree" in self.backends
+            else 2
+        )
+        self.mode = self.MODES[self.mode_idx]
+        if self.mode not in self.backends:
+            # Fallback if some backends are unavailable
+            self.mode = next(iter(self.backends.keys()))
+
+    def set_mode(self, name: str):
+        if name in self.backends:
+            self.mode = name
+
+    def cycle_mode(self):
+        # Cycle only through available backends
+        order = [m for m in self.MODES if m in self.backends]
+        cur = order.index(self.mode)
+        self.mode = order[(cur + 1) % len(order)]
 
     def add_ball(self, x, y, radius=10, color=(255, 0, 0)):
         vx = (random.random() - 0.5) * 300.0  # px/s
@@ -137,16 +256,9 @@ class BallPit:
             x, y, r=radius, color=color, vx=vx, vy=vy, mass=1.0, restitution=0.7
         )
         self.balls.append(ball)
-        with contextlib.suppress(ValueError):
-            self.qt.insert((ball.x, ball.y), obj=ball)
 
-    def rebuild_quadtree(self):
-        # Clear quadtree and re-insert all balls
-        # This is faster when most of the balls move each frame compared to updating individual points
-        self.qt.clear()
-        for b in self.balls:
-            with contextlib.suppress(ValueError):
-                self.qt.insert((b.x, b.y), obj=b)
+    def _backend(self) -> SpatialBase:
+        return self.backends[self.mode]
 
     def update(self, dt: float):
         # 1) Integrate motion
@@ -155,45 +267,26 @@ class BallPit:
             b.integrate(ax, ay, dt)
             b.clamp_to_bounds(self.width, self.height)
 
+        # 2) Rebuild spatial index
+        backend = self._backend()
+        backend.rebuild(self.balls, self.width, self.height)
+
+        # 3) Neighborhood checks with dedup on object id pairs
         self.pair_checks = 0
+        processed: Set[Tuple[int, int]] = set()
+        for a in self.balls:
+            for other in backend.neighbors(a):
+                a_id = id(a)
+                o_id = id(other)
+                key = (a_id, o_id) if a_id < o_id else (o_id, a_id)
+                if key in processed:
+                    continue
+                processed.add(key)
+                self.pair_checks += 1
+                resolve_ball_ball(a, other)
 
-        if self.use_quadtree:
-            # 2) Rebuild spatial index
-            self.rebuild_quadtree()
-
-            # 3) Quadtree neighborhood checks
-            processed: Set[Tuple[int, int]] = set()
-            for b in self.balls:
-                # Query a box that guarantees catching overlaps
-                x0 = b.x - 2 * b.r
-                y0 = b.y - 2 * b.r
-                x1 = b.x + 2 * b.r
-                y1 = b.y + 2 * b.r
-                for item in self.qt.query((x0, y0, x1, y1), as_items=True):
-                    other = item.obj
-                    if other is b or other is None:
-                        continue
-                    a_id = id(b)
-                    o_id = id(other)
-                    key = (a_id, o_id) if a_id < o_id else (o_id, a_id)
-                    if key in processed:
-                        continue
-                    processed.add(key)
-                    self.pair_checks += 1
-                    resolve_ball_ball(b, other)
-
-            # 4) Update quadtree after resolution
-            self.rebuild_quadtree()
-
-        else:
-            # Brute-force O(n^2) checks
-            n = len(self.balls)
-            for i in range(n):
-                a = self.balls[i]
-                for j in range(i + 1, n):
-                    b = self.balls[j]
-                    self.pair_checks += 1
-                    resolve_ball_ball(a, b)
+        # 4) Some backends benefit from post-resolution rebuild for next frame
+        backend.rebuild(self.balls, self.width, self.height)
 
     def draw(self, fps: float):
         for ball in self.balls:
@@ -201,18 +294,17 @@ class BallPit:
 
         # HUD
         font = pygame.font.SysFont(None, 20)
-        mode = "Quadtree" if self.use_quadtree else "Brute force"
         hud_lines = [
             f"FPS: {fps:.1f}",
-            f"Mode: {mode} (press Q to toggle)",
+            f"Mode: {self.mode} (Tab to cycle, 1/2/3 to select)",
             f"Balls: {len(self.balls)}",
             f"Pair checks this frame: {self.pair_checks}",
         ]
 
         # Draw a semi-transparent background for the HUD
         hud_bg_height = len(hud_lines) * 18 + 6
-        hud_bg = pygame.Surface((250, hud_bg_height), pygame.SRCALPHA)
-        hud_bg.fill((255, 255, 255, 200))  # White
+        hud_bg = pygame.Surface((400, hud_bg_height), pygame.SRCALPHA)
+        hud_bg.fill((255, 255, 255, 200))
         self.screen.blit(hud_bg, (0, 0))
 
         y = 6
@@ -229,14 +321,16 @@ def main():
     pygame.init()
     width, height = 800, 600
     screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("BallPit: Quadtree vs Brute Force")
+    pygame.display.set_caption("BallPit: fastquadtree vs pyqtree vs brute force")
     clock = pygame.time.Clock()
     ball_pit = BallPit(screen, width, height)
 
+    metrics = {}
+
     # Pre-seed a few balls so the FPS change is obvious
-    for _ in range(500):
+    for _ in range(1500):
         x, y = random.randint(40, width - 40), random.randint(40, height - 40)
-        r = random.randint(8, 18)
+        r = random.randint(8, 10)
         color = (
             random.randint(80, 255),
             random.randint(80, 255),
@@ -253,12 +347,23 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
-                    ball_pit.use_quadtree = not ball_pit.use_quadtree
+                if event.key == pygame.K_TAB:
+                    ball_pit.cycle_mode()
+                elif event.key == pygame.K_1:
+                    ball_pit.set_mode("fastquadtree")
+                elif event.key == pygame.K_2:
+                    ball_pit.set_mode("pyqtree")
+                elif event.key == pygame.K_3:
+                    ball_pit.set_mode("bruteforce")
                 elif event.key == pygame.K_c:
-                    # Clear all balls (optional helper)
                     ball_pit.balls.clear()
-                    ball_pit.rebuild_quadtree()
+                elif event.key == pygame.K_q:
+                    # legacy toggle: fastquadtree <-> brute (kept for convenience)
+                    ball_pit.set_mode(
+                        "bruteforce"
+                        if ball_pit.mode == "fastquadtree"
+                        else "fastquadtree"
+                    )
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = event.pos
                 r = random.randint(8, 18)
@@ -273,10 +378,24 @@ def main():
 
         screen.fill((255, 255, 255))
         fps = clock.get_fps()
+
+        if ball_pit.mode not in metrics:
+            metrics[ball_pit.mode] = {"count": 0, "avg_fps": 0.0}
+
+        metrics[ball_pit.mode]["count"] += 1
+        metrics[ball_pit.mode]["avg_fps"] = (
+            metrics[ball_pit.mode]["avg_fps"] * (metrics[ball_pit.mode]["count"] - 1)
+            + fps
+        ) / metrics[ball_pit.mode]["count"]
+
         ball_pit.draw(fps)
         pygame.display.flip()
 
     pygame.quit()
+
+    print("\nAverage FPS per backend mode:")
+    for mode, data in metrics.items():
+        print(f"  {mode}: {data['avg_fps']:.2f} FPS over {data['count']} frames")
 
 
 if __name__ == "__main__":
