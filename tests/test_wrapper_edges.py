@@ -163,3 +163,17 @@ def test_insert_many_exception_for_out_of_bounds():
 
     with pytest.raises(ValueError):
         qt.insert_many(points)
+
+
+def test_construct_quadtree_with_list_bounds():
+    bounds_list = [0.0, 0.0, 500.0, 500.0]
+    qt = QuadTree(bounds_list, capacity=4)  # pyright: ignore[reportArgumentType]
+    assert qt._bounds == (0.0, 0.0, 500.0, 500.0)
+
+
+def test_construct_quadtree_with_invalid_bounds_length():
+    bounds_invalid = (0.0, 0.0, 500.0)  # Only three values instead of four
+    with pytest.raises(
+        ValueError, match="bounds must be a tuple of four numeric values"
+    ):
+        QuadTree(bounds_invalid, capacity=4)  # pyright: ignore[reportArgumentType]

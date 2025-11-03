@@ -91,11 +91,20 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         track_objects: bool = False,
         dtype: str = "f32",
     ):
+        # Handle some bounds validation and list --> tuple conversion
+        if type(bounds) is not tuple:
+            bounds = tuple(bounds)  # pyright: ignore[reportAssignmentType]
+        if len(bounds) != 4:
+            raise ValueError(
+                "bounds must be a tuple of four numeric values (x min, y min, x max, y max)"
+            )
+
         self._bounds = bounds
+
         self._max_depth = max_depth
         self._capacity = capacity
         self._dtype = dtype
-        self._native = self._new_native(bounds, capacity, max_depth)
+        self._native = self._new_native(self._bounds, self._capacity, self._max_depth)
 
         self._track_objects = bool(track_objects)
         self._store: ObjStore[ItemType] | None = ObjStore() if track_objects else None
