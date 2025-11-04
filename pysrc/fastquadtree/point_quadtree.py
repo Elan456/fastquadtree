@@ -95,12 +95,22 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
     def query_np(self, rect: Bounds) -> tuple[Any, Any]:
         """
         Return all points inside an axis-aligned rectangle as NumPy arrays.
+        The first array is an array of IDs, and the second is a corresponding array of point coordinates.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
-            Points: A tuple of two NumPy arrays: Shapes: (ids_np.shape == (k,), coords_np.shape == (k, 2)) where k is the number of hits.
+            (ids, locations) <br>
+                ids:       NDArray[np.uint64] with shape (N,) <br>
+                locations: NDArray[np.floating] with shape (N, 2) <br>
+
+        Example:
+            ```python
+            ids, locations = qt.query_np((10.0, 10.0, 20.0, 20.0))
+            for id_, (x, y) in zip(ids, locations):
+                print(f"Found point id={id_} at ({x}, {y})")
+            ```
         """
         return self._native.query_np(rect)
 

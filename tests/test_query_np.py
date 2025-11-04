@@ -43,6 +43,10 @@ def test_query_np_single_hit():
     assert coords_np.shape == (1, 2)
     # IDs are auto-assigned in insertion order: 0,1,2
     assert ids_np[0] == 1
+
+    for id_, loc in zip(ids_np, coords_np):
+        print(f"Found point id={id_} at ({loc[0]}, {loc[1]})")
+
     assert np.allclose(coords_np[0], [50, 50])
 
 

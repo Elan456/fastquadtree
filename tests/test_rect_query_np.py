@@ -91,6 +91,10 @@ def test_query_np_many_hits_and_dtype():
     assert rects_np.dtype == np.float32
     assert rects_np.shape[1] == 4
 
+    ids, locations = rqt.query_np((10.0, 10.0, 20.0, 20.0))
+    for id_, (x0, y0, x1, y1) in zip(ids, locations):
+        print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+
     # Reference via list API
     ref = rqt.query(q)
     ref_ids = {r[0] for r in ref}

@@ -100,12 +100,22 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     def query_np(self, rect: Bounds) -> tuple[Any, Any]:
         """
         Return all points inside an axis-aligned rectangle as NumPy arrays.
+        The first array is an array of IDs, and the second is a corresponding array of rectangle coordinates.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
-            Rects: Tuple of two NumPy arrays: (ids_np, rects_np). Shapes: (ids_np.shape == (k,), rects_np.shape == (k, 4)) where k is the number of hits.
+            (ids, locations) <br>
+                ids:       NDArray[np.uint64] with shape (N,) <br>
+                locations: NDArray[np.floating] with shape (N, 4) <br>
+
+        Example:
+            ```python
+            ids, locations = rqt.query_np((10.0, 10.0, 20.0, 20.0))
+            for id_, (x0, y0, x1, y1) in zip(ids, locations):
+                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
         """
         ids_np, coords_np = self._native.query_np(rect)
         return ids_np, coords_np
