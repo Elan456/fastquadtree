@@ -126,8 +126,7 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         if self._store is None:
             raise ValueError("Cannot return results as items with track_objects=False")
 
-        ids, _ = self._native.query_np(rect)
-        return self._store.get_many_by_ids(ids)
+        return self._native.query_np(rect)
 
     @overload
     def nearest_neighbor(

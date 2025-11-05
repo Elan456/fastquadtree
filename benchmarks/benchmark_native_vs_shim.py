@@ -54,11 +54,15 @@ def bench_native(points, queries):
 def bench_np_shim(points, queries, track_objects: bool = False, as_items: bool = False):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
+    objs = [f"obj_{i}" for i in range(len(points))] if as_items else None
     t0 = now()
     qt = ShimQuadTree(
         BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
     )
-    qt.insert_many(np_points)
+    if objs is None:
+        qt.insert_many(np_points)
+    else:
+        qt.insert_many(np_points, objs=objs)
     t_build = now() - t0
     t0 = now()
     for q in queries:
@@ -69,16 +73,15 @@ def bench_np_shim(points, queries, track_objects: bool = False, as_items: bool =
 
 def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     # track_objects controls the map. with_objs decides if we actually store objects.
+    objs = [f"obj_{i}" for i in range(len(points))] if with_objs else None
     t0 = now()
     qt = ShimQuadTree(
         BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
     )
     if with_objs:
-        for i, p in enumerate(points):
-            qt.insert(p, obj=i)  # store a tiny object
+        qt.insert_many(points, objs)
     else:
-        for _, p in enumerate(points):
-            qt.insert(p)
+        qt.insert_many(points)
     t_build = now() - t0
 
     t0 = now()
