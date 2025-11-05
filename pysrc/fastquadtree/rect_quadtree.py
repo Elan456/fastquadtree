@@ -97,13 +97,22 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             raise ValueError("Cannot return results as items with track_objects=False")
         return self._store.get_many_by_ids(self._native.query_ids(rect))
 
-    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+    @overload
+    def query_np(
+        self, rect: Bounds, *, as_items: Literal[False] = ...
+    ) -> tuple[Any, Any]: ...
+    @overload
+    def query_np(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
+    def query_np(
+        self, rect: Bounds, as_items: bool = False
+    ) -> tuple[Any, Any] | list[RectItem]:
         """
         Return all points inside an axis-aligned rectangle as NumPy arrays.
         The first array is an array of IDs, and the second is a corresponding array of rectangle coordinates.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
+            as_items: If True, return Item wrappers. If False, return a raw tuple of NumPy arrays.
 
         Returns:
             (ids, locations) <br>
@@ -117,8 +126,12 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
                 print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
             ```
         """
-        ids_np, coords_np = self._native.query_np(rect)
-        return ids_np, coords_np
+        if not as_items:
+            return self._native.query_np(rect)
+        if self._store is None:
+            raise ValueError("Cannot return results as items with track_objects=False")
+
+        return self._store.get_many_by_ids(self._native.query_ids(rect))
 
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""

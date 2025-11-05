@@ -107,7 +107,7 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
-            as_items: If True, return Item wrappers. If False, return raw tuples.
+            as_items: If True, return Item wrappers. If False, return a raw tuple of NumPy Arrays.
 
         Returns:
             (ids, locations) <br>
@@ -126,7 +126,7 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         if self._store is None:
             raise ValueError("Cannot return results as items with track_objects=False")
 
-        return self._native.query_np(rect)
+        return self._store.get_many_by_ids(self._native.query_ids(rect))
 
     @overload
     def nearest_neighbor(

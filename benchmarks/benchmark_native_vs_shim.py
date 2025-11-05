@@ -130,7 +130,7 @@ def median_times(fn, points, queries, repeats: int, desc: str = "Running"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--points", type=int, default=500_000)
-    ap.add_argument("--queries", type=int, default=500)
+    ap.add_argument("--queries", type=int, default=1_000)
     ap.add_argument("--repeats", type=int, default=5)
     args = ap.parse_args()
 
@@ -188,23 +188,20 @@ def main():
         args.repeats,
         desc="Shim (numpy points + object return)",
     )
-    # p_build, p_query = median_times(
-    #     lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
-    #     points,
-    #     queries,
-    #     args.repeats,
-    #     desc="pyqtree (original)",
-    # )
-    # fqt_build, fqt_query = median_times(
-    #     lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
-    #     points,
-    #     queries,
-    #     args.repeats,
-    #     desc="pyqtree (FQT shim)",
-    # )
-
-    fqt_build, fqt_query = 1.0, 1.0
-    p_build, p_query = 1.0, 1.0
+    p_build, p_query = median_times(
+        lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
+        points,
+        queries,
+        args.repeats,
+        desc="pyqtree (original)",
+    )
+    fqt_build, fqt_query = median_times(
+        lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
+        points,
+        queries,
+        args.repeats,
+        desc="pyqtree (FQT shim)",
+    )
     print()
 
     def fmt(x):
@@ -230,13 +227,13 @@ def main():
 
 ### Summary
 
-Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
-**Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
+- Enabling object tracking changes the balance: build time is **{fmt(s_build_map / n_build)}x** of native while query time is **{fmt(s_query_map / n_query)}x** of native.
+  Overall total time is **{fmt((s_build_map + s_query_map) / (n_build + n_query))}x** of native.
 
-Using NumPy arrays for points improves performance, increasing build speed against the non-tracking shim by {fmt(s_build_no_map / np_build)}x and query speed by {fmt(s_query_no_map / np_query)}x.
-This results in a total speedup of {fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x compared to the non-tracking shim.
+- NumPy points without tracking are the fastest path: build is **{fmt(s_build_no_map / np_build)}x faster** than the non-tracking list path and queries are **{fmt(s_query_no_map / np_query)}x faster**,
+  for a **{fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x** total speedup vs the non-tracking list path.
 
-Adding the object map tends to only impact the build time, not the query time.
+- Adding the object map mainly impacts build time. Query time is largely unchanged.
 
 ## pyqtree drop-in shim performance gains
 

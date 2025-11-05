@@ -40,48 +40,45 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ### Configuration
 - Points: 500,000
-- Queries: 500
+- Queries: 1000
 - Repeats: 5
 
 ### Results
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.139 | 2.183 | 2.322 |
-| Shim (no tracking) | 0.219 | 2.078 | 2.297 |
-| Shim (tracking) | 0.627 | 1.726 | 2.353 |
-| Shim (numpy points) | 0.034 | 0.110 | 0.144 |
+| Native | 0.122 | 4.237 | 4.359 |
+| Shim (no tracking) | 0.053 | 3.918 | 3.970 |
+| Shim (object return) | 0.409 | 3.606 | 4.015 |
+| Shim (numpy points) | 0.036 | 0.232 | 0.268 |
+| Shim (numpy points + object return) | 0.453 | 3.493 | 3.946 |
 
 ### Summary
 
-Using the shim with object tracking increases build time by 4.503x and query time by 0.791x.
-**Total slowdown = 1.013x.**
+- Enabling object tracking changes the balance: build time is **3.365×** of native while query time is **0.851×** of native.  
+  Overall total time is **0.921×** of native.
 
-Using NumPy arrays for points improves performance, increasing build speed against the non-tracking shim by 6.399x and query speed by 18.886x.
-This results in a total speedup of 15.925x compared to the non-tracking shim.
-
-Adding the object map tends to only impact the build time, not the query time.
-
------------
+- NumPy points without tracking are the fastest path: build is **1.479× faster** than the non-tracking list path and queries are **16.856× faster**,  
+  for a **14.804×** total speedup vs the non-tracking list path.
 
 ## pyqtree drop-in shim performance gains
 
 ### Configuration
 - Points: 500,000
-- Queries: 500
+- Queries: 1000
 - Repeats: 5
 
 ### Results
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| pyqtree (fastquadtree) | 0.443 | 2.007 | 2.450 |
-| pyqtree (original) | 3.233 | 12.857 | 16.091 |
+| pyqtree (fastquadtree) | 0.375 | 3.192 | 3.567 |
+| pyqtree (original) | 2.358 | 21.862 | 24.221 |
 
 ### Summary
 
-If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.443s and query time of 2.007s.
-This is a **total speedup of 6.567x** compared to the original pyqtree and requires no code changes.
+If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.375s and query time of 3.192s.
+This is a **total speedup of 6.791x** compared to the original pyqtree and requires no code changes.
 
 ---------
 
