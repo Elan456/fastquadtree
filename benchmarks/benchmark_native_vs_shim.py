@@ -40,8 +40,7 @@ def gen_queries(m: int, rng: random.Random):
 def bench_native(points, queries):
     t0 = now()
     qt = NativeQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
-    for i, p in enumerate(points):
-        qt.insert(i, p)
+    qt.insert_many(0, points)
     t_build = now() - t0
 
     t0 = now()
@@ -130,8 +129,8 @@ def median_times(fn, points, queries, repeats: int, desc: str = "Running"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--points", type=int, default=500_000)
-    ap.add_argument("--queries", type=int, default=1_000)
-    ap.add_argument("--repeats", type=int, default=5)
+    ap.add_argument("--queries", type=int, default=500)
+    ap.add_argument("--repeats", type=int, default=3)
     args = ap.parse_args()
 
     print("Native vs Shim Benchmark")
@@ -227,8 +226,7 @@ def main():
 
 ### Summary
 
-- Enabling object tracking changes the balance: build time is **{fmt(s_build_map / n_build)}x** of native while query time is **{fmt(s_query_map / n_query)}x** of native.
-  Overall total time is **{fmt((s_build_map + s_query_map) / (n_build + n_query))}x** of native.
+- The Python shim is {fmt((s_build_no_map + s_query_no_map) / (n_build + n_query))}x slower than the native engine due to Python overhead.
 
 - NumPy points without tracking are the fastest path: build is **{fmt(s_build_no_map / np_build)}x faster** than the non-tracking list path and queries are **{fmt(s_query_no_map / np_query)}x faster**,
   for a **{fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x** total speedup vs the non-tracking list path.

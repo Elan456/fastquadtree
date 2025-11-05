@@ -218,6 +218,27 @@ macro_rules! define_point_quadtree_pyclass {
                 PyList::new(py, &ids).expect("Failed to create Python list")
             }
 
+            /// Returns np.ndarray[u64] of ids only
+            pub fn query_ids_np<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+            ) -> PyResult<Bound<'py, PyArray1<u64>>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // Run the search without the GIL and collect ids
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|it| it.0) // (id, x, y) -> id
+                        .collect()
+                });
+
+                // Materialize as a NumPy array
+                Ok(PyArray1::<u64>::from_vec(py, ids))
+            }
+
             pub fn nearest_neighbor(&self, xy: ($t, $t)) -> Option<(u64, $t, $t)> {
                 let (x, y) = xy;
                 self.inner.nearest_neighbor(Point { x, y }).map(item_to_tuple)
@@ -422,6 +443,27 @@ macro_rules! define_rect_quadtree_pyclass {
                     .map(|(id, _)| id)
                     .collect();
                 PyList::new(py, &ids).expect("Failed to create Python list")
+            }
+
+            /// Returns np.ndarray[u64] of ids only
+            pub fn query_ids_np<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+            ) -> PyResult<Bound<'py, PyArray1<u64>>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // Run the search without the GIL and collect ids
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|(id, _r)| id)
+                        .collect()
+                });
+
+                // Materialize as a NumPy array
+                Ok(PyArray1::<u64>::from_vec(py, ids))
             }
 
             pub fn get_all_node_boundaries(&self) -> Vec<($t, $t, $t, $t)> {
