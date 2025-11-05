@@ -51,16 +51,18 @@ def bench_native(points, queries):
     return t_build, t_query
 
 
-def bench_np_shim(points, queries):
+def bench_np_shim(points, queries, track_objects: bool = False, as_items: bool = False):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
     t0 = now()
-    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    qt = ShimQuadTree(
+        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
+    )
     qt.insert_many(np_points)
     t_build = now() - t0
     t0 = now()
     for q in queries:
-        _ = qt.query_np(q)
+        _ = qt.query_np(q, as_items=as_items)
     t_query = now() - t0
     return t_build, t_query
 
@@ -176,20 +178,30 @@ def main():
         args.repeats,
         desc="Shim (numpy points)",
     )
-    p_build, p_query = median_times(
-        lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
+    np_obj_return_build, np_obj_return_query = median_times(
+        lambda pts, qs: bench_np_shim(pts, qs, track_objects=True, as_items=True),
         points,
         queries,
         args.repeats,
-        desc="pyqtree (original)",
+        desc="Shim (numpy points + object return)",
     )
-    fqt_build, fqt_query = median_times(
-        lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
-        points,
-        queries,
-        args.repeats,
-        desc="pyqtree (FQT shim)",
-    )
+    # p_build, p_query = median_times(
+    #     lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
+    #     points,
+    #     queries,
+    #     args.repeats,
+    #     desc="pyqtree (original)",
+    # )
+    # fqt_build, fqt_query = median_times(
+    #     lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
+    #     points,
+    #     queries,
+    #     args.repeats,
+    #     desc="pyqtree (FQT shim)",
+    # )
+
+    fqt_build, fqt_query = 1.0, 1.0
+    p_build, p_query = 1.0, 1.0
     print()
 
     def fmt(x):
@@ -209,8 +221,9 @@ def main():
 |---|---:|---:|---:|
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
 | Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
-| Shim (tracking) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
+| Shim (object return) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
 | Shim (numpy points) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
+| Shim (numpy points + object return) | {fmt(np_obj_return_build)} | {fmt(np_obj_return_query)} | {fmt(np_obj_return_build + np_obj_return_query)} |
 
 ### Summary
 

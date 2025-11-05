@@ -142,15 +142,11 @@ class ObjStore(Generic[TItem]):
         Batch: return Items for ids, preserving order.
         Uses C-level itemgetter on the dense array in chunks.
         """
-        ids_list: list[int] = list(ids)
-        if not ids_list:
-            return []
-
         out: list[TItem] = []
         extend = out.extend
         arr = self._arr
-        for i in range(0, len(ids_list), chunk):
-            block = ids_list[i : i + chunk]
+        for i in range(0, len(ids), chunk):
+            block = ids[i : i + chunk]
             vals = itemgetter(*block)(arr)  # tuple or single item
             extend(vals if isinstance(vals, tuple) else (vals,))
         return out
