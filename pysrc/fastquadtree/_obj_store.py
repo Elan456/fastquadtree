@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from operator import itemgetter
-from typing import Any, Generic, Iterable, Iterator, TypeVar
+from typing import Any, Generic, Iterable, Iterator, Sequence, TypeVar
 
 from ._item import Item  # base class for PointItem and RectItem
 
@@ -137,38 +137,31 @@ class ObjStore(Generic[TItem]):
 
     # -------- fast batch gathers --------
 
-    def get_many_by_ids(self, ids: Iterable[int], *, chunk: int = 2048) -> list[TItem]:
+    def get_many_by_ids(self, ids: Sequence[int], *, chunk: int = 2048) -> list[TItem]:
         """
         Batch: return Items for ids, preserving order.
         Uses C-level itemgetter on the dense array in chunks.
         """
-        ids_list: list[int] = list(ids)
-        if not ids_list:
-            return []
-
         out: list[TItem] = []
         extend = out.extend
         arr = self._arr
-        for i in range(0, len(ids_list), chunk):
-            block = ids_list[i : i + chunk]
+        for i in range(0, len(ids), chunk):
+            block = ids[i : i + chunk]
             vals = itemgetter(*block)(arr)  # tuple or single item
             extend(vals if isinstance(vals, tuple) else (vals,))
         return out
 
-    def get_many_objects(self, ids: Iterable[int], *, chunk: int = 2048) -> list[Any]:
+    def get_many_objects(self, ids: Sequence[int], *, chunk: int = 2048) -> list[Any]:
         """
         Batch: return Python objects for ids, preserving order.
         Mirrors get_many_by_ids but reads from _objs.
         """
-        ids_list: list[int] = list(ids)
-        if not ids_list:
-            return []
 
         out: list[Any] = []
         extend = out.extend
         objs = self._objs
-        for i in range(0, len(ids_list), chunk):
-            block = ids_list[i : i + chunk]
+        for i in range(0, len(ids), chunk):
+            block = ids[i : i + chunk]
             vals = itemgetter(*block)(objs)  # tuple or single object
             extend(vals if isinstance(vals, tuple) else (vals,))
         return out

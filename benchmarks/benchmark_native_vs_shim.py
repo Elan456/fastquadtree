@@ -40,8 +40,7 @@ def gen_queries(m: int, rng: random.Random):
 def bench_native(points, queries):
     t0 = now()
     qt = NativeQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
-    for i, p in enumerate(points):
-        qt.insert(i, p)
+    qt.insert_many(0, points)
     t_build = now() - t0
 
     t0 = now()
@@ -51,32 +50,37 @@ def bench_native(points, queries):
     return t_build, t_query
 
 
-def bench_np_shim(points, queries):
+def bench_np_shim(points, queries, track_objects: bool = False, as_items: bool = False):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
+    objs = [f"obj_{i}" for i in range(len(points))] if as_items else None
     t0 = now()
-    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
-    qt.insert_many(np_points)
+    qt = ShimQuadTree(
+        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
+    )
+    if objs is None:
+        qt.insert_many(np_points)
+    else:
+        qt.insert_many(np_points, objs=objs)
     t_build = now() - t0
     t0 = now()
     for q in queries:
-        _ = qt.query_np(q)
+        _ = qt.query_np(q, as_items=as_items)
     t_query = now() - t0
     return t_build, t_query
 
 
 def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
     # track_objects controls the map. with_objs decides if we actually store objects.
+    objs = [f"obj_{i}" for i in range(len(points))] if with_objs else None
     t0 = now()
     qt = ShimQuadTree(
         BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
     )
     if with_objs:
-        for i, p in enumerate(points):
-            qt.insert(p, obj=i)  # store a tiny object
+        qt.insert_many(points, objs)
     else:
-        for _, p in enumerate(points):
-            qt.insert(p)
+        qt.insert_many(points)
     t_build = now() - t0
 
     t0 = now()
@@ -126,7 +130,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--points", type=int, default=500_000)
     ap.add_argument("--queries", type=int, default=500)
-    ap.add_argument("--repeats", type=int, default=5)
+    ap.add_argument("--repeats", type=int, default=3)
     args = ap.parse_args()
 
     print("Native vs Shim Benchmark")
@@ -176,6 +180,13 @@ def main():
         args.repeats,
         desc="Shim (numpy points)",
     )
+    np_obj_return_build, np_obj_return_query = median_times(
+        lambda pts, qs: bench_np_shim(pts, qs, track_objects=True, as_items=True),
+        points,
+        queries,
+        args.repeats,
+        desc="Shim (numpy points + object return)",
+    )
     p_build, p_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
         points,
@@ -209,18 +220,18 @@ def main():
 |---|---:|---:|---:|
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
 | Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
-| Shim (tracking) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
+| Shim (object return) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
 | Shim (numpy points) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
+| Shim (numpy points + object return) | {fmt(np_obj_return_build)} | {fmt(np_obj_return_query)} | {fmt(np_obj_return_build + np_obj_return_query)} |
 
 ### Summary
 
-Using the shim with object tracking increases build time by {fmt(s_build_map / n_build)}x and query time by {fmt(s_query_map / n_query)}x.
-**Total slowdown = {fmt((s_build_map + s_query_map) / (n_build + n_query))}x.**
+- The Python shim is {fmt((s_build_no_map + s_query_no_map) / (n_build + n_query))}x slower than the native engine due to Python overhead.
 
-Using NumPy arrays for points improves performance, increasing build speed against the non-tracking shim by {fmt(s_build_no_map / np_build)}x and query speed by {fmt(s_query_no_map / np_query)}x.
-This results in a total speedup of {fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x compared to the non-tracking shim.
+- NumPy points without tracking are the fastest path: build is **{fmt(s_build_no_map / np_build)}x faster** than the non-tracking list path and queries are **{fmt(s_query_no_map / np_query)}x faster**,
+  for a **{fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x** total speedup vs the non-tracking list path.
 
-Adding the object map tends to only impact the build time, not the query time.
+- Adding the object map mainly impacts build time. Query time is largely unchanged.
 
 ## pyqtree drop-in shim performance gains
 

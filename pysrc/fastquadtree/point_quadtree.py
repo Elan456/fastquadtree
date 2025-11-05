@@ -92,18 +92,31 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
             raise ValueError("Cannot return results as items with track_objects=False")
         return self._store.get_many_by_ids(self._native.query_ids(rect))
 
-    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+    @overload
+    def query_np(
+        self, rect: Bounds, *, as_items: Literal[False] = ...
+    ) -> tuple[Any, Any]: ...
+    @overload
+    def query_np(self, rect: Bounds, *, as_items: Literal[True]) -> list[PointItem]: ...
+    def query_np(
+        self, rect: Bounds, as_items: bool = False
+    ) -> tuple[Any, Any] | list[PointItem]:
         """
         Return all points inside an axis-aligned rectangle as NumPy arrays.
         The first array is an array of IDs, and the second is a corresponding array of point coordinates.
 
+        Requirements:
+            NumPy must be installed to use this method.
+
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
+            as_items: If True, return Item wrappers. If False, return a raw tuple of NumPy Arrays.
 
         Returns:
-            (ids, locations) <br>
+            if as_items if False: (ids, locations) <br>
                 ids:       NDArray[np.uint64] with shape (N,) <br>
                 locations: NDArray[np.floating] with shape (N, 2) <br>
+            if as_items is True: list of Item objects. <br>
 
         Example:
             ```python
@@ -112,7 +125,12 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
                 print(f"Found point id={id_} at ({x}, {y})")
             ```
         """
-        return self._native.query_np(rect)
+        if not as_items:
+            return self._native.query_np(rect)
+        if self._store is None:
+            raise ValueError("Cannot return results as items with track_objects=False")
+
+        return self._store.get_many_by_ids(self._native.query_ids_np(rect).tolist())
 
     @overload
     def nearest_neighbor(

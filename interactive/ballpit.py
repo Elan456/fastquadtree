@@ -146,7 +146,7 @@ class FastQTIndex(SpatialBase):
     def neighbors(self, b: Ball) -> Iterable[Ball]:
         r2 = 2 * b.r
         x0, y0, x1, y1 = b.x - r2, b.y - r2, b.x + r2, b.y + r2
-        for it in self.qt.query((x0, y0, x1, y1), as_items=True):
+        for it in self.qt.query_np((x0, y0, x1, y1), as_items=True):
             other = it.obj
             if other is not None and other is not b:
                 yield other

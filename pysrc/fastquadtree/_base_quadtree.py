@@ -339,17 +339,23 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         if num < len(geoms):
             raise ValueError("One or more items are outside tree bounds")
 
+        # For object tracking, we need the geoms to be a Python list
+        if _np is not None:
+            geoms = geoms.tolist()  # pyright: ignore[reportAttributeAccessIssue]
+
+        # Function bindings to avoid repeated attribute lookups
+        add = self._store.add
+        mk = self._make_item
+
         # Add items to the store in one pass
         if objs is None:
             for off, geom in enumerate(geoms):
-                id_ = start_id + off
-                self._store.add(self._make_item(id_, geom, None))
+                add(mk(start_id + off, geom, None))
         else:
             if len(objs) != len(geoms):
                 raise ValueError("objs length must match geoms length")
             for off, (geom, o) in enumerate(zip(geoms, objs)):
-                id_ = start_id + off
-                self._store.add(self._make_item(id_, geom, o))
+                add(mk(start_id + off, geom, o))
 
         # Keep _next_id monotonic for the non-tracking path
         self._next_id = max(self._next_id, last_id + 1)
