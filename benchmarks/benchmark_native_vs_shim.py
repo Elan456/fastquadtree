@@ -50,22 +50,16 @@ def bench_native(points, queries):
     return t_build, t_query
 
 
-def bench_np_shim(points, queries, track_objects: bool = False, as_items: bool = False):
+def bench_np_shim(points, queries):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
-    objs = [f"obj_{i}" for i in range(len(points))] if as_items else None
     t0 = now()
-    qt = ShimQuadTree(
-        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
-    )
-    if objs is None:
-        qt.insert_many(np_points)
-    else:
-        qt.insert_many(np_points, objs=objs)
+    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    qt.insert_many(np_points)
     t_build = now() - t0
     t0 = now()
     for q in queries:
-        _ = qt.query_np(q, as_items=as_items)
+        _ = qt.query_np(q)
     t_query = now() - t0
     return t_build, t_query
 
@@ -180,13 +174,6 @@ def main():
         args.repeats,
         desc="Shim (numpy points)",
     )
-    np_obj_return_build, np_obj_return_query = median_times(
-        lambda pts, qs: bench_np_shim(pts, qs, track_objects=True, as_items=True),
-        points,
-        queries,
-        args.repeats,
-        desc="Shim (numpy points + object return)",
-    )
     p_build, p_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
         points,
@@ -222,7 +209,6 @@ def main():
 | Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
 | Shim (object return) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
 | Shim (numpy points) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
-| Shim (numpy points + object return) | {fmt(np_obj_return_build)} | {fmt(np_obj_return_query)} | {fmt(np_obj_return_build + np_obj_return_query)} |
 
 ### Summary
 

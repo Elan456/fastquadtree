@@ -329,26 +329,3 @@ def test_query_np_dtype_variants_i64():
     assert rects_np.dtype == np.int64
     ids_np, rects_np = _sorted_by_id(ids_np, rects_np)
     assert np.array_equal(rects_np, rects)
-
-
-def test_query_np_with_obj_tracking():
-    pts = np.array(
-        [[10, 10, 20, 20], [20, 20, 40, 40], [50, 50, 60, 60]], dtype=np.float32
-    )
-    objs = ["a", "b", "c"]
-    qt = RectQuadTree(BOUNDS, capacity=4, track_objects=True)
-    qt.insert_many(pts, objs=objs)
-    out_items = qt.query_np((15, 15, 35, 35), as_items=True)
-    assert len(out_items) == 2
-    found_objs = [item.obj for item in out_items]
-    assert set(found_objs) == {"a", "b"}
-
-
-def test_query_np_with_as_items_when_no_obj_tracking():
-    pts = np.array([[10, 10, 20, 20], [20, 20, 40, 40]], dtype=np.float32)
-    qt = RectQuadTree(BOUNDS, capacity=4)
-    qt.insert_many(pts)
-    with pytest.raises(
-        ValueError, match="Cannot return results as items with track_objects=False"
-    ):
-        _ = qt.query_np((15, 15, 35, 35), as_items=True)

@@ -47,18 +47,17 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.056 | 2.131 | 2.186 |
-| Shim (no tracking) | 0.051 | 1.944 | 1.995 |
-| Shim (object return) | 0.372 | 1.475 | 1.846 |
-| Shim (numpy points) | 0.032 | 0.099 | 0.132 |
-| Shim (numpy points + object return) | 0.397 | 1.508 | 1.905 |
+| Native | 0.058 | 2.124 | 2.182 |
+| Shim (no tracking) | 0.056 | 1.980 | 2.035 |
+| Shim (object return) | 0.412 | 1.619 | 2.031 |
+| Shim (numpy points) | 0.034 | 0.110 | 0.144 |
 
 ### Summary
 
 - The Python shim does not make the query and build times larger.
 
-- NumPy points without tracking are the fastest path: build is **1.581x faster** than the non-tracking list path and queries are **19.536x faster**,
-  for a **15.133x** total speedup vs the non-tracking list path.
+- NumPy points without tracking are the fastest path: build is **1.635x faster** than the non-tracking list path and queries are **17.968x faster**,
+  for a **14.110x** total speedup vs the non-tracking list path.
 
 - Object tracking increases build time because objects have to be stored in the lookup table. It also increases query time because the objects have to be recovered from the table. 
 

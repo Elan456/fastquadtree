@@ -225,24 +225,3 @@ def test_query_np_i64_dtype_and_accuracy():
     assert coords_np.dtype == np.int64
     ids_np, coords_np = _sorted_by_id(ids_np, coords_np)
     assert np.array_equal(coords_np, pts)
-
-
-def test_query_np_with_obj_tracking():
-    pts = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32)
-    objs = ["a", "b", "c"]
-    qt = QuadTree(BOUNDS, capacity=4, track_objects=True)
-    qt.insert_many(pts, objs=objs)
-    out_items = qt.query_np((15, 15, 35, 35), as_items=True)
-    assert len(out_items) == 2
-    found_objs = [item.obj for item in out_items]
-    assert set(found_objs) == {"b", "c"}
-
-
-def test_query_np_with_as_items_when_no_obj_tracking():
-    pts = np.array([[10, 10], [20, 20]], dtype=np.float32)
-    qt = QuadTree(BOUNDS, capacity=4, track_objects=False)
-    qt.insert_many(pts)
-    with pytest.raises(
-        ValueError, match="Cannot return results as items with track_objects=False"
-    ):
-        _ = qt.query_np((0, 0, 30, 30), as_items=True)

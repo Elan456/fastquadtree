@@ -97,15 +97,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
             raise ValueError("Cannot return results as items with track_objects=False")
         return self._store.get_many_by_ids(self._native.query_ids(rect))
 
-    @overload
-    def query_np(
-        self, rect: Bounds, *, as_items: Literal[False] = ...
-    ) -> tuple[Any, Any]: ...
-    @overload
-    def query_np(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
-    def query_np(
-        self, rect: Bounds, as_items: bool = False
-    ) -> tuple[Any, Any] | list[RectItem]:
+    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
         """
         Return all points inside an axis-aligned rectangle as NumPy arrays.
         The first array is an array of IDs, and the second is a corresponding array of rectangle coordinates.
@@ -115,13 +107,11 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
-            as_items: If True, return Item wrappers. If False, return a raw tuple of NumPy arrays.
 
         Returns:
-            if as_items is False: (ids, locations) <br>
-                ids:       NDArray[np.uint64] with shape (N,) <br>
-                locations: NDArray[np.floating] with shape (N, 4) <br>
-            if as_items is True: list of Item objects. <br>
+            Tuple of (ids, locations) where:
+                ids:       NDArray[np.uint64] with shape (N,)
+                locations: NDArray[np.floating] with shape (N, 4)
 
         Example:
             ```python
@@ -130,12 +120,8 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
                 print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
             ```
         """
-        if not as_items:
-            return self._native.query_np(rect)
-        if self._store is None:
-            raise ValueError("Cannot return results as items with track_objects=False")
 
-        return self._store.get_many_by_ids(self._native.query_ids_np(rect).tolist())
+        return self._native.query_np(rect)
 
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""

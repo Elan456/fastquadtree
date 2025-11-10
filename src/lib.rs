@@ -209,12 +209,13 @@ macro_rules! define_point_quadtree_pyclass {
                 rect: ($t, $t, $t, $t),
             ) -> Bound<'py, PyList> {
                 let (min_x, min_y, max_x, max_y) = rect;
-                let ids: Vec<u64> = self
-                    .inner
-                    .query(Rect { min_x, min_y, max_x, max_y })
-                    .into_iter()
-                    .map(|it| it.0)
-                    .collect();
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|it| it.0) // (id, x, y) -> id
+                        .collect()
+                });
                 PyList::new(py, &ids).expect("Failed to create Python list")
             }
 

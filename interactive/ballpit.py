@@ -1,4 +1,3 @@
-import contextlib
 import math
 import random
 from typing import Iterable, List, Set, Tuple
@@ -140,13 +139,13 @@ class FastQTIndex(SpatialBase):
         else:
             self.qt.clear()
         for b in balls:
-            with contextlib.suppress(ValueError):
-                self.qt.insert((b.x, b.y), obj=b)
+            self.qt.insert((b.x, b.y), obj=b)
 
     def neighbors(self, b: Ball) -> Iterable[Ball]:
         r2 = 2 * b.r
         x0, y0, x1, y1 = b.x - r2, b.y - r2, b.x + r2, b.y + r2
-        for it in self.qt.query_np((x0, y0, x1, y1), as_items=True):
+        neighbors = self.qt.query((x0, y0, x1, y1), as_items=True)
+        for it in neighbors:
             other = it.obj
             if other is not None and other is not b:
                 yield other
