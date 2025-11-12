@@ -36,7 +36,7 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ---------
 
-### Native vs Shim
+## Native vs Shim
 
 ### Configuration
 - Points: 500,000

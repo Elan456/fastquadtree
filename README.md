@@ -133,14 +133,17 @@ See the [runnables guide](https://elan456.github.io/fastquadtree/runnables/) for
 
 ## FAQ
 
-**What happens if I insert the same id more than once?**
-Allowed. For k-nearest, duplicates are de-duplicated by id. For range queries you will see every inserted point.
-
 **Can I delete items from the quadtree?**
 Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `track_objects=True`, you can also use `delete_by_object(obj)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
 
 **Can I store rectangles or circles?**
 Yes, you can store rectangles using the `RectQuadTree` class. Circles can be approximated with bounding boxes. See the [RectQuadTree docs](https://elan456.github.io/fastquadtree/api/rect_quadtree/) for details.
+
+**Do I need NumPy installed?**  
+No, NumPy is a fully optional dependency. If you do have NumPy installed, you can use methods such as `query_np` and the NumPy array variant of `insert_many` for better performance. The Rust core is able to handle NumPy arrays faster than Python lists, so there's a lot of time savings in utilizing the NumPy functions. See the [Native vs Shim benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim) for details on how returing NumPy arrays can speed up queries.
+
+**Does fastquadtree support multiprocessing?**  
+Yes, fastquadtree objects can be serialized to bytes using the `to_bytes()` method and deserialized back using `from_bytes()`. This allows you to share quadtree data across processes and even cache prebuilt trees to disk. See the [interactive v2 demo](https://github.com/Elan456/fastquadtree/blob/main/interactive/interactive_v2.py) for an example of saving and loading a quadtree.
 
 ## License
 
