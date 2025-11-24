@@ -27,7 +27,7 @@ fn rect_contains_half_open() {
 
 #[test]
 fn insert_inside_leaf_until_capacity() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
 
     let ok1 = qt.insert(Item { id: 1, point: pt(10.0, 10.0) });
     let ok2 = qt.insert(Item { id: 2, point: pt(20.0, 20.0) });
@@ -37,7 +37,7 @@ fn insert_inside_leaf_until_capacity() {
 
 #[test]
 fn insert_outside_returns_false() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
 
     assert!(!qt.insert(Item { id: 1, point: pt(-1.0, 50.0) }));
     assert!(!qt.insert(Item { id: 2, point: pt(50.0, 101.0) }));
@@ -46,7 +46,7 @@ fn insert_outside_returns_false() {
 #[test]
 fn split_then_midline_inserts_succeed() {
     // capacity 1 forces a split on the second insert
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // first insert goes to parent as a leaf
     assert!(qt.insert(Item { id: 1, point: pt(25.0, 25.0) }));
@@ -66,7 +66,7 @@ fn split_then_midline_inserts_succeed() {
 
 #[test]
 fn many_inserts_all_succeed_when_inside() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 1000.0, 1000.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 1000.0, 1000.0), 4, 8);
 
     // generate a grid of interior points
     let mut ok = 0usize;
@@ -84,7 +84,7 @@ fn many_inserts_all_succeed_when_inside() {
 
 #[test]
 fn boundary_points_respect_half_open_rule() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
 
     // Allowed: on min edges
     assert!(qt.insert(Item { id: 1, point: pt(0.0, 0.0) }));

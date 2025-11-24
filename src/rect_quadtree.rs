@@ -52,18 +52,7 @@ fn rects_touch_or_intersect<T: Coord>(a: &Rect<T>, b: &Rect<T>) -> bool {
 }
 
 impl<T: Coord> RectQuadTree<T> {
-    pub fn new(boundary: Rect<T>, capacity: usize) -> Self {
-        RectQuadTree {
-            boundary,
-            items: Vec::with_capacity(capacity),
-            capacity,
-            children: None,
-            depth: 0,
-            max_depth: usize::MAX,
-        }
-    }
-
-    pub fn new_with_max_depth(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
+    pub fn new(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
         RectQuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -300,5 +289,9 @@ impl<T: Coord> RectQuadTree<T> {
                 child.collect_boundaries(out);
             }
         }
+    }
+
+    pub fn get_max_depth(&self) -> usize {
+        self.max_depth
     }
 }

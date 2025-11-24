@@ -18,14 +18,14 @@ fn ids(v: &[(u64, Rect<f32>)]) -> Vec<u64> {
 
 #[test]
 fn query_on_empty_tree_is_empty() {
-    let qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     let hits = qt.query(r(10.0, 10.0, 20.0, 20.0));
     assert!(hits.is_empty());
 }
 
 #[test]
 fn insert_outside_boundary_returns_false() {
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     // Well outside with a gap
     let ok = qt.insert(item(1, 200.0, 200.0, 210.0, 210.0));
     assert!(!ok);
@@ -34,7 +34,7 @@ fn insert_outside_boundary_returns_false() {
 
 #[test]
 fn leaf_insert_no_split_and_inclusive_edge_touch_query() {
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 8);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 8, 8);
     let a = item(1, 10.0, 10.0, 20.0, 20.0);
     assert!(qt.insert(a));
 
@@ -50,7 +50,7 @@ fn leaf_insert_no_split_and_inclusive_edge_touch_query() {
 #[test]
 fn new_with_max_depth_prevents_split() {
     // max_depth = 0 at root, force everything to stay in the root even beyond capacity
-    let mut qt = RectQuadTree::new_with_max_depth(r(0.0, 0.0, 100.0, 100.0), 1, 0);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 0);
     assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0)));
     assert!(qt.insert(item(2, 30.0, 30.0, 35.0, 35.0)));
     assert!(qt.insert(item(3, 60.0, 60.0, 70.0, 70.0)));
@@ -66,7 +66,7 @@ fn new_with_max_depth_prevents_split() {
 #[test]
 fn split_child_routing_and_straddler_stays_at_parent() {
     // capacity 1 to force split as soon as we try to insert the second item
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // Rectangles that fully fit each quadrant
     let q0 = item(1,  5.0,  5.0,  10.0, 10.0); // left-bottom
@@ -107,7 +107,7 @@ fn split_child_routing_and_straddler_stays_at_parent() {
 
 #[test]
 fn query_ids_convenience() {
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
     assert!(qt.insert(item(1, 0.0, 0.0, 10.0, 10.0)));
     assert!(qt.insert(item(2, 20.0, 20.0, 30.0, 30.0)));
 
@@ -119,7 +119,7 @@ fn query_ids_convenience() {
 #[test]
 fn delete_from_child_triggers_merge_when_possible() {
     // Setup to create children, then delete and allow merge
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
     let a = item(1,  5.0,  5.0, 10.0, 10.0); // will go to left-bottom
     let b = item(2, 60.0,  5.0, 70.0, 10.0); // will go to right-bottom
 
@@ -138,7 +138,7 @@ fn delete_from_child_triggers_merge_when_possible() {
 #[test]
 fn delete_no_merge_when_a_child_has_children() {
     // Build a tree where one child will split (becoming non-leaf)
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // Two rectangles in the left-bottom quadrant to force that child to split
     let lb1 = item(1, 5.0,  5.0, 10.0, 10.0); // goes to Q0
@@ -162,7 +162,7 @@ fn delete_no_merge_when_a_child_has_children() {
 #[test]
 fn delete_no_merge_when_capacity_would_be_exceeded() {
     // Parent capacity=1, keep one straddler at parent plus at least one child item
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // Straddler at center stays in parent
     let s  = item(100, 49.0, 49.0, 51.0, 51.0);
@@ -183,7 +183,7 @@ fn delete_no_merge_when_capacity_would_be_exceeded() {
 
 #[test]
 fn delete_parent_straddler_and_delete_outside() {
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // Keep a straddler at parent and one child item
     let s  = item(7, 49.0, 49.0, 51.0, 51.0);
@@ -202,7 +202,7 @@ fn delete_parent_straddler_and_delete_outside() {
 
 #[test]
 fn count_items_and_get_all_node_boundaries() {
-    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // Build a small hierarchy
     assert!(qt.insert(item(1,  5.0,  5.0, 10.0, 10.0))); // cause split with next

@@ -86,3 +86,29 @@ def test_integer_overflow_bounding_box():
 
     with pytest.raises(OverflowError):
         qt.insert((-(2**31) - 1, -(2**31) - 1), obj="underflow")  # type: ignore
+
+
+def test_different_datatype_default_max_depth():
+    """Test that different dtypes have different default max_depth."""
+    qt_f32 = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="f32")
+    qt_f64 = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="f64")
+    qt_i32 = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="i32")
+    qt_i64 = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True, dtype="i64")
+
+    assert qt_f32.get_inner_max_depth() == 24
+    assert qt_f64.get_inner_max_depth() == 53
+    assert qt_i32.get_inner_max_depth() == 32
+    assert qt_i64.get_inner_max_depth() == 64
+
+
+def test_double_identical_insert_with_capacity_one_and_no_max_depth():
+    """Test inserting identical points with capacity 1 and no max_depth."""
+    qt = QuadTree((0, 0, 100, 100), capacity=1, track_objects=True, dtype="f32")
+    id1 = qt.insert((10.0, 10.0), obj="point1")
+    id2 = qt.insert((10.0, 10.0), obj="point2")
+    assert id1 == 0
+    assert id2 == 1
+    items = qt.get_all_items()
+    assert len(items) == 2
+    assert items[0].obj == "point1"
+    assert items[1].obj == "point2"

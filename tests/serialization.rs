@@ -6,6 +6,7 @@ fn quadtree_roundtrip_bytes() {
     let mut qt = QuadTree::new(
         Rect { min_x: 0.0, min_y: 0.0, max_x: 10.0, max_y: 10.0 },
         4,
+        8
     );
     for (i, (x, y)) in [(1.0, 1.0), (2.0, 3.0), (7.5, 8.5), (9.0, 0.5)].into_iter().enumerate() {
         qt.insert(Item { id: i as u64 + 1, point: Point { x, y } });
@@ -39,6 +40,7 @@ fn rectquadtree_roundtrip_bytes() {
     let mut qt = RectQuadTree::new(
         Rect { min_x: 0.0, min_y: 0.0, max_x: 10.0, max_y: 10.0 },
         4,
+        8
     );
     for (i, (x, y)) in [(1.0, 1.0), (2.0, 3.0), (7.5, 8.5), (9.0, 0.5)].into_iter().enumerate() {
         qt.insert(RectItem { id: i as u64 + 1, rect: Rect { min_x: x, min_y: y, max_x: x + 1.0, max_y: y + 1.0 } });

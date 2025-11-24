@@ -2,7 +2,7 @@ use fastquadtree::{QuadTree, Item, Point, Rect};
 
 #[test]
 fn test_delete_simple() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4, 8);
     
     // Insert some points
     let p1 = Point { x: 10.0, y: 10.0 };
@@ -34,7 +34,7 @@ fn test_delete_simple() {
 
 #[test]
 fn test_delete_non_existent() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4, 8);
     
     // Insert some points
     tree.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });
@@ -55,7 +55,7 @@ fn test_delete_non_existent() {
 
 #[test]
 fn test_delete_with_split_and_merge() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2, 8);
     
     // Insert points that will cause splits
     tree.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });
@@ -82,7 +82,7 @@ fn test_delete_with_split_and_merge() {
 
 #[test]
 fn test_delete_deep_tree() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 1);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 1, 8);
     
     // Insert many points in the same area to create a deep tree
     let points = vec![
@@ -119,7 +119,7 @@ fn test_delete_deep_tree() {
 
 #[test]
 fn test_delete_all_points() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 3);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 3, 8);
     
     let points = vec![
         Point { x: 10.0, y: 10.0 },
@@ -151,7 +151,7 @@ fn test_delete_all_points() {
 
 #[test]
 fn test_delete_preserves_other_operations() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4, 8);
     
     // Insert points
     tree.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });
@@ -180,7 +180,7 @@ fn test_delete_preserves_other_operations() {
 
 #[test]
 fn test_delete_exact_point_matching() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4, 8);
     
     // Insert points that are very close but not identical, and same point with different IDs
     tree.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });
@@ -210,7 +210,7 @@ fn test_delete_exact_point_matching() {
 
 #[test]
 fn test_delete_multiple_items_same_location() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 4, 8);
     
     // Insert multiple items at the exact same location
     let location = Point { x: 50.0, y: 50.0 };
@@ -249,7 +249,7 @@ fn test_delete_multiple_items_same_location() {
 #[test]
 fn merge_happens_when_grandchildren_exist() {
     // capacity 2 makes the tree split as soon as 3 points share a node
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2, 8);
 
     // Build depth: put several points in the lower-left quadrant to force grandchildren
     let pts = [
@@ -280,7 +280,7 @@ fn merge_happens_when_grandchildren_exist() {
 
 #[test]
 fn root_collapses_when_total_items_fit_capacity() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2, 8);
 
     // Points across different quadrants to ensure a top-level split
     let pts = [
@@ -305,7 +305,7 @@ fn root_collapses_when_total_items_fit_capacity() {
 
 #[test]
 fn no_merge_when_over_capacity() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 }, 2, 8);
 
     // Force a split
     let pts = [
@@ -327,7 +327,7 @@ fn no_merge_when_over_capacity() {
 
 #[test]
 fn deep_chain_collapses_to_leaf() {
-    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0 }, 1);
+    let mut tree = QuadTree::new(Rect { min_x: 0.0, min_y: 0.0, max_x: 1.0, max_y: 1.0 }, 1, 8);
     // Create a chain by inserting points that keep falling into the same quadrant
     let pts = [
         (0, Point { x: 0.1, y: 0.1 }),

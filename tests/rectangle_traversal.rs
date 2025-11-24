@@ -3,7 +3,7 @@ use fastquadtree::{QuadTree, Item, Point, Rect};
 #[test]
 fn test_get_all_node_boundaries_single_node() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    let qt = QuadTree::new(boundary, 4);
+    let qt = QuadTree::new(boundary, 4, 8);
     
     let rectangles = qt.get_all_node_boundaries();
     assert_eq!(rectangles.len(), 1);
@@ -13,7 +13,7 @@ fn test_get_all_node_boundaries_single_node() {
 #[test]
 fn test_get_all_node_boundaries_after_split() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    let mut qt = QuadTree::new(boundary, 2);
+    let mut qt = QuadTree::new(boundary, 2, 8);
     
     // Insert items in different quadrants to avoid deep splits
     qt.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } }); // Bottom-left
@@ -45,7 +45,7 @@ fn test_get_all_node_boundaries_after_split() {
 #[test]
 fn test_get_all_node_boundaries_deep_tree() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    let mut qt = QuadTree::new(boundary, 1); // Small capacity to force deep splits
+    let mut qt = QuadTree::new(boundary, 1, 8); // Small capacity to force deep splits
     
     // Insert items to create a deeper tree structure
     qt.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });
@@ -64,7 +64,7 @@ fn test_get_all_node_boundaries_deep_tree() {
 #[test]
 fn test_get_all_node_boundaries_same_quadrant_deep_split() {
     let boundary = Rect { min_x: 0.0, min_y: 0.0, max_x: 100.0, max_y: 100.0 };
-    let mut qt = QuadTree::new(boundary, 2);
+    let mut qt = QuadTree::new(boundary, 2, 8);
     
     // Insert items that all fall in the same quadrant to force deep splits
     qt.insert(Item { id: 1, point: Point { x: 10.0, y: 10.0 } });

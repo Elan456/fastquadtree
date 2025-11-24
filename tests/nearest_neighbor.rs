@@ -18,20 +18,20 @@ fn dist2(a: Point<f32>, b: Point<f32>) -> f32 {
 #[test]
 fn nearest_neighbor_zero_poins() {
     // keep user's original test name
-    let qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     assert!(qt.nearest_neighbor(pt(10.0, 10.0)).is_none());
 }
 
 #[test]
 fn nearest_neighbor_one_point() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     qt.insert(Item { id: 1, point: pt(50.0, 50.0) });
     assert_eq!(qt.nearest_neighbor(pt(10.0, 10.0)).unwrap().id, 1);
 }
 
 #[test]
 fn nearest_neighbor_two_points() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     qt.insert(Item { id: 1, point: pt(50.0, 50.0) });
     qt.insert(Item { id: 2, point: pt(60.0, 60.0) });
     assert_eq!(qt.nearest_neighbor(pt(10.0, 10.0)).unwrap().id, 1);
@@ -39,7 +39,7 @@ fn nearest_neighbor_two_points() {
 
 #[test]
 fn nn_exact_hit_distance_zero() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 20.0, 20.0), 8);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 20.0, 20.0), 8, 8);
     qt.insert(Item { id: 7, point: pt(10.0, 10.0) });
     qt.insert(Item { id: 8, point: pt(3.0, 4.0) });
     let q = pt(10.0, 10.0);
@@ -56,7 +56,7 @@ fn nn_exact_hit_distance_zero() {
 #[test]
 fn knn_basic_ordering_no_split() {
     // capacity high so we do not split
-    let mut qt = QuadTree::new(r(0.0, 0.0, 40.0, 40.0), 16);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 40.0, 40.0), 16, 8);
     // unique distances from query (6, 6)
     qt.insert(Item { id: 1, point: pt(5.0, 5.0) });     // d2 = 2
     qt.insert(Item { id: 2, point: pt(6.5, 6.0) });     // d2 = 0.25
@@ -78,7 +78,7 @@ fn knn_basic_ordering_no_split() {
 #[test]
 fn knn_respects_capacity_and_split() {
     // capacity small so we force splits across all quadrants
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
     qt.insert(Item { id: 1, point: pt(10.0, 10.0) });
     qt.insert(Item { id: 2, point: pt(90.0, 10.0) });
     qt.insert(Item { id: 3, point: pt(10.0, 90.0) });
@@ -98,7 +98,7 @@ fn knn_respects_capacity_and_split() {
 
 #[test]
 fn knn_k_greater_than_len_no_duplicates() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 10.0, 10.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 10.0, 10.0), 2, 8);
     qt.insert(Item { id: 1, point: pt(1.0, 1.0) });
     qt.insert(Item { id: 2, point: pt(2.0, 2.0) });
     qt.insert(Item { id: 3, point: pt(9.0, 9.0) });
@@ -115,7 +115,7 @@ fn knn_k_greater_than_len_no_duplicates() {
 #[test]
 fn within_strictly_less_than_max_distance() {
     // current implementation uses d2 < max_d2, not <=
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     let p = pt(10.0, 10.0);
     qt.insert(Item { id: 1, point: pt(13.0, 14.0) }); // distance = 5.0
     qt.insert(Item { id: 2, point: pt(30.0, 30.0) });
@@ -133,7 +133,7 @@ fn within_strictly_less_than_max_distance() {
 #[test]
 fn equidistant_tie_returns_one_of_the_candidates() {
     // two points equidistant from query
-    let mut qt = QuadTree::new(r(0.0, 0.0, 50.0, 50.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 50.0, 50.0), 4, 8);
     qt.insert(Item { id: 10, point: pt(10.0, 10.0) });
     qt.insert(Item { id: 20, point: pt(10.0, 12.0) });
     let q = pt(10.0, 11.0);
@@ -145,7 +145,7 @@ fn equidistant_tie_returns_one_of_the_candidates() {
 fn identical_locations_two_items_pick_one_due_to_strict_lt() {
     // both items at the same coordinates
     // with current algorithm and strict <, k=2 will only return one of them
-    let mut qt = QuadTree::new(r(0.0, 0.0, 10.0, 10.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 10.0, 10.0), 4, 8);
     qt.insert(Item { id: 1, point: pt(5.0, 5.0) });
     qt.insert(Item { id: 2, point: pt(5.0, 5.0) });
 
@@ -157,7 +157,7 @@ fn identical_locations_two_items_pick_one_due_to_strict_lt() {
 
 #[test]
 fn query_far_outside_root_works() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     qt.insert(Item { id: 1, point: pt(0.0, 0.0) });
     qt.insert(Item { id: 2, point: pt(100.0, 100.0) });
     qt.insert(Item { id: 3, point: pt(100.0, 0.0) });
@@ -171,7 +171,7 @@ fn query_far_outside_root_works() {
 
 #[test]
 fn ordering_is_by_distance_even_after_splits() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 64.0, 64.0), 1); // force deep subdivisions
+    let mut qt = QuadTree::new(r(0.0, 0.0, 64.0, 64.0), 1, 8); // force deep subdivisions
     // place a small grid of points
     let mut id = 1u64;
     for y in (4..=60).step_by(8) {
@@ -200,7 +200,7 @@ fn ordering_is_by_distance_even_after_splits() {
 #[test]
 fn midline_and_center_points_are_handled() {
     // insert points that lie on child midlines and the exact center
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
     let center = pt(50.0, 50.0);
     qt.insert(Item { id: 1, point: center });
     qt.insert(Item { id: 2, point: pt(50.0, 10.0) }); // vertical midline

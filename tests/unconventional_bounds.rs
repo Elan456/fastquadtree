@@ -21,7 +21,7 @@ fn ids(v: &Vec<(u64, f32, f32)>) -> Vec<u64> {
 #[test]
 fn negative_region_basic_operations() {
     // Test completely negative region
-    let mut qt = QuadTree::new(r(-500.0, -500.0, -100.0, -100.0), 4);
+    let mut qt = QuadTree::new(r(-500.0, -500.0, -100.0, -100.0), 4, 8);
     
     // Insert points in negative space
     assert!(qt.insert(item(1, -200.0, -200.0)));
@@ -41,7 +41,7 @@ fn negative_region_basic_operations() {
 #[test]
 fn negative_region_with_splits() {
     // Force splits in negative space
-    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 0.0, 0.0), 2);
+    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 0.0, 0.0), 2, 8);
     
     // Insert enough points to force multiple splits
     assert!(qt.insert(item(1, -100.0, -100.0)));   // NE quadrant
@@ -66,7 +66,7 @@ fn negative_region_with_splits() {
 #[test]
 fn cross_origin_region() {
     // Region that spans across origin (0,0)
-    let mut qt = QuadTree::new(r(-100.0, -100.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(-100.0, -100.0, 100.0, 100.0), 4, 8);
     
     assert!(qt.insert(item(1, -50.0, -50.0)));  // Bottom-left quadrant
     assert!(qt.insert(item(2, 50.0, -50.0)));   // Bottom-right quadrant
@@ -94,7 +94,7 @@ fn cross_origin_region() {
 #[test]
 fn very_large_negative_coordinates() {
     // Test with very large negative coordinates
-    let mut qt = QuadTree::new(r(-1e6, -1e6, -1e5, -1e5), 4);
+    let mut qt = QuadTree::new(r(-1e6, -1e6, -1e5, -1e5), 4, 8);
     
     assert!(qt.insert(item(1, -500000.0, -500000.0)));
     assert!(qt.insert(item(2, -200000.0, -800000.0)));
@@ -112,7 +112,7 @@ fn very_large_negative_coordinates() {
 #[test]
 fn fractional_negative_coordinates() {
     // Test with fractional negative coordinates
-    let mut qt = QuadTree::new(r(-1.0, -1.0, -0.1, -0.1), 4);
+    let mut qt = QuadTree::new(r(-1.0, -1.0, -0.1, -0.1), 4, 8);
     
     assert!(qt.insert(item(1, -0.5, -0.5)));
     assert!(qt.insert(item(2, -0.2, -0.8)));
@@ -130,7 +130,7 @@ fn fractional_negative_coordinates() {
 #[test]
 fn mixed_positive_negative_large_region() {
     // Large region spanning both positive and negative space
-    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 1000.0, 1000.0), 4);
+    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 1000.0, 1000.0), 4, 8);
     
     // Insert points in all quadrants
     assert!(qt.insert(item(1, -500.0, -500.0)));  // Negative both
@@ -153,7 +153,7 @@ fn mixed_positive_negative_large_region() {
 #[test]
 fn edge_boundary_handling() {
     // Test boundary conditions with negative coordinates
-    let mut qt = QuadTree::new(r(-10.0, -10.0, 0.0, 0.0), 4);
+    let mut qt = QuadTree::new(r(-10.0, -10.0, 0.0, 0.0), 4, 8);
     
     // Insert points exactly on boundaries
     assert!(qt.insert(item(1, -10.0, -10.0)));  // Min corner
@@ -175,7 +175,7 @@ fn edge_boundary_handling() {
 #[test]
 fn delete_operations_negative_space() {
     // Test deletion in negative coordinate space
-    let mut qt = QuadTree::new(r(-100.0, -100.0, -10.0, -10.0), 4);
+    let mut qt = QuadTree::new(r(-100.0, -100.0, -10.0, -10.0), 4, 8);
     
     assert!(qt.insert(item(1, -50.0, -50.0)));
     assert!(qt.insert(item(2, -30.0, -80.0)));
@@ -199,7 +199,7 @@ fn delete_operations_negative_space() {
 
 #[test]
 fn nearest_neighbor_negative_space() {
-    let mut qt = QuadTree::new(r(-200.0, -200.0, -50.0, -50.0), 4);
+    let mut qt = QuadTree::new(r(-200.0, -200.0, -50.0, -50.0), 4, 8);
     
     assert!(qt.insert(item(1, -100.0, -100.0)));
     assert!(qt.insert(item(2, -150.0, -150.0)));
@@ -220,7 +220,7 @@ fn nearest_neighbor_negative_space() {
 #[test]
 fn stress_test_negative_coordinates() {
     // Stress test with many points in negative space
-    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 0.0, 0.0), 4);
+    let mut qt = QuadTree::new(r(-1000.0, -1000.0, 0.0, 0.0), 4, 8);
     
     // Insert a grid of points
     let mut inserted_count = 0;
@@ -248,7 +248,7 @@ fn stress_test_negative_coordinates() {
 
 #[test]
 fn out_of_bounds_insertion_negative() {
-    let mut qt = QuadTree::new(r(-100.0, -100.0, -10.0, -10.0), 4);
+    let mut qt = QuadTree::new(r(-100.0, -100.0, -10.0, -10.0), 4, 8);
     
     // These should succeed (within bounds)
     assert!(qt.insert(item(1, -50.0, -50.0)));

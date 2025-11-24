@@ -525,5 +525,19 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         return self._native.count_items()
 
+    def get_inner_max_depth(self) -> int:
+        """
+        Return the maximum depth of the quadtree core.
+        Useful if you let the core chose the default max depth based on dtype
+        by constructing with max_depth=None.
+
+        Example:
+            ```python
+            depth = qt.get_inner_max_depth()
+            assert isinstance(depth, int)
+            ```
+        """
+        return self._native.get_max_depth()
+
     def __len__(self) -> int:
         return self._count

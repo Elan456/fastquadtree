@@ -37,18 +37,7 @@ fn child_index_for_point<T: Coord>(b: &Rect<T>, p: &Point<T>) -> usize {
 }
 
 impl<T: Coord> QuadTree<T> {
-    pub fn new(boundary: Rect<T>, capacity: usize) -> Self {
-        QuadTree {
-            boundary,
-            items: Vec::with_capacity(capacity),
-            capacity,
-            children: None,
-            depth: 0,
-            max_depth: usize::MAX,
-        }
-    }
-
-    pub fn new_with_max_depth(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
+    pub fn new(boundary: Rect<T>, capacity: usize, max_depth: usize) -> Self {
         QuadTree {
             boundary,
             items: Vec::with_capacity(capacity),
@@ -390,6 +379,10 @@ impl<T: Coord> QuadTree<T> {
             }
         }
         count
+    }
+
+    pub fn get_max_depth(&self) -> usize {
+        self.max_depth
     }
 
 

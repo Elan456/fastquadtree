@@ -25,6 +25,25 @@ fn rect_to_tuple<T: Coord + Copy>(r: Rect<T>) -> (T, T, T, T) {
     (r.min_x, r.min_y, r.max_x, r.max_y)
 }
 
+fn default_max_depth_for<T: 'static>() -> usize {
+    // Caps aligned with meaningful resolution per dtype.
+    // f32: 24 mantissa bits -> deeper splits stop helping.
+    // f64: 53 mantissa bits.
+    // ints: cap at bit width, beyond that subdivision degenerates anyway.
+    if TypeId::of::<T>() == TypeId::of::<f32>() {
+        24
+    } else if TypeId::of::<T>() == TypeId::of::<f64>() {
+        53
+    } else if TypeId::of::<T>() == TypeId::of::<i32>() {
+        32
+    } else if TypeId::of::<T>() == TypeId::of::<i64>() {
+        64
+    } else {
+        32
+    }
+}
+
+
 // Reusable core for point QuadTrees
 macro_rules! define_point_quadtree_pyclass {
     ($t:ty, $rs_name:ident, $py_name:literal) => {
@@ -41,8 +60,12 @@ macro_rules! define_point_quadtree_pyclass {
                 let (min_x, min_y, max_x, max_y) = bounds;
                 let rect = Rect { min_x, min_y, max_x, max_y };
                 let inner = match max_depth {
-                    Some(d) => QuadTree::new_with_max_depth(rect, capacity, d),
-                    None => QuadTree::new(rect, capacity),
+                    Some(d) => QuadTree::new(rect, capacity, d),
+                    None => QuadTree::new(
+                        rect,
+                        capacity,
+                        default_max_depth_for::<$t>(),
+                    ),
                 };
                 Self { inner }
             }
@@ -265,6 +288,10 @@ macro_rules! define_point_quadtree_pyclass {
             pub fn count_items(&self) -> usize {
                 self.inner.count_items()
             }
+
+            pub fn get_max_depth(&self) -> usize {
+                self.inner.get_max_depth()
+            }
         }
     };
 }
@@ -285,8 +312,12 @@ macro_rules! define_rect_quadtree_pyclass {
                 let (min_x, min_y, max_x, max_y) = bounds;
                 let rect = Rect { min_x, min_y, max_x, max_y };
                 let inner = match max_depth {
-                    Some(d) => RectQuadTree::new_with_max_depth(rect, capacity, d),
-                    None => RectQuadTree::new(rect, capacity),
+                    Some(d) => RectQuadTree::new(rect, capacity, d),
+                    None => RectQuadTree::new(
+                        rect,
+                        capacity,
+                        default_max_depth_for::<$t>(),
+                    ),
                 };
                 Self { inner }
             }
@@ -477,6 +508,10 @@ macro_rules! define_rect_quadtree_pyclass {
 
             pub fn count_items(&self) -> usize {
                 self.inner.count_items()
+            }
+
+            pub fn get_max_depth(&self) -> usize {
+                self.inner.get_max_depth()
             }
         }
     };

@@ -12,14 +12,14 @@ fn ids(v: &Vec<(u64, f32, f32)>) -> Vec<u64> {
 
 #[test]
 fn query_on_empty_tree_is_empty() {
-    let qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     let hits = qt.query(r(10.0, 10.0, 20.0, 20.0));
     assert!(hits.is_empty());
 }
 
 #[test]
 fn leaf_query_without_split() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 10);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 10, 8);
     let a = Item { id: 1, point: pt(10.0, 10.0) };
     let b = Item { id: 2, point: pt(30.0, 30.0) };
     let c = Item { id: 3, point: pt(70.0, 70.0) };
@@ -38,7 +38,7 @@ fn leaf_query_without_split() {
 
 #[test]
 fn query_outside_root_returns_empty() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
     assert!(qt.insert(Item { id: 1, point: pt(50.0, 50.0) }));
     let hits = qt.query(r(200.0, 200.0, 300.0, 300.0));
     assert!(hits.is_empty());
@@ -47,7 +47,7 @@ fn query_outside_root_returns_empty() {
 #[test]
 fn query_after_split_picks_from_correct_children() {
     // capacity 1 to force early splits
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
 
     // One point in each quadrant plus the exact center
     assert!(qt.insert(Item { id: 1, point: pt(10.0, 10.0) }));  // Q0
@@ -75,7 +75,7 @@ fn query_after_split_picks_from_correct_children() {
 
 #[test]
 fn query_range_covering_multiple_children_returns_union() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 1, 8);
     let pts = [
         (1, pt(10.0, 10.0)),  // Q0
         (2, pt(75.0, 10.0)),  // Q1
@@ -99,7 +99,7 @@ fn query_range_covering_multiple_children_returns_union() {
 
 #[test]
 fn full_range_query_returns_all_items() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 3);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 3, 8);
     for i in 0..9 {
         let x = 10.0 + 10.0 * (i as f32);
         let y = 20.0 + 5.0 * (i as f32);
@@ -112,7 +112,7 @@ fn full_range_query_returns_all_items() {
 
 #[test]
 fn half_open_edges_behavior() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     // min edges are included, max edges are excluded
     assert!(qt.insert(Item { id: 1, point: pt(0.0, 0.0) }));
     assert!(!qt.insert(Item { id: 2, point: pt(100.0, 0.0) }));
@@ -125,7 +125,7 @@ fn half_open_edges_behavior() {
 
 #[test]
 fn triple_insert_query() {
-    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4);
+    let mut qt = QuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
     // min edges are included, max edges are excluded
     assert!(qt.insert(Item { id: 1, point: pt(10.0, 10.0) }));
     assert!(qt.insert(Item { id: 2, point: pt(5.0, 5.0) }));
