@@ -9,19 +9,25 @@ The features will likely be implemented in the order they are listed below, but 
 
 ## 🚧 Planned Features
 
-### 1. KNN with criteria function
+### 1. Rust core published to crates.io
+
+Currently, the Rust code is only available via Git dependency.
+By publishing the Rust core to crates.io, we can make it easier for Rust developers to use the quadtree in their projects.
+This will also allow us to use semantic versioning for the Rust crate, making it easier to manage dependencies.
+
+### 2. KNN with criteria function
 
 Currently, KNN only supports finding the nearest neighbors based on euclidean distance.
 By adding a criteria function, we could allow users to define custom criteria for finding neighbors by passing a function that 
 takes in a point and returns a score. The KNN algorithm would then use this score to determine the nearest neighbors.
 
-### 2. KNN in rectangle quadtree
+### 3. KNN in rectangle quadtree
 
 Currently, KNN is only supported in the point quadtree. By adding KNN support to the rectangle quadtree, we could allow users to find the nearest rectangles to a given point. This would be to the nearest edge of the rectangle, adding complexity to the algorithm.
 However, it will allow for really quick collision detection between a point and a set of rectangles as the point can just do
 robust-collision handling with the nearest rectangles.
 
-### 3. Circle support
+### 4. Circle support
 
 Currently, we support points and rectangles in two separate quadtrees.
 For example, in the ball-pit demo, we use a point quadtree, but then query a larger area to account for the radius of the balls.
@@ -33,6 +39,11 @@ A good alternative is to use the rectangle quadtree and insert the minimum bound
 
 Once a feature from above is completed, it will be moved to this section.
 
+### Numpy Queries (1.4.0)
+
+To improve performance when querying, we add support to have your result returned in a pre-allocated Numpy array.
+This saves on allocation time and allows for better memory management.  
+A lot of time is wasted on creating Python objects, so if a Numpy array is acceptable for your use case, this will be much faster.
 
 ### Configurable Quadtree Coordinate Type (1.3.0)
 

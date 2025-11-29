@@ -85,6 +85,7 @@ nav:
   - Runnables: runnables.md
   - Benchmark: benchmark.md
   - Future Features: future_features.md
+  - Rust Usage: rust_usage.md
   - API:
       - QuadTree: api/quadtree.md
       - RectQuadTree: api/rect_quadtree.md
