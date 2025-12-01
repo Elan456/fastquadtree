@@ -1,5 +1,5 @@
 use smallvec::SmallVec;
-use crate::geom::{Rect, Coord, mid};
+use crate::geom::{Point, Rect, Coord, mid, dist_sq_point_to_rect};
 use serde::{Serialize, Deserialize};
 use bincode::config::standard;
 use bincode::serde::{encode_to_vec, decode_from_slice};
@@ -217,6 +217,97 @@ impl<T: Coord> RectQuadTree<T> {
     /// Convenience if you only want ids.
     pub fn query_ids(&self, range: Rect<T>) -> Vec<u64> {
         self.query(range).into_iter().map(|(id, _)| id).collect()
+    }
+
+    // Default: unbounded search when max_distance == 0
+    pub fn nearest_neighbor(&self, point: Point<T>) -> Option<RectItem<T>> {
+        self.nearest_neighbors_within(point, 1, T::zero())
+            .into_iter()
+            .next()
+    }
+
+    // Default: unbounded search when max_distance == 0
+    pub fn nearest_neighbors(&self, point: Point<T>, k: usize) -> Vec<RectItem<T>> {
+        self.nearest_neighbors_within(point, k, T::zero())
+    }
+
+    // If max_distance == 0, treat as "no max"
+    // Distance is measured from the query point to the nearest edge of each rectangle
+    pub fn nearest_neighbors_within(
+        &self,
+        point: Point<T>,
+        k: usize,
+        max_distance: T,
+    ) -> Vec<RectItem<T>> {
+        if k == 0 {
+            return Vec::new();
+        }
+
+        let mut picked = std::collections::HashSet::<u64>::new();
+        let mut out = Vec::with_capacity(k);
+
+        // Fixed cap for all iterations
+        let cap2: Option<T> = if max_distance == T::zero() {
+            None
+        } else {
+            Some(max_distance * max_distance)
+        };
+
+        for _ in 0..k {
+            // stack holds (node_ref, bbox_distance_sq)
+            let mut stack: Vec<(&RectQuadTree<T>, T)> = Vec::new();
+            stack.push((self, dist_sq_point_to_rect(&point, &self.boundary)));
+
+            let mut best: Option<RectItem<T>> = None;
+            // Best for this iteration, starts at the cap (or None for unbounded)
+            let mut best_d2: Option<T> = cap2;
+
+            while let Some((node, node_d2)) = stack.pop() {
+                // prune if strictly farther than current best
+                if let Some(b) = best_d2 {
+                    if node_d2 > b {
+                        continue;
+                    }
+                }
+
+                // Check items at this node (internal nodes can have items that span children)
+                for it in &node.items {
+                    if picked.contains(&it.id) {
+                        continue;
+                    }
+                    let d2 = dist_sq_point_to_rect(&point, &it.rect);
+                    // strict < keeps cap exclusive and picks exactly one per iteration
+                    if best_d2.map(|b| d2 < b).unwrap_or(true) {
+                        best_d2 = Some(d2);
+                        best = Some(*it);
+                    }
+                }
+
+                if let Some(children) = node.children.as_ref() {
+                    // Push children farthest-first so nearest is popped first
+                    let mut kids: Vec<(&RectQuadTree<T>, T)> = children
+                        .iter()
+                        .map(|c| (c, dist_sq_point_to_rect(&point, &c.boundary)))
+                        .filter(|&(_, d2)| best_d2.map(|b| d2 < b).unwrap_or(true))
+                        .collect();
+
+                    kids.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                    for e in kids {
+                        stack.push(e);
+                    }
+                }
+            }
+
+            if let Some(it) = best {
+                picked.insert(it.id);
+                out.push(it);
+                // Note: do NOT tighten cap here
+            } else {
+                break;
+            }
+        }
+
+        out
     }
 
     /// Delete an item by id and rect. Returns true if removed.

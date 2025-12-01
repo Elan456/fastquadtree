@@ -497,6 +497,23 @@ macro_rules! define_rect_quadtree_pyclass {
                 // Materialize as a NumPy array
                 Ok(PyArray1::<u64>::from_vec(py, ids))
             }
+            
+            /// Returns a single nearest neighbor (id, min_x, min_y, max_x, max_y)
+            pub fn nearest_neighbor(&self, xy: ($t, $t)) -> Option<(u64, $t, $t, $t, $t)> {
+                let (x, y) = xy;
+                self.inner.nearest_neighbor(Point { x, y }).map(|item| (item.id, item.rect.min_x, item.rect.min_y, item.rect.max_x, item.rect.max_y))
+            }
+            
+
+            /// Returns K nearest neighbors as a list[(id, min_x, min_y, max_x, max_y)]
+            pub fn nearest_neighbors(&self, xy: ($t, $t), k: usize) -> Vec<(u64, $t, $t, $t, $t)> {
+                let (x, y) = xy;
+                self.inner
+                    .nearest_neighbors(Point { x, y }, k)
+                    .into_iter()
+                    .map(|item| (item.id, item.rect.min_x, item.rect.min_y, item.rect.max_x, item.rect.max_y))
+                    .collect()
+            }
 
             pub fn get_all_node_boundaries(&self) -> Vec<($t, $t, $t, $t)> {
                 self.inner

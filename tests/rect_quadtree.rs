@@ -219,3 +219,108 @@ fn count_items_and_get_all_node_boundaries() {
     // There should be more than 1 node since we split
     assert!(nodes.len() >= 5);
 }
+
+#[test]
+fn nearest_neighbor_single_rect() {
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+    assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0)));
+
+    // Query point inside the rectangle (distance = 0)
+    let nn = qt.nearest_neighbor(fastquadtree::Point { x: 15.0, y: 15.0 });
+    assert!(nn.is_some());
+    let item = nn.unwrap();
+    assert_eq!(item.id, 1);
+    assert_eq!(item.rect, r(10.0, 10.0, 20.0, 20.0));
+
+    // Query point outside the rectangle
+    let nn2 = qt.nearest_neighbor(fastquadtree::Point { x: 25.0, y: 25.0 });
+    assert!(nn2.is_some());
+    assert_eq!(nn2.unwrap().id, 1);
+}
+
+#[test]
+fn nearest_neighbor_multiple_rects() {
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+
+    // Insert rectangles at different distances from query point (50, 50)
+    assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0))); // far
+    assert!(qt.insert(item(2, 30.0, 30.0, 40.0, 40.0))); // closer
+    assert!(qt.insert(item(3, 45.0, 45.0, 55.0, 55.0))); // closest (contains query point)
+    assert!(qt.insert(item(4, 70.0, 70.0, 80.0, 80.0))); // far
+
+    let nn = qt.nearest_neighbor(fastquadtree::Point { x: 50.0, y: 50.0 });
+    assert!(nn.is_some());
+    // Should find rect 3 since the point is inside it (distance = 0)
+    assert_eq!(nn.unwrap().id, 3);
+}
+
+#[test]
+fn nearest_neighbor_empty_tree() {
+    let qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+    let nn = qt.nearest_neighbor(fastquadtree::Point { x: 50.0, y: 50.0 });
+    assert!(nn.is_none());
+}
+
+#[test]
+fn nearest_neighbors_k_multiple() {
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+
+    assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0)));
+    assert!(qt.insert(item(2, 30.0, 30.0, 40.0, 40.0)));
+    assert!(qt.insert(item(3, 50.0, 50.0, 60.0, 60.0)));
+    assert!(qt.insert(item(4, 70.0, 70.0, 80.0, 80.0)));
+
+    // Query from point (25, 25) and get 2 nearest
+    let results = qt.nearest_neighbors(fastquadtree::Point { x: 25.0, y: 25.0 }, 2);
+    assert_eq!(results.len(), 2);
+
+    // Collect IDs to check which ones were returned
+    let mut result_ids: Vec<u64> = results.iter().map(|item| item.id).collect();
+    result_ids.sort_unstable();
+
+    // Should be IDs 1 and 2 (the two closest to point 25,25)
+    assert_eq!(result_ids, vec![1, 2]);
+}
+
+#[test]
+fn nearest_neighbors_k_exceeds_count() {
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+
+    assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0)));
+    assert!(qt.insert(item(2, 30.0, 30.0, 40.0, 40.0)));
+
+    // Request more neighbors than exist
+    let results = qt.nearest_neighbors(fastquadtree::Point { x: 25.0, y: 25.0 }, 10);
+    // Should return only the 2 that exist
+    assert_eq!(results.len(), 2);
+}
+
+#[test]
+fn nearest_neighbors_k_zero() {
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 4, 8);
+    assert!(qt.insert(item(1, 10.0, 10.0, 20.0, 20.0)));
+
+    let results = qt.nearest_neighbors(fastquadtree::Point { x: 25.0, y: 25.0 }, 0);
+    assert_eq!(results.len(), 0);
+}
+
+#[test]
+fn nearest_neighbors_with_deep_tree() {
+    // Create a tree that will split into multiple levels
+    let mut qt = RectQuadTree::new(r(0.0, 0.0, 100.0, 100.0), 2, 8);
+
+    // Insert many rectangles to force splitting
+    for i in 0..20 {
+        let offset = (i as f32) * 4.0;
+        qt.insert(item(i as u64, offset, offset, offset + 3.0, offset + 3.0));
+    }
+
+    // Query for 5 nearest
+    let results = qt.nearest_neighbors(fastquadtree::Point { x: 10.0, y: 10.0 }, 5);
+    assert_eq!(results.len(), 5);
+
+    // All results should be valid
+    for item in &results {
+        assert!(item.id < 20);
+    }
+}
