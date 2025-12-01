@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any, Literal, SupportsFloat, Tuple, overload
 
 from ._base_quadtree import Bounds, _BaseQuadTree
-from ._item import RectItem
+from ._item import Point, RectItem
 from ._native import (
     RectQuadTree as RectQuadTreeF32,
     RectQuadTreeF64,
@@ -122,6 +122,74 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         """
 
         return self._native.query_np(rect)
+
+    @overload
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[False] = ...
+    ) -> _IdRect | None: ...
+    @overload
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: Literal[True]
+    ) -> RectItem | None: ...
+    def nearest_neighbor(
+        self, xy: Point, *, as_item: bool = False
+    ) -> RectItem | _IdRect | None:
+        """
+        Return the single nearest neighbor to the query point.
+
+        Args:
+            xy: Query point (x, y).
+            as_item: If True, return Item. If False, return (id, x0, y0, x1, y1).
+
+        Returns:
+            The nearest neighbor or None if the tree is empty.
+        """
+        t = self._native.nearest_neighbor(xy)
+        if t is None or not as_item:
+            return t
+        if self._store is None:
+            raise ValueError("Cannot return result as item with track_objects=False")
+        id_, _x0, _y0, _x1, _y1 = t
+        it = self._store.by_id(id_)
+        if it is None:
+            raise RuntimeError("Internal error: missing tracked item")
+        return it
+
+    @overload
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[False] = ...
+    ) -> list[_IdRect]: ...
+    @overload
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: Literal[True]
+    ) -> list[RectItem]: ...
+    def nearest_neighbors(
+        self, xy: Point, k: int, *, as_items: bool = False
+    ) -> list[RectItem] | list[_IdRect]:
+        """
+        Return the k nearest neighbors to the query point in order of increasing distance.
+
+        Args:
+            xy: Query point (x, y).
+            k: Number of neighbors to return.
+            as_items: If True, return Item wrappers. If False, return raw tuples.
+
+        Returns:
+            If as_items is False: list of (id, x0, y0, x1, y1) tuples. <br>
+            If as_items is True: list of Item objects. <br>
+        """
+        raw = self._native.nearest_neighbors(xy, k)
+        if not as_items:
+            return raw
+        if self._store is None:
+            raise ValueError("Cannot return results as items with track_objects=False")
+        out: list[RectItem] = []
+        for id_, _x0, _y0, _x1, _y1 in raw:
+            it = self._store.by_id(id_)
+            if it is None:
+                raise RuntimeError("Internal error: missing tracked item")
+            out.append(it)
+        return out
 
     def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
         """Create the native engine instance."""
