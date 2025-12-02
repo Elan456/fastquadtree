@@ -5,7 +5,7 @@ from statistics import median
 
 from tqdm import tqdm
 
-from .engines import _create_fastquadtree_engine
+from .engines import _create_fastquadtree_np_engine
 from .runner import BenchmarkConfig, BenchmarkRunner
 
 # --------- helpers ---------
@@ -140,7 +140,7 @@ def optimize(bounds, *, rng_seed: int = 42):
                 runner = BenchmarkRunner(bc)
                 results = runner.run_benchmark(
                     {
-                        "fastquadtree": _create_fastquadtree_engine(
+                        "fastquadtree": _create_fastquadtree_np_engine(
                             bounds, cfg.max_points_per_leaf, cfg.max_depth
                         )
                     }
@@ -155,9 +155,10 @@ def optimize(bounds, *, rng_seed: int = 42):
             if score < best_score:
                 best_score = score
                 best_cfg = cfg
-            bar.set_description(
-                f"{stage_label}: best mp={best_cfg.max_points_per_leaf}, md={best_cfg.max_depth}, time={best_score:.4f}s"
-            )
+            if best_cfg is not None:
+                bar.set_description(
+                    f"{stage_label}: best mp={best_cfg.max_points_per_leaf}, md={best_cfg.max_depth}, time={best_score:.4f}s"
+                )
 
         # Prune to top ~1/eta for next stage, but always keep at least 6
         scores.sort(key=lambda x: x[0])
@@ -165,7 +166,9 @@ def optimize(bounds, *, rng_seed: int = 42):
         candidates = [cfg for _, cfg in scores[:keep]]
 
     # Final answer at full budget
-    print(
-        f"Optimized max_points: {best_cfg.max_points_per_leaf}, max_depth: {best_cfg.max_depth} (time ~{best_score:.4f}s)"
-    )
-    return best_cfg.max_points_per_leaf, best_cfg.max_depth
+    if best_cfg is not None:
+        print(
+            f"Optimized max_points: {best_cfg.max_points_per_leaf}, max_depth: {best_cfg.max_depth} (time ~{best_score:.4f}s)"
+        )
+        return best_cfg.max_points_per_leaf, best_cfg.max_depth
+    raise RuntimeError("No best configuration found")

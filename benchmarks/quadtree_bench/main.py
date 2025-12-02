@@ -42,7 +42,7 @@ def main():
     parser.add_argument(
         "--max-experiment-points",
         type=int,
-        default=250_000,
+        default=500_000,
         help="Maximum number of points in largest experiment",
     )
     parser.add_argument(
