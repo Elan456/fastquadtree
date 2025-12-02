@@ -218,8 +218,7 @@ def draw_query_circle(cx, cy, r, blink):
 def draw_nn_rays():
     for obj in list(qtree.get_all_objects()):
         wx, wy = obj.x, obj.y
-        # out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
-        out = []
+        out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
         if len(out) < 2:
             continue
         nn = out[1].obj  # second nearest (first is self)
