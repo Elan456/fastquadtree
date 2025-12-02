@@ -136,6 +136,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     ) -> RectItem | _IdRect | None:
         """
         Return the single nearest neighbor to the query point.
+        Utilizes euclidean distance to the nearest edge of rectangles.
 
         Args:
             xy: Query point (x, y).
@@ -143,6 +144,15 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
 
         Returns:
             The nearest neighbor or None if the tree is empty.
+
+        Example:
+            ```python
+            nn = rqt.nearest_neighbor((15.0, 15.0), as_item=True)
+            if nn is not None:
+                print(f"Nearest rect id={nn.id_} at {nn.geom} with obj={nn.obj}")
+            else:
+                print("No rectangles in the tree.")
+            ```
         """
         t = self._native.nearest_neighbor(xy)
         if t is None or not as_item:
@@ -168,6 +178,7 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
     ) -> list[RectItem] | list[_IdRect]:
         """
         Return the k nearest neighbors to the query point in order of increasing distance.
+        Utilizes euclidean distance to the nearest edge of rectangles.
 
         Args:
             xy: Query point (x, y).
@@ -177,6 +188,14 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
         Returns:
             If as_items is False: list of (id, x0, y0, x1, y1) tuples. <br>
             If as_items is True: list of Item objects. <br>
+
+        Example:
+            ```python
+            # Gets the 3 nearest rectangles to point (15.0, 15.0)
+            results = rqt.nearest_neighbors((15.0, 15.0), 3, as_items=True)
+            for item in results:
+                print(f"Found rect id={item.id_} at {item.geom} with obj={item.obj}")
+            ```
         """
         raw = self._native.nearest_neighbors(xy, k)
         if not as_items:
