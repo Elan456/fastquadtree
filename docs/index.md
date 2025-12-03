@@ -35,9 +35,9 @@
 
 ## Why use fastquadtree
 
-- Clean [Python API](api/quadtree.md) with no external dependencies and modern typing hints
+- Just pip install: prebuilt wheels for Windows, macOS, and Linux (no Rust or compiler needed)
 - The fastest quadtree Python package ([>10x faster](benchmark.md) than pyqtree)
-- Prebuilt wheels for Windows, macOS, and Linux
+- Clean [Python API](api/quadtree.md) with no external dependencies and modern typing hints
 - Support for [inserting bounding boxes](api/rect_quadtree.md) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
