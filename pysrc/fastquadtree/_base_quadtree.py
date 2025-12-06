@@ -8,6 +8,7 @@ from typing import (
     Any,
     Generic,
     Iterable,
+    Literal,
     Sequence,
     SupportsFloat,
     Tuple,
@@ -221,6 +222,9 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         """
         Insert a single item.
 
+        The Ids are auto-assigned starting from zero and incrementing by one for each insert. <br>
+        After deletions, ids may be reused if tracking is enabled.
+
         Args:
             geom: Point (x, y) or Rect (x0, y0, x1, y1) depending on quadtree type.
             obj: Optional Python object to associate with id if tracking is enabled.
@@ -258,17 +262,62 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         return rid
 
     @overload
-    def insert_many(self, geoms: Sequence[G], objs: list[Any] | None = None) -> int: ...
+    def insert_many(
+        self,
+        geoms: Sequence[G],
+        objs: Sequence[Any] | None = None,
+        get_start_id: Literal[False] = False,
+    ) -> int: ...
+
     @overload
     def insert_many(
-        self, geoms: NDArray[Any], objs: list[Any] | None = None
+        self,
+        geoms: NDArray[Any],
+        objs: Sequence[Any] | None = None,
+        get_start_id: Literal[False] = False,
     ) -> int: ...
+
+    # ---- get_start_id=True: tuple[int, int] ----
+    # keyword form (recommended)
+    @overload
     def insert_many(
-        self, geoms: NDArray[Any] | Sequence[G], objs: list[Any] | None = None
-    ) -> int:
+        self,
+        geoms: Sequence[G] | NDArray[Any],
+        objs: Sequence[Any] | None = None,
+        *,
+        get_start_id: Literal[True],
+    ) -> tuple[int, int]: ...
+
+    # optional: positional form to allow insert_many(geoms, None, True)
+    @overload
+    def insert_many(
+        self,
+        geoms: Sequence[G] | NDArray[Any],
+        objs: Sequence[Any] | None,
+        get_start_id: Literal[True],
+    ) -> tuple[int, int]: ...
+
+    # ---- get_start_id is a bool variable: union ----
+    @overload
+    def insert_many(
+        self,
+        geoms: Sequence[G] | NDArray[Any],
+        objs: Sequence[Any] | None = None,
+        *,
+        get_start_id: bool,
+    ) -> int | tuple[int, int]: ...
+    def insert_many(
+        self,
+        geoms: Sequence[G] | NDArray[Any],
+        objs: Sequence[Any] | None = None,
+        get_start_id: bool = False,
+    ) -> int | tuple[int, int]:
         """
         Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
-        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with a dtype that matches the quadtree's dtype.
+        Starting ID on a fresh tree is 0. You can get the starting ID for this batch via `get_start_id=True` if the tree was not empty before this call. <br>
+        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with a dtype that matches the quadtree's dtype. <br>
+
+        The (N, 2) geometry format is for point quadtrees, and (N, 4) is for rect quadtrees. <br>
 
         If tracking is enabled, the objects will be bulk stored internally.
         If no objects are provided, the items will have obj=None (if tracking).
@@ -279,6 +328,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
 
         Returns:
             Number of items inserted.
+            If `get_start_id` is True, returns a tuple (count, start_id).
 
         Raises:
             ValueError: If any geometry is outside bounds.
@@ -294,8 +344,13 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
             assert n2 == 2
             ```
         """
+        # Determine what "start_id" would be for this call, even if empty
+        start_id_for_call = (
+            len(self._store._arr) if self._store is not None else self._next_id
+        )
+
         if type(geoms) is list and len(geoms) == 0:
-            return 0
+            return (0, start_id_for_call) if get_start_id else 0
 
         if _is_np_array(geoms):
             import numpy as _np
@@ -305,7 +360,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         # Early return if the numpy array is empty
         if _np is not None and isinstance(geoms, _np.ndarray):
             if geoms.size == 0:
-                return 0
+                return (0, start_id_for_call) if get_start_id else 0
 
             # Check if dtype matches quadtree dtype
             expected_np_dtype = QUADTREE_DTYPE_TO_NP_DTYPE.get(self._dtype)
@@ -327,7 +382,7 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
                 raise ValueError("One or more items are outside tree bounds")
             self._next_id = last_id + 1
             self._count += num
-            return num
+            return (num, start_id) if get_start_id else num
 
         # With tracking enabled:
         start_id = len(self._store._arr)  # contiguous tail position
@@ -361,6 +416,10 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         self._next_id = max(self._next_id, last_id + 1)
 
         self._count += num
+
+        if get_start_id:
+            return num, start_id
+
         return num
 
     def delete(self, id_: int, geom: G) -> bool:

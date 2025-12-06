@@ -244,3 +244,219 @@ def test_query_as_np_accuracy():
 
     # Check ids
     assert set(ids_list) == {1, 2}
+
+
+# -------------------------
+# Additional thorough tests
+# -------------------------
+
+
+class _Tag:
+    """Equality-by-value but distinct identity."""
+
+    def __init__(self, v: int):
+        self.v = v
+
+    def __eq__(self, other):
+        return isinstance(other, _Tag) and self.v == other.v
+
+    def __hash__(self):
+        return hash(self.v)
+
+
+def test_insert_many_get_start_id_non_tracking_numpy_returns_contiguous_range():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+    pts = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32)
+
+    n, start = qt.insert_many(pts, get_start_id=True)
+    assert (n, start) == (3, 0)
+
+    raw = qt.query((0, 0, 40, 40), as_items=False)
+    got = sorted(t[0] for t in raw)
+    assert got == list(range(start, start + n))
+
+
+def test_insert_many_get_start_id_non_tracking_sequence_returns_contiguous_range():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+    n, start = qt.insert_many([(10, 10), (20, 20), (30, 30)], get_start_id=True)
+    assert (n, start) == (3, 0)
+
+    raw = qt.query((0, 0, 40, 40), as_items=False)
+    got = sorted(t[0] for t in raw)
+    assert got == list(range(start, start + n))
+
+
+def test_insert_many_get_start_id_non_tracking_start_after_prior_single_inserts():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+
+    id0 = qt.insert((5, 5))
+    id1 = qt.insert((6, 6))
+    assert (id0, id1) == (0, 1)
+
+    n, start = qt.insert_many(
+        np.array([[10, 10], [20, 20]], dtype=np.float32), get_start_id=True
+    )
+    assert (n, start) == (2, 2)
+
+    raw = qt.query((0, 0, 40, 40), as_items=False)
+    got = sorted(t[0] for t in raw)
+    assert got == [0, 1, 2, 3]
+
+
+def test_insert_many_get_start_id_tracking_appends_tail_does_not_fill_holes():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+
+    a = qt.insert((10, 10), obj="a")
+    b = qt.insert((20, 20), obj="b")
+    c = qt.insert((30, 30), obj="c")
+    assert (a, b, c) == (0, 1, 2)
+
+    # Delete id 1, leaving a hole in ObjStore
+    assert qt.delete(1, (20, 20)) is True
+    assert len(qt) == 2
+
+    # Bulk insert should append at tail in your implementation (start_id == len(_arr) == 3)
+    n, start = qt.insert_many([(40, 40), (50, 50)], get_start_id=True)
+    assert (n, start) == (2, 3)
+
+    raw = qt.query((0, 0, 60, 60), as_items=False)
+    got_ids = sorted(t[0] for t in raw)
+    assert got_ids == [0, 2, 3, 4]
+
+    # A single insert should reuse the free-list hole (LIFO), which is id 1 here
+    rid = qt.insert((60, 60), obj="d")
+    assert rid == 1
+
+
+def test_insert_many_get_start_id_empty_inputs_returns_tuple_and_does_not_mutate():
+    # non-tracking
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+    qt.insert((1, 1))
+    assert len(qt) == 1
+
+    # empty list
+    n, start = qt.insert_many([], get_start_id=True)
+    assert n == 0
+    assert start == 1
+    assert len(qt) == 1
+
+    # empty numpy
+    empty = np.empty((0, 2), dtype=np.float32)
+    n, start = qt.insert_many(empty, get_start_id=True)
+    assert (n, start) == (0, 1)
+    assert len(qt) == 1
+
+    # tracking
+    qt2 = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    qt2.insert((1, 1), obj="x")
+    assert len(qt2) == 1
+
+    n, start = qt2.insert_many([], get_start_id=True)
+    assert (n, start) == (0, 1)
+    assert len(qt2) == 1
+
+    n, start = qt2.insert_many(np.empty((0, 2), dtype=np.float32), get_start_id=True)
+    assert (n, start) == (0, 1)
+    assert len(qt2) == 1
+
+
+def test_insert_many_get_start_id_positional_backcompat_third_arg():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+    pts = np.array([[10, 10], [20, 20]], dtype=np.float32)
+
+    # positional: (geoms, objs, get_start_id)
+    n, start = qt.insert_many(pts, None, True)
+    assert (n, start) == (2, 0)
+
+
+def test_insert_many_objs_len_mismatch_raises_tracking():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    pts = np.array([[10, 10], [20, 20]], dtype=np.float32)
+
+    with pytest.raises(ValueError):
+        qt.insert_many(pts, objs=[{"only": "one"}])
+
+
+def test_delete_by_object_is_identity_not_equality():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+
+    a = _Tag(7)
+    b = _Tag(7)  # equal to a, but not the same object
+    assert a == b
+    assert a is not b
+
+    qt.insert((10, 10), obj=a)
+
+    # Should not delete using a different equal object if identity semantics are used
+    assert qt.delete_by_object(b) is False
+    assert len(qt) == 1
+
+    # But should delete with the original object
+    assert qt.delete_by_object(a) is True
+    assert len(qt) == 0
+
+
+def test_attach_then_get_and_query_items_and_get_all_objects():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+
+    i = qt.insert((10, 10), obj=None)
+    qt.attach(i, {"k": "v"})
+    assert qt.get(i) == {"k": "v"}
+
+    items = qt.query((0, 0, 20, 20), as_items=True)
+    assert len(items) == 1
+    assert items[0].id_ == i
+    assert items[0].obj == {"k": "v"}
+
+    objs = qt.get_all_objects()
+    assert objs == [{"k": "v"}]
+
+    all_items = qt.get_all_items()
+    assert len(all_items) == 1
+    assert all_items[0].id_ == i
+
+
+def test_clear_resets_ids_in_both_modes():
+    # non-tracking
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=False)
+    assert qt.insert((1, 1)) == 0
+    assert qt.insert((2, 2)) == 1
+    qt.clear()
+    assert len(qt) == 0
+    assert qt.insert((3, 3)) == 0
+
+    # tracking
+    qt2 = QuadTree(BOUNDS, capacity=8, track_objects=True)
+    assert qt2.insert((1, 1), obj="a") == 0
+    assert qt2.insert((2, 2), obj="b") == 1
+    qt2.clear()
+    assert len(qt2) == 0
+    assert qt2.insert((3, 3), obj="c") == 0
+
+
+def test_to_bytes_from_bytes_round_trip_preserves_objects_and_queries():
+    qt = QuadTree(BOUNDS, capacity=8, track_objects=True)
+
+    pts = np.array([[10, 10], [20, 20], [30, 30]], dtype=np.float32)
+    qt.insert_many(pts, objs=["a", "b", "c"])
+    assert len(qt) == 3
+
+    blob = qt.to_bytes()
+    qt2 = type(qt).from_bytes(blob, dtype="f32")
+
+    assert len(qt2) == 3
+    res = qt2.query((0, 0, 40, 40), as_items=True)
+    assert {it.obj for it in res} == {"a", "b", "c"}
+
+
+def test_query_np_shapes_and_types_sanity():
+    qt = QuadTree(BOUNDS, capacity=4, track_objects=False)
+    pts = np.array([[10, 10], [20, 20], [30, 30], [40, 40]], dtype=np.float32)
+    qt.insert_many(pts)
+
+    ids_np, coords_np = qt.query_np((0, 0, 100, 100))
+
+    assert ids_np.ndim == 1
+    assert coords_np.ndim == 2
+    assert coords_np.shape[1] == 2
+    assert ids_np.shape[0] == coords_np.shape[0]
