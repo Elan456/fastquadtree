@@ -35,7 +35,7 @@ Rust-optimized quadtree with a clean Python API
 - Fast [serialization](https://elan456.github.io/fastquadtree/benchmark/#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
-- Offers a drop-in [pyqtree shim](https://elan456.github.io/fastquadtree/benchmark/#pyqtree-drop-in-shim-performance-gains) that is 6.567x faster while keeping the same API
+- Offers a drop-in [pyqtree shim](https://elan456.github.io/fastquadtree/benchmark/#pyqtree-drop-in-shim-performance-gains) that is 6.791x faster while keeping the same API
 
 ----
 
@@ -52,7 +52,7 @@ pip install fastquadtree
 ```python
 from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
-from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (6.567x faster while keeping the same API)
+from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (6.791x faster while keeping the same API)
 ```
 
 ## Benchmarks
@@ -88,17 +88,17 @@ See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) f
 
 [See the full API](https://elan456.github.io/fastquadtree/api/quadtree/)
 
-### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, start_id=1)`
+### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, dtype="f32")`
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
 * `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
 * `track_objects` — if `True`, the wrapper maintains an id → object map for convenience.
-* `start_id` — starting value for auto-assigned ids
+* `dtype` — data type for coordinates, e.g., `"f32"`, `"f64"`, `"i32"`, `"i64"`
 
 ### Key Methods
 
-- `insert(xy, *, id=None, obj=None) -> int`
+- `insert(xy, *, obj=None) -> int`
 
 - `query(rect, *, as_items=False) -> list`
 
