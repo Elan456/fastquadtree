@@ -92,6 +92,7 @@ nav:
       - pyqtree: api/pyqtree.md
       - RectItem: api/rect_item.md
       - PointItem: api/point_item.md
+  - Version 2 Proposal: 2.0_proposal.md
 
 extra:
   social:
