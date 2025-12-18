@@ -1,10 +1,12 @@
 # rect_quadtree.py
+"""RectQuadTree - High-performance rectangle spatial index without object association."""
+
 from __future__ import annotations
 
-from typing import Any, Literal, SupportsFloat, Tuple, overload
+from typing import Any
 
-from ._base_quadtree import Bounds, _BaseQuadTree
-from ._item import Point, RectItem
+from ._base_quadtree import _BaseQuadTree
+from ._common import Bounds, Point
 from ._native import (
     RectQuadTree as RectQuadTreeF32,
     RectQuadTreeF64,
@@ -12,7 +14,7 @@ from ._native import (
     RectQuadTreeI64,
 )
 
-_IdRect = Tuple[int, SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
+_IdRect = tuple[int, float, float, float, float]
 
 DTYPE_MAP = {
     "f32": RectQuadTreeF32,
@@ -22,15 +24,18 @@ DTYPE_MAP = {
 }
 
 
-class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
+class RectQuadTree(_BaseQuadTree[Bounds]):
     """
-    Rectangle version of the quadtree. All geometries are axis-aligned rectangles. (min_x, min_y, max_x, max_y)
-    High-level Python wrapper over the Rust quadtree engine.
+    High-performance spatial index for axis-aligned rectangles.
+
+    This class provides fast spatial indexing without Python object association.
+    Rectangles are stored with integer IDs that you can use to correlate with
+    external data structures. For object association, see RectQuadTreeObjects.
 
     Performance characteristics:
-        Inserts: average O(log n) <br>
-        Rect queries: average O(log n + k) where k is matches returned <br>
-        Nearest neighbor: average O(log n) <br>
+        Inserts: average O(log n)
+        Rect queries: average O(log n + k) where k is matches returned
+        Nearest neighbor: average O(log n)
 
     Thread-safety:
         Instances are not thread-safe. Use external synchronization if you
@@ -38,193 +43,203 @@ class RectQuadTree(_BaseQuadTree[Bounds, _IdRect, RectItem]):
 
     Args:
         bounds: World bounds as (min_x, min_y, max_x, max_y).
-        capacity: Max number of points per node before splitting.
+        capacity: Max number of rectangles per node before splitting.
         max_depth: Optional max tree depth. If omitted, engine decides.
-        track_objects: Enable id <-> object mapping inside Python.
-        dtype: Data type for coordinates and ids in the native engine. Default is 'f32'. Options are 'f32', 'f64', 'i32', 'i64'.
+        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
 
     Raises:
         ValueError: If parameters are invalid or inserts are out of bounds.
+
+    Example:
+        ```python
+        rqt = RectQuadTree((0.0, 0.0, 100.0, 100.0), capacity=10)
+        id_ = rqt.insert((10.0, 20.0, 30.0, 40.0))
+        results = rqt.query((5.0, 5.0, 35.0, 35.0))
+        for id_, x0, y0, x1, y1 in results:
+            print(f"Rect {id_} at ({x0}, {y0}, {x1}, {y1})")
+        ```
     """
 
-    def __init__(
-        self,
-        bounds: Bounds,
-        capacity: int,
-        *,
-        max_depth: int | None = None,
-        track_objects: bool = False,
-        dtype: str = "f32",
-    ):
-        super().__init__(
-            bounds,
-            capacity,
-            max_depth=max_depth,
-            track_objects=track_objects,
-            dtype=dtype,
-        )
+    # ---- Native engine factory methods ----
 
-    @overload
-    def query(
-        self, rect: Bounds, *, as_items: Literal[False] = ...
-    ) -> list[_IdRect]: ...
-    @overload
-    def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[RectItem]: ...
-    def query(
-        self, rect: Bounds, *, as_items: bool = False
-    ) -> list[_IdRect] | list[RectItem]:
-        """
-        Query the tree for all items that intersect the given rectangle.
-
-        Args:
-            rect: Query rectangle as (min_x, min_y, max_x, max_y).
-            as_items: If True, return Item wrappers. If False, return raw tuples.
-
-        Returns:
-            If as_items is False: list of (id, x0, y0, x1, y1) tuples.
-            If as_items is True: list of Item objects.
-
-        Example:
-            ```python
-            results = rqt.query((10.0, 10.0, 20.0, 20.0), as_items=True)
-            for item in results:
-                print(f"Found rect id={item.id_} at {item.geom} with obj={item.obj}")
-            ```
-        """
-        if not as_items:
-            return self._native.query(rect)
-        if self._store is None:
-            raise ValueError("Cannot return results as items with track_objects=False")
-        return self._store.get_many_by_ids(self._native.query_ids(rect))
-
-    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
-        """
-        Return all points inside an axis-aligned rectangle as NumPy arrays.
-        The first array is an array of IDs, and the second is a corresponding array of rectangle coordinates.
-
-        Requirements:
-            NumPy must be installed to use this method.
-
-        Args:
-            rect: Query rectangle as (min_x, min_y, max_x, max_y).
-
-        Returns:
-            Tuple of (ids, locations) where:
-                ids:       NDArray[np.uint64] with shape (N,)
-                locations: NDArray[np.floating] with shape (N, 4)
-
-        Example:
-            ```python
-            ids, locations = rqt.query_np((10.0, 10.0, 20.0, 20.0))
-            for id_, (x0, y0, x1, y1) in zip(ids, locations):
-                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
-            ```
-        """
-
-        return self._native.query_np(rect)
-
-    @overload
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: Literal[False] = ...
-    ) -> _IdRect | None: ...
-    @overload
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: Literal[True]
-    ) -> RectItem | None: ...
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: bool = False
-    ) -> RectItem | _IdRect | None:
-        """
-        Return the single nearest neighbor to the query point.
-        Utilizes euclidean distance to the nearest edge of rectangles.
-
-        Args:
-            xy: Query point (x, y).
-            as_item: If True, return Item. If False, return (id, x0, y0, x1, y1).
-
-        Returns:
-            The nearest neighbor or None if the tree is empty.
-
-        Example:
-            ```python
-            nn = rqt.nearest_neighbor((15.0, 15.0), as_item=True)
-            if nn is not None:
-                print(f"Nearest rect id={nn.id_} at {nn.geom} with obj={nn.obj}")
-            else:
-                print("No rectangles in the tree.")
-            ```
-        """
-        t = self._native.nearest_neighbor(xy)
-        if t is None or not as_item:
-            return t
-        if self._store is None:
-            raise ValueError("Cannot return result as item with track_objects=False")
-        id_, _x0, _y0, _x1, _y1 = t
-        it = self._store.by_id(id_)
-        if it is None:
-            raise RuntimeError("Internal error: missing tracked item")
-        return it
-
-    @overload
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: Literal[False] = ...
-    ) -> list[_IdRect]: ...
-    @overload
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: Literal[True]
-    ) -> list[RectItem]: ...
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: bool = False
-    ) -> list[RectItem] | list[_IdRect]:
-        """
-        Return the k nearest neighbors to the query point in order of increasing distance.
-        Utilizes euclidean distance to the nearest edge of rectangles.
-
-        Args:
-            xy: Query point (x, y).
-            k: Number of neighbors to return.
-            as_items: If True, return Item wrappers. If False, return raw tuples.
-
-        Returns:
-            If as_items is False: list of (id, x0, y0, x1, y1) tuples. <br>
-            If as_items is True: list of Item objects. <br>
-
-        Example:
-            ```python
-            # Gets the 3 nearest rectangles to point (15.0, 15.0)
-            results = rqt.nearest_neighbors((15.0, 15.0), 3, as_items=True)
-            for item in results:
-                print(f"Found rect id={item.id_} at {item.geom} with obj={item.obj}")
-            ```
-        """
-        raw = self._native.nearest_neighbors(xy, k)
-        if not as_items:
-            return raw
-        if self._store is None:
-            raise ValueError("Cannot return results as items with track_objects=False")
-        out: list[RectItem] = []
-        for id_, _x0, _y0, _x1, _y1 in raw:
-            it = self._store.by_id(id_)
-            if it is None:
-                raise RuntimeError("Internal error: missing tracked item")
-            out.append(it)
-        return out
-
-    def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
+    def _new_native(
+        self, bounds: Bounds, capacity: int, max_depth: int | None, dtype: str
+    ) -> Any:
         """Create the native engine instance."""
-        rust_cls = DTYPE_MAP.get(self._dtype)
+        rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
-            raise TypeError(f"Unsupported dtype: {self._dtype}")
+            raise TypeError(f"Unsupported dtype: {dtype}")
         return rust_cls(bounds, capacity, max_depth)
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str = "f32") -> Any:
-        """Create a new native engine instance from serialized bytes."""
+    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+        """Create the native engine instance from serialized bytes."""
         rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
             raise TypeError(f"Unsupported dtype: {dtype}")
         return rust_cls.from_bytes(data)
 
-    @staticmethod
-    def _make_item(id_: int, geom: Bounds, obj: Any | None) -> RectItem:
-        return RectItem(id_, geom, obj)
+    # ---- Queries ----
+
+    def query(self, rect: Bounds) -> list[_IdRect]:
+        """
+        Return all rectangles that intersect the query rectangle.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            List of (id, x0, y0, x1, y1) tuples.
+
+        Example:
+            ```python
+            results = rqt.query((10.0, 10.0, 20.0, 20.0))
+            for id_, x0, y0, x1, y1 in results:
+                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
+        """
+        return self._native.query(rect)
+
+    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+        """
+        Return all rectangles that intersect the query rectangle as NumPy arrays.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            Tuple of (ids, coords) where:
+                ids: NDArray[np.int64] with shape (N,)
+                coords: NDArray with shape (N, 4) and dtype matching tree
+
+        Raises:
+            ImportError: If NumPy is not installed.
+
+        Example:
+            ```python
+            ids, coords = rqt.query_np((10.0, 10.0, 20.0, 20.0))
+            for id_, (x0, y0, x1, y1) in zip(ids, coords):
+                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
+        """
+        return self._native.query_np(rect)
+
+    def nearest_neighbor(self, point: Point) -> _IdRect | None:
+        """
+        Return the single nearest rectangle to the query point.
+
+        Uses Euclidean distance to the nearest edge of rectangles.
+
+        Args:
+            point: Query point (x, y).
+
+        Returns:
+            Tuple of (id, x0, y0, x1, y1) or None if the tree is empty.
+
+        Example:
+            ```python
+            nn = rqt.nearest_neighbor((15.0, 15.0))
+            if nn is not None:
+                id_, x0, y0, x1, y1 = nn
+                print(f"Nearest: {id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
+        """
+        return self._native.nearest_neighbor(point)
+
+    def nearest_neighbor_np(self, point: Point) -> tuple[int, Any] | None:
+        """
+        Return the single nearest rectangle as NumPy array.
+
+        Args:
+            point: Query point (x, y).
+
+        Returns:
+            Tuple of (id, coords) or None if tree is empty, where coords is ndarray shape (4,).
+
+        Raises:
+            ImportError: If NumPy is not installed.
+        """
+        return self._native.nearest_neighbor_np(point)
+
+    def nearest_neighbors(self, point: Point, k: int) -> list[_IdRect]:
+        """
+        Return the k nearest rectangles to the query point.
+
+        Uses Euclidean distance to the nearest edge of rectangles.
+
+        Args:
+            point: Query point (x, y).
+            k: Number of neighbors to return.
+
+        Returns:
+            List of (id, x0, y0, x1, y1) tuples in order of increasing distance.
+
+        Example:
+            ```python
+            neighbors = rqt.nearest_neighbors((15.0, 15.0), k=5)
+            for id_, x0, y0, x1, y1 in neighbors:
+                print(f"Neighbor {id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
+        """
+        return self._native.nearest_neighbors(point, k)
+
+    def nearest_neighbors_np(self, point: Point, k: int) -> tuple[Any, Any]:
+        """
+        Return the k nearest rectangles as NumPy arrays.
+
+        Args:
+            point: Query point (x, y).
+            k: Number of neighbors to return.
+
+        Returns:
+            Tuple of (ids, coords) where:
+                ids: NDArray[np.int64] with shape (k,)
+                coords: NDArray with shape (k, 4) and dtype matching tree
+
+        Raises:
+            ImportError: If NumPy is not installed.
+        """
+        return self._native.nearest_neighbors_np(point, k)
+
+    # ---- Deletion and Mutation inherited from base ----
+    # delete(id_, geom) and update(id_, old_geom, new_geom) work with Bounds tuples
+
+    # ---- Utilities ----
+
+    def __contains__(self, rect: Bounds) -> bool:
+        """
+        Check if any item exists at the given rectangle coordinates.
+
+        Args:
+            rect: Rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            True if at least one item exists at these exact coordinates.
+
+        Example:
+            ```python
+            rqt.insert((10.0, 20.0, 30.0, 40.0))
+            assert (10.0, 20.0, 30.0, 40.0) in rqt
+            assert (5.0, 5.0, 10.0, 10.0) not in rqt
+            ```
+        """
+        x0, y0, x1, y1 = rect
+        candidates = self._native.query(rect)
+        return any(
+            rx0 == x0 and ry0 == y0 and rx1 == x1 and ry1 == y1
+            for _, rx0, ry0, rx1, ry1 in candidates
+        )
+
+    def __iter__(self):
+        """
+        Iterate over all (id, x0, y0, x1, y1) tuples in the tree.
+
+        Example:
+            ```python
+            for id_, x0, y0, x1, y1 in rqt:
+                print(f"ID {id_} at ({x0}, {y0}, {x1}, {y1})")
+            ```
+        """
+        # Query the entire bounds to get all items
+        all_items = self._native.query(self._bounds)
+        return iter(all_items)

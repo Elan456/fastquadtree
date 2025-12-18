@@ -112,7 +112,7 @@ def optimize(bounds, *, rng_seed: int = 42):
     best_score = float("inf")
 
     for stage, budget in enumerate(budgets):
-        stage_label = f"Stage {stage+1}/{len(budgets)}"
+        stage_label = f"Stage {stage + 1}/{len(budgets)}"
         scores = []
 
         bar = tqdm(

@@ -1,16 +1,14 @@
 # item.py
 from __future__ import annotations
 
-from typing import Any, SupportsFloat, Tuple
+from typing import Any, Generic, TypeVar
 
-Bounds = Tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
-"""Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
+from ._common import Bounds, Point
 
-Point = Tuple[SupportsFloat, SupportsFloat]
-"""2D point as (x, y)."""
+G = TypeVar("G", Point, Bounds)
 
 
-class Item:
+class Item(Generic[G]):
     """
     Lightweight view of an index entry.
 
@@ -22,9 +20,9 @@ class Item:
 
     __slots__ = ("geom", "id_", "obj")
 
-    def __init__(self, id_: int, geom: Point | Bounds, obj: Any | None = None):
+    def __init__(self, id_: int, geom: G, obj: Any | None = None):
         self.id_: int = id_
-        self.geom: Point | Bounds = geom
+        self.geom: G = geom
         self.obj: Any | None = obj
 
     def to_dict(self) -> dict[str, Any]:
@@ -57,7 +55,7 @@ class Item:
         return cls(id_, geom, obj)
 
 
-class PointItem(Item):
+class PointItem(Item[Point]):
     """
     Lightweight point item wrapper for tracking and as_items results.
 
@@ -74,7 +72,7 @@ class PointItem(Item):
         self.x, self.y = geom
 
 
-class RectItem(Item):
+class RectItem(Item[Bounds]):
     """
     Lightweight rectangle item wrapper for tracking and as_items results.
 

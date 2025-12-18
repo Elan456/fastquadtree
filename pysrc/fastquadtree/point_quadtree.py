@@ -1,13 +1,15 @@
 # point_quadtree.py
+"""QuadTree - High-performance point spatial index without object association."""
+
 from __future__ import annotations
 
-from typing import Any, Literal, SupportsFloat, Tuple, overload
+from typing import Any
 
-from ._base_quadtree import Bounds, _BaseQuadTree
-from ._item import Point, PointItem
+from ._base_quadtree import _BaseQuadTree
+from ._common import Bounds, Point
 from ._native import QuadTree as QuadTreeF32, QuadTreeF64, QuadTreeI32, QuadTreeI64
 
-_IdCoord = Tuple[int, SupportsFloat, SupportsFloat]
+_IdCoord = tuple[int, float, float]
 
 DTYPE_MAP = {
     "f32": QuadTreeF32,
@@ -17,15 +19,18 @@ DTYPE_MAP = {
 }
 
 
-class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
+class QuadTree(_BaseQuadTree[Point]):
     """
-    Point version of the quadtree. All geometries are 2D points (x, y).
-    High-level Python wrapper over the Rust quadtree engine.
+    High-performance spatial index for 2D points.
+
+    This class provides fast spatial indexing without Python object association.
+    Points are stored with integer IDs that you can use to correlate with external
+    data structures. For object association, see QuadTreeObjects.
 
     Performance characteristics:
-        Inserts: average O(log n) <br>
-        Rect queries: average O(log n + k) where k is matches returned <br>
-        Nearest neighbor: average O(log n) <br>
+        Inserts: average O(log n)
+        Rect queries: average O(log n + k) where k is matches returned
+        Nearest neighbor: average O(log n)
 
     Thread-safety:
         Instances are not thread-safe. Use external synchronization if you
@@ -35,172 +40,196 @@ class QuadTree(_BaseQuadTree[Point, _IdCoord, PointItem]):
         bounds: World bounds as (min_x, min_y, max_x, max_y).
         capacity: Max number of points per node before splitting.
         max_depth: Optional max tree depth. If omitted, engine decides.
-        track_objects: Enable id <-> object mapping inside Python.
-        dtype: Data type for coordinates and ids in the native engine. Default is 'f32'. Options are 'f32', 'f64', 'i32', 'i64'.
+        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
 
     Raises:
         ValueError: If parameters are invalid or inserts are out of bounds.
+
+    Example:
+        ```python
+        qt = QuadTree((0.0, 0.0, 100.0, 100.0), capacity=10)
+        id_ = qt.insert((10.0, 20.0))
+        results = qt.query((5.0, 5.0, 25.0, 25.0))
+        for id_, x, y in results:
+            print(f"Point {id_} at ({x}, {y})")
+        ```
     """
 
-    def __init__(
-        self,
-        bounds: Bounds,
-        capacity: int,
-        *,
-        max_depth: int | None = None,
-        track_objects: bool = False,
-        dtype: str = "f32",
-    ):
-        super().__init__(
-            bounds,
-            capacity,
-            max_depth=max_depth,
-            track_objects=track_objects,
-            dtype=dtype,
-        )
+    # ---- Native engine factory methods ----
 
-    @overload
-    def query(
-        self, rect: Bounds, *, as_items: Literal[False] = ...
-    ) -> list[_IdCoord]: ...
-    @overload
-    def query(self, rect: Bounds, *, as_items: Literal[True]) -> list[PointItem]: ...
-    def query(
-        self, rect: Bounds, *, as_items: bool = False
-    ) -> list[PointItem] | list[_IdCoord]:
-        """
-        Return all points inside an axis-aligned rectangle.
-
-        Args:
-            rect: Query rectangle as (min_x, min_y, max_x, max_y).
-            as_items: If True, return Item wrappers. If False, return raw tuples.
-
-        Returns:
-            If as_items is False: list of (id, x, y) tuples.
-            If as_items is True: list of Item objects.
-
-        Example:
-            ```python
-            results = qt.query((10.0, 10.0, 20.0, 20.0), as_items=True)
-            for item in results:
-                print(f"Found point id={item.id_} at {item.geom} with obj={item.obj}")
-            ```
-        """
-        if not as_items:
-            return self._native.query(rect)
-        if self._store is None:
-            raise ValueError("Cannot return results as items with track_objects=False")
-        return self._store.get_many_by_ids(self._native.query_ids(rect))
-
-    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
-        """
-        Return all points inside an axis-aligned rectangle as NumPy arrays.
-        The first array is an array of IDs, and the second is a corresponding array of point coordinates.
-
-        Requirements:
-            NumPy must be installed to use this method.
-
-        Args:
-            rect: Query rectangle as (min_x, min_y, max_x, max_y).
-
-        Returns:
-            Tuple of (ids, locations) where:
-                ids:       NDArray[np.uint64] with shape (N,)
-                locations: NDArray[np.floating] with shape (N, 2)
-
-        Example:
-            ```python
-            ids, locations = qt.query_np((10.0, 10.0, 20.0, 20.0))
-            for id_, (x, y) in zip(ids, locations):
-                print(f"Found point id={id_} at ({x}, {y})")
-            ```
-        """
-
-        return self._native.query_np(rect)
-
-    @overload
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: Literal[False] = ...
-    ) -> _IdCoord | None: ...
-    @overload
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: Literal[True]
-    ) -> PointItem | None: ...
-    def nearest_neighbor(
-        self, xy: Point, *, as_item: bool = False
-    ) -> PointItem | _IdCoord | None:
-        """
-        Return the single nearest neighbor to the query point.
-
-        Args:
-            xy: Query point (x, y).
-            as_item: If True, return Item. If False, return (id, x, y).
-
-        Returns:
-            The nearest neighbor or None if the tree is empty.
-        """
-        t = self._native.nearest_neighbor(xy)
-        if t is None or not as_item:
-            return t
-        if self._store is None:
-            raise ValueError("Cannot return result as item with track_objects=False")
-        id_, _x, _y = t
-        it = self._store.by_id(id_)
-        if it is None:
-            raise RuntimeError("Internal error: missing tracked item")
-        return it
-
-    @overload
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: Literal[False] = ...
-    ) -> list[_IdCoord]: ...
-    @overload
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: Literal[True]
-    ) -> list[PointItem]: ...
-    def nearest_neighbors(
-        self, xy: Point, k: int, *, as_items: bool = False
-    ) -> list[PointItem] | list[_IdCoord]:
-        """
-        Return the k nearest neighbors to the query point in order of increasing distance.
-
-        Args:
-            xy: Query point (x, y).
-            k: Number of neighbors to return.
-            as_items: If True, return Item wrappers. If False, return raw tuples.
-
-        Returns:
-            If as_items is False: list of (id, x, y) tuples. <br>
-            If as_items is True: list of Item objects. <br>
-        """
-        raw = self._native.nearest_neighbors(xy, k)
-        if not as_items:
-            return raw
-        if self._store is None:
-            raise ValueError("Cannot return results as items with track_objects=False")
-        out: list[PointItem] = []
-        for id_, _x, _y in raw:
-            it = self._store.by_id(id_)
-            if it is None:
-                raise RuntimeError("Internal error: missing tracked item")
-            out.append(it)
-        return out
-
-    def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
+    def _new_native(
+        self, bounds: Bounds, capacity: int, max_depth: int | None, dtype: str
+    ) -> Any:
         """Create the native engine instance."""
-        rust_cls = DTYPE_MAP.get(self._dtype)
+        rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
-            raise TypeError(f"Unsupported dtype: {self._dtype}")
+            raise TypeError(f"Unsupported dtype: {dtype}")
         return rust_cls(bounds, capacity, max_depth)
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str = "f32") -> Any:
-        """Create a new native engine instance from serialized bytes."""
+    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+        """Create the native engine instance from serialized bytes."""
         rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
             raise TypeError(f"Unsupported dtype: {dtype}")
         return rust_cls.from_bytes(data)
 
-    @staticmethod
-    def _make_item(id_: int, geom: Point, obj: Any | None) -> PointItem:
-        return PointItem(id_, geom, obj)
+    # ---- Queries ----
+
+    def query(self, rect: Bounds) -> list[_IdCoord]:
+        """
+        Return all points inside an axis-aligned rectangle.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            List of (id, x, y) tuples.
+
+        Example:
+            ```python
+            results = qt.query((10.0, 10.0, 20.0, 20.0))
+            for id_, x, y in results:
+                print(f"Found point id={id_} at ({x}, {y})")
+            ```
+        """
+        return self._native.query(rect)
+
+    def query_np(self, rect: Bounds) -> tuple[Any, Any]:
+        """
+        Return all points inside an axis-aligned rectangle as NumPy arrays.
+
+        Args:
+            rect: Query rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            Tuple of (ids, coords) where:
+                ids: NDArray[np.int64] with shape (N,)
+                coords: NDArray with shape (N, 2) and dtype matching tree
+
+        Raises:
+            ImportError: If NumPy is not installed.
+
+        Example:
+            ```python
+            ids, coords = qt.query_np((10.0, 10.0, 20.0, 20.0))
+            for id_, (x, y) in zip(ids, coords):
+                print(f"Found point id={id_} at ({x}, {y})")
+            ```
+        """
+        return self._native.query_np(rect)
+
+    def nearest_neighbor(self, point: Point) -> _IdCoord | None:
+        """
+        Return the single nearest neighbor to the query point.
+
+        Args:
+            point: Query point (x, y).
+
+        Returns:
+            Tuple of (id, x, y) or None if the tree is empty.
+
+        Example:
+            ```python
+            nn = qt.nearest_neighbor((15.0, 15.0))
+            if nn is not None:
+                id_, x, y = nn
+                print(f"Nearest: {id_} at ({x}, {y})")
+            ```
+        """
+        return self._native.nearest_neighbor(point)
+
+    def nearest_neighbor_np(self, point: Point) -> tuple[int, Any] | None:
+        """
+        Return the single nearest neighbor as NumPy array.
+
+        Args:
+            point: Query point (x, y).
+
+        Returns:
+            Tuple of (id, coords) or None if tree is empty, where coords is ndarray shape (2,).
+
+        Raises:
+            ImportError: If NumPy is not installed.
+        """
+        return self._native.nearest_neighbor_np(point)
+
+    def nearest_neighbors(self, point: Point, k: int) -> list[_IdCoord]:
+        """
+        Return the k nearest neighbors to the query point.
+
+        Args:
+            point: Query point (x, y).
+            k: Number of neighbors to return.
+
+        Returns:
+            List of (id, x, y) tuples in order of increasing distance.
+
+        Example:
+            ```python
+            neighbors = qt.nearest_neighbors((15.0, 15.0), k=5)
+            for id_, x, y in neighbors:
+                print(f"Neighbor {id_} at ({x}, {y})")
+            ```
+        """
+        return self._native.nearest_neighbors(point, k)
+
+    def nearest_neighbors_np(self, point: Point, k: int) -> tuple[Any, Any]:
+        """
+        Return the k nearest neighbors as NumPy arrays.
+
+        Args:
+            point: Query point (x, y).
+            k: Number of neighbors to return.
+
+        Returns:
+            Tuple of (ids, coords) where:
+                ids: NDArray[np.int64] with shape (k,)
+                coords: NDArray with shape (k, 2) and dtype matching tree
+
+        Raises:
+            ImportError: If NumPy is not installed.
+        """
+        return self._native.nearest_neighbors_np(point, k)
+
+    # ---- Deletion and Mutation inherited from base ----
+    # delete(id_, geom) and update(id_, old_geom, new_geom) work with Point tuples
+
+    # ---- Utilities ----
+
+    def __contains__(self, point: Point) -> bool:
+        """
+        Check if any item exists at the given point coordinates.
+
+        Args:
+            point: Point as (x, y).
+
+        Returns:
+            True if at least one item exists at these coordinates.
+
+        Example:
+            ```python
+            qt.insert((10.0, 20.0))
+            assert (10.0, 20.0) in qt
+            assert (5.0, 5.0) not in qt
+            ```
+        """
+        x, y = point
+        eps = 1e-9
+        rect = (x - eps, y - eps, x + eps, y + eps)
+        candidates = self._native.query(rect)
+        return any(px == x and py == y for _, px, py in candidates)
+
+    def __iter__(self):
+        """
+        Iterate over all (id, x, y) tuples in the tree.
+
+        Example:
+            ```python
+            for id_, x, y in qt:
+                print(f"ID {id_} at ({x}, {y})")
+            ```
+        """
+        # Query the entire bounds to get all items
+        all_items = self._native.query(self._bounds)
+        return iter(all_items)

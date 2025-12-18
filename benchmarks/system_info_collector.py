@@ -144,7 +144,7 @@ def _gpu_briefs(gpus: list[dict]) -> list[str]:
     for g in gpus or []:
         name = g.get("name") or "GPU"
         mem_mb = g.get("memory_total_mb")
-        mem_gb = f"{mem_mb/1024:.1f} GB" if isinstance(mem_mb, (int, float)) else "?"
+        mem_gb = f"{mem_mb / 1024:.1f} GB" if isinstance(mem_mb, (int, float)) else "?"
         briefs.append(f"{name} ({mem_gb})")
     return briefs
 
@@ -192,8 +192,8 @@ def format_system_info_markdown(info: dict) -> str:
         lines.append("|-:|------|------------:|:------|:-----|")
         for i, g in enumerate(gpus):
             lines.append(
-                f"| {i} | {g.get('name','')} | {g.get('memory_total_mb','')} | "
-                f"{g.get('driver','')} | {g.get('uuid','')} |"
+                f"| {i} | {g.get('name', '')} | {g.get('memory_total_mb', '')} | "
+                f"{g.get('driver', '')} | {g.get('uuid', '')} |"
             )
     else:
         lines.append("- **GPUs**: none detected")
@@ -209,7 +209,7 @@ def format_system_info_markdown_lite(info: dict) -> str:
     mem = info.get("memory_gb")
     gpus = info.get("gpus", [])
 
-    py_str = f"{py.get('implementation','Python')} {py.get('version','?')}"
+    py_str = f"{py.get('implementation', 'Python')} {py.get('version', '?')}"
     cpu_model = cpu.get("model") or "Unknown CPU"
     lcores = cpu.get("logical_cores")
     core_str = f" ({lcores} threads)" if lcores is not None else ""
@@ -236,7 +236,7 @@ def format_system_info_oneliner(info: dict) -> str:
     mem = info.get("memory_gb")
     gpus = info.get("gpus", [])
 
-    py_str = f"{py.get('implementation','Python')} {py.get('version','?')}"
+    py_str = f"{py.get('implementation', 'Python')} {py.get('version', '?')}"
     cpu_model = cpu.get("model") or "Unknown CPU"
     lcores = cpu.get("logical_cores")
     mem_str = f"{mem:.1f} GB" if isinstance(mem, (int, float)) else "?"

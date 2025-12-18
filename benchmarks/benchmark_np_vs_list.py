@@ -38,9 +38,9 @@ def _build_tree_np(points_np: np.ndarray, track_objects: bool) -> float:
     # Direct NumPy path
     inserted = qt.insert_many(points_np)
     dt = now() - t0
-    assert (
-        inserted == points_np.shape[0]
-    ), f"Inserted {inserted} != {points_np.shape[0]}"
+    assert inserted == points_np.shape[0], (
+        f"Inserted {inserted} != {points_np.shape[0]}"
+    )
     return dt
 
 
