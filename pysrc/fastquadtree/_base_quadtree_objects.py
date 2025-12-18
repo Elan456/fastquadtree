@@ -752,7 +752,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
         for id_, geom in id_geom_pairs:
             obj = id_to_obj.get(id_)
-            add(mk(id_, geom, obj))  # type: ignore[arg-type]
+            add(mk(id_, geom, obj), handle_out_of_order=True)  # type: ignore[arg-type]
 
         qt._store = store
 

@@ -189,7 +189,7 @@ class _BaseQuadTree(Generic[G], ABC):
 
     # ---- Deletion ----
 
-    def delete(self, id_: int, geom: G) -> bool:
+    def _delete_geom(self, id_: int, geom: G) -> bool:
         """
         Delete an item by ID and exact geometry.
 

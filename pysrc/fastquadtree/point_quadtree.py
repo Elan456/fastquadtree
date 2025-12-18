@@ -192,8 +192,13 @@ class QuadTree(_BaseQuadTree[Point]):
         """
         return self._native.nearest_neighbors_np(point, k)
 
-    # ---- Deletion and Mutation inherited from base ----
-    # delete(id_, geom) and update(id_, old_geom, new_geom) work with Point tuples
+    # ---- Deletion ----
+    def delete(self, id_: int, x: float, y: float) -> bool:
+        return self._delete_geom(id_, (x, y))
+
+    def delete_tuple(self, t: _IdCoord) -> bool:
+        id_, x, y = t
+        return self._delete_geom(id_, (x, y))
 
     # ---- Utilities ----
 

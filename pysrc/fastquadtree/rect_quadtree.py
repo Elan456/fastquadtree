@@ -201,11 +201,17 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
         """
         return self._native.nearest_neighbors_np(point, k)
 
-    # ---- Deletion and Mutation inherited from base ----
-    # delete(id_, geom) and update(id_, old_geom, new_geom) work with Bounds tuples
+    # ---- Deletion ----
+    def delete(
+        self, id_: int, min_x: float, min_y: float, max_x: float, max_y: float
+    ) -> bool:
+        return self._delete_geom(id_, (min_x, min_y, max_x, max_y))
+
+    def delete_tuple(self, t: _IdRect) -> bool:
+        id_, min_x, min_y, max_x, max_y = t
+        return self._delete_geom(id_, (min_x, min_y, max_x, max_y))
 
     # ---- Utilities ----
-
     def __contains__(self, rect: Bounds) -> bool:
         """
         Check if any item exists at the given rectangle coordinates.
