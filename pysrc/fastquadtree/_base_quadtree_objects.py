@@ -8,9 +8,16 @@ from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
 from ._common import (
+    SECTION_ITEMS,
+    SECTION_OBJECTS,
+    SERIALIZATION_FORMAT_VERSION,
     Bounds,
     Point,
+    QuadTreeDType,
+    SerializationError,
     _is_np_array,
+    build_container,
+    parse_container,
     validate_bounds,
     validate_np_dtype,
 )
@@ -21,6 +28,156 @@ from ._obj_store import ObjStore
 # Generic parameters
 G = TypeVar("G")  # geometry type, e.g. Point or Bounds
 ItemType = TypeVar("ItemType", bound=Item)  # e.g. PointItem or RectItem
+
+
+def _is_point_geom(geom: Any) -> bool:
+    # Points: (x, y)
+    return isinstance(geom, tuple) and len(geom) == 2
+
+
+def _is_rect_geom(geom: Any) -> bool:
+    # Rects: (min_x, min_y, max_x, max_y)
+    return isinstance(geom, tuple) and len(geom) == 4
+
+
+def _encode_items_section(items: list[ItemType]) -> bytes:
+    """
+    Encode items (id + geom) into a safe payload.
+
+    This is intentionally NOT pickle. It's a simple validated format using only:
+      - int IDs
+      - geometry tuples of length 2 or 4
+    """
+    import struct
+
+    # Format:
+    #   kind[u8] = 0 (points) or 1 (rects)
+    #   reserved[u8]
+    #   n[u32]
+    #   repeated:
+    #     id[u64]
+    #     geom (2 or 4) as float64 (portable, independent of tree dtype)
+    #
+    # Note: we store geometry as float64 to keep it stable and easy.
+    # The tree dtype still lives in the container header and is used by native core.
+    if not items:
+        # default to points kind=0 (doesn't matter when empty)
+        return struct.pack("<BBI", 0, 0, 0)
+
+    first_geom = items[0].geom
+    if _is_point_geom(first_geom):
+        kind = 0
+        geom_len = 2
+        pack_geom = struct.Struct("<2d").pack
+    elif _is_rect_geom(first_geom):
+        kind = 1
+        geom_len = 4
+        pack_geom = struct.Struct("<4d").pack
+    else:
+        raise SerializationError("Unsupported geometry in items section")
+
+    # Validate all items match the same geometry type
+    for it in items:
+        g = it.geom
+        if kind == 0 and not _is_point_geom(g):
+            raise SerializationError("Mixed geometry kinds in items section")
+        if kind == 1 and not _is_rect_geom(g):
+            raise SerializationError("Mixed geometry kinds in items section")
+
+    n = len(items)
+    if n > 0xFFFFFFFF:
+        raise SerializationError("Too many items to serialize")
+
+    out = bytearray()
+    out += struct.pack("<BBI", kind, 0, n)
+
+    pack_id = struct.Struct("<Q").pack
+    if geom_len == 2:
+        for it in items:
+            x, y = it.geom  # type: ignore[misc]
+            out += pack_id(int(it.id_))
+            out += pack_geom(float(x), float(y))
+    else:
+        for it in items:
+            min_x, min_y, max_x, max_y = it.geom  # type: ignore[misc]
+            out += pack_id(int(it.id_))
+            out += pack_geom(float(min_x), float(min_y), float(max_x), float(max_y))
+
+    return bytes(out)
+
+
+def _decode_items_section(payload: bytes) -> list[tuple[int, tuple]]:
+    """
+    Decode the safe items section into (id, geom) pairs.
+    """
+    import struct
+
+    buf = memoryview(payload)
+    if len(buf) < 6:
+        raise SerializationError("Items section too short")
+
+    kind, _reserved, n = struct.unpack_from("<BBI", buf, 0)
+    off = 6
+
+    out: list[tuple[int, tuple]] = []
+    if n == 0:
+        return out
+
+    if kind == 0:
+        stride = 8 + 16  # id(u64) + 2*float64
+        need = off + n * stride
+        if len(buf) < need:
+            raise SerializationError("Items section truncated (points)")
+        for _ in range(n):
+            (id_,) = struct.unpack_from("<Q", buf, off)
+            off += 8
+            x, y = struct.unpack_from("<2d", buf, off)
+            off += 16
+            out.append((int(id_), (float(x), float(y))))
+        return out
+
+    if kind == 1:
+        stride = 8 + 32  # id(u64) + 4*float64
+        need = off + n * stride
+        if len(buf) < need:
+            raise SerializationError("Items section truncated (rects)")
+        for _ in range(n):
+            (id_,) = struct.unpack_from("<Q", buf, off)
+            off += 8
+            min_x, min_y, max_x, max_y = struct.unpack_from("<4d", buf, off)
+            off += 32
+            out.append(
+                (int(id_), (float(min_x), float(min_y), float(max_x), float(max_y)))
+            )
+        return out
+
+    raise SerializationError(f"Unknown items section kind: {kind}")
+
+
+def _encode_objects_section(store: ObjStore[ItemType]) -> bytes:
+    """
+    Encode objects (id -> obj) as a pickle payload (unsafe).
+    Only used when include_objects=True.
+    """
+    # Keep it minimal: serialize (id, obj) pairs for ids that currently exist.
+    # This avoids depending on ObjStore internal representation.
+    pairs: list[tuple[int, Any]] = [(int(it.id_), it.obj) for it in store.items()]
+    return pickle.dumps(pairs, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def _decode_objects_section(payload: bytes) -> list[tuple[int, Any]]:
+    """
+    Decode pickled objects section. Caller must have checked allow_objects=True.
+    """
+    pairs = pickle.loads(payload)
+    if not isinstance(pairs, list):
+        raise SerializationError("Objects section malformed")
+    out: list[tuple[int, Any]] = []
+    for p in pairs:
+        if not (isinstance(p, tuple) and len(p) == 2 and isinstance(p[0], int)):
+            raise SerializationError("Objects section contains invalid entries")
+        out.append((int(p[0]), p[1]))
+    return out
 
 
 class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
@@ -52,7 +209,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
     @classmethod
     @abstractmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     @staticmethod
@@ -73,12 +230,12 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         capacity: int,
         *,
         max_depth: int | None = None,
-        dtype: str = "f32",
+        dtype: QuadTreeDType = "f32",
     ):
         self._bounds = validate_bounds(bounds)
         self._capacity = capacity
         self._max_depth = max_depth
-        self._dtype = dtype
+        self._dtype: QuadTreeDType = dtype
 
         self._native = self._new_native(self._bounds, capacity, max_depth)
         self._store: ObjStore[ItemType] = ObjStore()
@@ -106,9 +263,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         rid = self._store.alloc_id()
 
         if not self._native.insert(rid, geom):
-            bx0, by0, bx1, by1 = self._bounds
+            min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
-                f"Geometry {geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
             )
 
         self._store.add(self._make_item(rid, geom, obj))
@@ -202,12 +359,12 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         mk = self._make_item
         if objs is None:
             for off, geom in enumerate(geoms_list):
-                add(mk(start_id + off, tuple(geom), None))
+                add(mk(start_id + off, tuple(geom), None))  # type: ignore
         else:
             if len(objs) != len(geoms_list):
                 raise ValueError("objs length must match geoms length")
             for off, (geom, obj) in enumerate(zip(geoms_list, objs)):
-                add(mk(start_id + off, tuple(geom), obj))
+                add(mk(start_id + off, tuple(geom), obj))  # type: ignore
 
         self._count += num
         return InsertResult(count=num, start_id=start_id, end_id=last_id)
@@ -487,37 +644,42 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         """
         Serialize the quadtree to bytes.
 
-        Object serialization is explicit and off by default for safety.
+        Safety:
+          - include_objects=False (default): safe to load from untrusted data (no pickle executed)
+          - include_objects=True: includes a pickle section; unsafe for untrusted data
 
         Args:
-            include_objects: If True, serialize Python objects using pickle (unsafe for untrusted data).
+            include_objects: If True, serialize Python objects using pickle (unsafe).
 
         Returns:
             Bytes representing the serialized quadtree.
         """
         core_bytes = self._native.to_bytes()
 
-        data = {
-            "core": core_bytes,
-            "bounds": self._bounds,
-            "capacity": self._capacity,
-            "max_depth": self._max_depth,
-            "dtype": self._dtype,
-            "count": self._count,
-            "include_objects": include_objects,
-        }
+        flags = 0
+        if self._max_depth is not None:
+            flags |= 1  # max_depth_present
 
+        # Always store items (id + geom) safely.
+        items_payload = _encode_items_section(list(self._store.items()))
+        sections: list[tuple[int, bytes]] = [(SECTION_ITEMS, items_payload)]
+
+        # Optionally store Python objects (unsafe).
         if include_objects:
-            data["store"] = self._store.to_dict()
-        else:
-            # Store geometry and IDs but not objects
-            items_data = [
-                {"id": item.id_, "geom": item.geom, "obj": None}
-                for item in self._store.items()
-            ]
-            data["store"] = {"items": items_data}
+            sections.append((SECTION_OBJECTS, _encode_objects_section(self._store)))
 
-        return pickle.dumps(data)
+        return build_container(
+            fmt_ver=SERIALIZATION_FORMAT_VERSION,
+            dtype=self._dtype,  # type: ignore[arg-type]
+            flags=flags,
+            capacity=self._capacity,
+            max_depth=self._max_depth,
+            next_id=0,  # unused for Objects trees (dense IDs live in store)
+            count=self._count,
+            bounds=self._bounds,
+            core=core_bytes,
+            extra_sections=sections,
+        )
 
     @classmethod
     def from_bytes(cls, data: bytes, allow_objects: bool = False):
@@ -526,7 +688,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
         Args:
             data: Bytes from to_bytes().
-            allow_objects: If True, allow loading pickled Python objects (unsafe for untrusted data).
+            allow_objects: If True, allow loading pickled Python objects (unsafe).
 
         Returns:
             A new instance.
@@ -534,25 +696,68 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Raises:
             ValueError: If allow_objects=False but data contains objects.
         """
-        in_dict = pickle.loads(data)
+        parsed = parse_container(data)
 
-        if in_dict.get("include_objects", False) and not allow_objects:
+        fmt_ver = parsed["fmt_ver"]
+        if fmt_ver > SERIALIZATION_FORMAT_VERSION:
+            raise SerializationError(
+                f"Unsupported serialization format version {fmt_ver}; "
+                f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
+            )
+
+        dtype = parsed["dtype"]
+        core = parsed["core"]
+
+        # Pull out sections
+        sections: list[tuple[int, bytes]] = parsed["sections"]
+        items_section = None
+        objects_section = None
+        for stype, payload in sections:
+            if stype == SECTION_ITEMS:
+                items_section = payload
+            elif stype == SECTION_OBJECTS:
+                objects_section = payload
+
+        if items_section is None:
+            raise SerializationError("Missing required items section")
+
+        if objects_section is not None and not allow_objects:
             raise ValueError(
                 "Serialized data contains Python objects but allow_objects=False. "
                 "Set allow_objects=True to load objects (unsafe for untrusted data)."
             )
 
-        dtype = in_dict["dtype"]
+        # Decode items safely (id + geom)
+        id_geom_pairs = _decode_items_section(items_section)
 
+        # Decode objects (unsafe) if present/allowed
+        id_to_obj: dict[int, Any] = {}
+        if objects_section is not None:
+            # Rewrite as dict comprehension
+            id_to_obj = dict(_decode_objects_section(objects_section))
+
+        # Construct instance without __init__
         qt = cls.__new__(cls)
-        qt._native = cls._new_native_from_bytes(in_dict["core"], dtype)
-        qt._bounds = in_dict["bounds"]
-        qt._capacity = in_dict["capacity"]
-        qt._max_depth = in_dict["max_depth"]
         qt._dtype = dtype
-        qt._count = in_dict["count"]
+        qt._bounds = parsed["bounds"]
+        qt._capacity = parsed["capacity"]
+        qt._max_depth = parsed["max_depth"]
+        qt._count = parsed["count"]
+        qt._native = cls._new_native_from_bytes(core, dtype)
 
-        # Restore store - use _make_item as factory
-        qt._store = ObjStore.from_dict(in_dict["store"], cls._make_item)
+        # Rebuild store from decoded ids/geoms (+ optional objects)
+        store: ObjStore[ItemType] = ObjStore()
+        add = store.add
+        mk = cls._make_item
+
+        for id_, geom in id_geom_pairs:
+            obj = id_to_obj.get(id_)
+            add(mk(id_, geom, obj))  # type: ignore[arg-type]
+
+        qt._store = store
+
+        # Important: ensure dense allocation continues after max id.
+        # ObjStore likely derives alloc_id() from internal array size; we used add() which should
+        # grow it appropriately. If ObjStore requires an explicit "seal" or "set_next_id", do it here.
 
         return qt

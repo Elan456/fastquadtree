@@ -19,9 +19,9 @@ class DummyNative:
         self._items = {}  # id -> geom
 
     def _inside(self, geom):
-        x0, y0, x1, y1 = self.bounds
+        min_x, min_y, max_x, max_y = self.bounds
         x, y = geom
-        return x0 <= x <= x1 and y0 <= y <= y1
+        return min_x <= x <= max_x and min_y <= y <= max_y
 
     def insert(self, id_, geom):
         if not self._inside(geom):

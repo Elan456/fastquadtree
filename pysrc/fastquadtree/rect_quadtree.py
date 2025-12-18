@@ -55,8 +55,8 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
         rqt = RectQuadTree((0.0, 0.0, 100.0, 100.0), capacity=10)
         id_ = rqt.insert((10.0, 20.0, 30.0, 40.0))
         results = rqt.query((5.0, 5.0, 35.0, 35.0))
-        for id_, x0, y0, x1, y1 in results:
-            print(f"Rect {id_} at ({x0}, {y0}, {x1}, {y1})")
+        for id_, min_x, min_y, max_x, max_y in results:
+            print(f"Rect {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
         ```
     """
 
@@ -89,13 +89,13 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
-            List of (id, x0, y0, x1, y1) tuples.
+            List of (id, min_x, min_y, max_x, max_y) tuples.
 
         Example:
             ```python
             results = rqt.query((10.0, 10.0, 20.0, 20.0))
-            for id_, x0, y0, x1, y1 in results:
-                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+            for id_, min_x, min_y, max_x, max_y in results:
+                print(f"Found rect id={id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.query(rect)
@@ -118,8 +118,8 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
         Example:
             ```python
             ids, coords = rqt.query_np((10.0, 10.0, 20.0, 20.0))
-            for id_, (x0, y0, x1, y1) in zip(ids, coords):
-                print(f"Found rect id={id_} at ({x0}, {y0}, {x1}, {y1})")
+            for id_, (min_x, min_y, max_x, max_y) in zip(ids, coords):
+                print(f"Found rect id={id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.query_np(rect)
@@ -134,14 +134,14 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             point: Query point (x, y).
 
         Returns:
-            Tuple of (id, x0, y0, x1, y1) or None if the tree is empty.
+            Tuple of (id, min_x, min_y, max_x, max_y) or None if the tree is empty.
 
         Example:
             ```python
             nn = rqt.nearest_neighbor((15.0, 15.0))
             if nn is not None:
-                id_, x0, y0, x1, y1 = nn
-                print(f"Nearest: {id_} at ({x0}, {y0}, {x1}, {y1})")
+                id_, min_x, min_y, max_x, max_y = nn
+                print(f"Nearest: {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.nearest_neighbor(point)
@@ -172,13 +172,13 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             k: Number of neighbors to return.
 
         Returns:
-            List of (id, x0, y0, x1, y1) tuples in order of increasing distance.
+            List of (id, min_x, min_y, max_x, max_y) tuples in order of increasing distance.
 
         Example:
             ```python
             neighbors = rqt.nearest_neighbors((15.0, 15.0), k=5)
-            for id_, x0, y0, x1, y1 in neighbors:
-                print(f"Neighbor {id_} at ({x0}, {y0}, {x1}, {y1})")
+            for id_, min_x, min_y, max_x, max_y in neighbors:
+                print(f"Neighbor {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.nearest_neighbors(point, k)
@@ -223,21 +223,21 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             assert (5.0, 5.0, 10.0, 10.0) not in rqt
             ```
         """
-        x0, y0, x1, y1 = rect
+        min_x, min_y, max_x, max_y = rect
         candidates = self._native.query(rect)
         return any(
-            rx0 == x0 and ry0 == y0 and rx1 == x1 and ry1 == y1
-            for _, rx0, ry0, rx1, ry1 in candidates
+            rmin_x == min_x and rmin_y == min_y and rmax_x == max_x and rmax_y == max_y
+            for _, rmin_x, rmin_y, rmax_x, rmax_y in candidates
         )
 
     def __iter__(self):
         """
-        Iterate over all (id, x0, y0, x1, y1) tuples in the tree.
+        Iterate over all (id, min_x, min_y, max_x, max_y) tuples in the tree.
 
         Example:
             ```python
-            for id_, x0, y0, x1, y1 in rqt:
-                print(f"ID {id_} at ({x0}, {y0}, {x1}, {y1})")
+            for id_, min_x, min_y, max_x, max_y in rqt:
+                print(f"ID {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         # Query the entire bounds to get all items

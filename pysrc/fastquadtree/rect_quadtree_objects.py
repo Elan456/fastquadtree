@@ -86,17 +86,17 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
 
     # ---- Rectangle-specific deletion ----
 
-    def delete_at(self, x0: float, y0: float, x1: float, y1: float) -> bool:
+    def delete_at(self, min_x: float, min_y: float, max_x: float, max_y: float) -> bool:
         """
         Delete one item at the given rectangle coordinates.
 
         If multiple items exist at the same coordinates, deletes the one with the lowest ID.
 
         Args:
-            x0: Min x coordinate.
-            y0: Min y coordinate.
-            x1: Max x coordinate.
-            y1: Max y coordinate.
+            min_x: Min x coordinate.
+            min_y: Min y coordinate.
+            max_x: Max x coordinate.
+            max_y: Max y coordinate.
 
         Returns:
             True if an item was found and deleted.
@@ -109,14 +109,17 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
             ```
         """
         # Query for overlapping rectangles
-        rect = (x0, y0, x1, y1)
+        rect = (min_x, min_y, max_x, max_y)
         candidates = self._native.query(rect)
 
         # Find all exact matches
         matches = [
-            (id_, rx0, ry0, rx1, ry1)
-            for id_, rx0, ry0, rx1, ry1 in candidates
-            if rx0 == x0 and ry0 == y0 and rx1 == x1 and ry1 == y1
+            (id_, rmin_x, rmin_y, rmax_x, rmax_y)
+            for id_, rmin_x, rmin_y, rmax_x, rmax_y in candidates
+            if rmin_x == min_x
+            and rmin_y == min_y
+            and rmax_x == max_x
+            and rmax_y == max_y
         ]
         if not matches:
             return False
@@ -128,7 +131,12 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
     # ---- Rectangle-specific update ----
 
     def update(
-        self, id_: int, new_x0: float, new_y0: float, new_x1: float, new_y1: float
+        self,
+        id_: int,
+        new_min_x: float,
+        new_min_y: float,
+        new_max_x: float,
+        new_max_y: float,
     ) -> bool:
         """
         Move an existing rectangle to a new location.
@@ -137,10 +145,10 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
 
         Args:
             id_: The ID of the rectangle to move.
-            new_x0: New min x coordinate.
-            new_y0: New min y coordinate.
-            new_x1: New max x coordinate.
-            new_y1: New max y coordinate.
+            new_min_x: New min x coordinate.
+            new_min_y: New min y coordinate.
+            new_max_x: New max x coordinate.
+            new_max_y: New max y coordinate.
 
         Returns:
             True if the update succeeded.
@@ -166,13 +174,13 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
             return False
 
         # Insert at new position
-        new_rect = (new_x0, new_y0, new_x1, new_y1)
+        new_rect = (new_min_x, new_min_y, new_max_x, new_max_y)
         if not self._native.insert(id_, new_rect):
             # Rollback: reinsert at old position
             self._native.insert(id_, old_rect)
-            bx0, by0, bx1, by1 = self._bounds
+            min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
-                f"New rectangle {new_rect!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                f"New rectangle {new_rect!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
             )
 
         # Update stored item

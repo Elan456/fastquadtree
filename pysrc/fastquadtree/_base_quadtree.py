@@ -3,13 +3,17 @@
 
 from __future__ import annotations
 
-import pickle
 from abc import ABC, abstractmethod
 from typing import Any, Generic, TypeVar
 
 from ._common import (
+    SERIALIZATION_FORMAT_VERSION,
     Bounds,
+    QuadTreeDType,
+    SerializationError,
     _is_np_array,
+    build_container,
+    parse_container,
     validate_bounds,
     validate_np_dtype,
 )
@@ -49,7 +53,7 @@ class _BaseQuadTree(Generic[G], ABC):
 
     @classmethod
     @abstractmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     # ---- Initialization ----
@@ -60,16 +64,16 @@ class _BaseQuadTree(Generic[G], ABC):
         capacity: int,
         *,
         max_depth: int | None = None,
-        dtype: str = "f32",
+        dtype: QuadTreeDType = "f32",
     ):
         self._bounds = validate_bounds(bounds)
         self._capacity = capacity
         self._max_depth = max_depth
-        self._dtype = dtype
+        self._dtype: QuadTreeDType = dtype
 
         self._native = self._new_native(self._bounds, capacity, max_depth, dtype)
 
-        self._next_id = 0
+        self._next_id: int = 0
         self._count = 0
 
     # ---- Insertion ----
@@ -102,9 +106,9 @@ class _BaseQuadTree(Generic[G], ABC):
             self._next_id += 1
 
         if not self._native.insert(id_, geom):
-            bx0, by0, bx1, by1 = self._bounds
+            min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
-                f"Geometry {geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
             )
 
         self._count += 1
@@ -240,9 +244,9 @@ class _BaseQuadTree(Generic[G], ABC):
         if not self._native.insert(id_, new_geom):
             # Rollback: reinsert at old position
             self._native.insert(id_, old_geom)
-            bx0, by0, bx1, by1 = self._bounds
+            min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
-                f"New geometry {new_geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                f"New geometry {new_geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
             )
 
         return True
@@ -270,48 +274,46 @@ class _BaseQuadTree(Generic[G], ABC):
     # ---- Serialization ----
 
     def to_bytes(self) -> bytes:
-        """
-        Serialize the quadtree to bytes.
-
-        Returns:
-            Bytes representing the serialized quadtree.
-        """
         core_bytes = self._native.to_bytes()
 
-        data = {
-            "core": core_bytes,
-            "bounds": self._bounds,
-            "capacity": self._capacity,
-            "max_depth": self._max_depth,
-            "dtype": self._dtype,
-            "next_id": self._next_id,
-            "count": self._count,
-        }
+        flags = 0
+        if self._max_depth is not None:
+            flags |= 1  # max_depth_present
 
-        return pickle.dumps(data)
+        return build_container(
+            fmt_ver=SERIALIZATION_FORMAT_VERSION,
+            dtype=self._dtype,  # type: ignore[arg-type]
+            flags=flags,
+            capacity=self._capacity,
+            max_depth=self._max_depth,
+            next_id=self._next_id,
+            count=self._count,
+            bounds=self._bounds,
+            core=core_bytes,
+            extra_sections=None,  # reserved for Objects trees
+        )
 
     @classmethod
     def from_bytes(cls, data: bytes):
-        """
-        Deserialize a quadtree from bytes.
+        parsed = parse_container(data)
 
-        Args:
-            data: Bytes from to_bytes().
+        fmt_ver = parsed["fmt_ver"]
+        if fmt_ver > SERIALIZATION_FORMAT_VERSION:
+            raise SerializationError(
+                f"Unsupported serialization format version {fmt_ver}; "
+                f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
+            )
 
-        Returns:
-            A new instance.
-        """
-        in_dict = pickle.loads(data)
-
-        dtype = in_dict["dtype"]
+        dtype = parsed["dtype"]
+        core = parsed["core"]
 
         qt = cls.__new__(cls)
-        qt._native = cls._new_native_from_bytes(in_dict["core"], dtype)
-        qt._bounds = in_dict["bounds"]
-        qt._capacity = in_dict["capacity"]
-        qt._max_depth = in_dict["max_depth"]
         qt._dtype = dtype
-        qt._next_id = in_dict["next_id"]
-        qt._count = in_dict["count"]
+        qt._bounds = parsed["bounds"]
+        qt._capacity = parsed["capacity"]
+        qt._max_depth = parsed["max_depth"]
+        qt._next_id = parsed["next_id"]
+        qt._count = parsed["count"]
+        qt._native = cls._new_native_from_bytes(core, dtype)
 
         return qt

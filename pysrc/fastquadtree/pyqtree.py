@@ -98,8 +98,10 @@ class Index:
             arguments must be set.
         """
         if bbox is not None:
-            x1, y1, x2, y2 = bbox
-            self._qt = RectQuadTree((x1, y1, x2, y2), max_items, max_depth=max_depth)
+            min_x, min_y, max_x, max_y = bbox
+            self._qt = RectQuadTree(
+                (min_x, min_y, max_x, max_y), max_items, max_depth=max_depth
+            )
 
         elif (
             x is not None and y is not None and width is not None and height is not None
