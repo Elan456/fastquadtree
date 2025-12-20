@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, Final, Literal, overload
 
 SERIALIZATION_FORMAT_VERSION: Final[int] = 1
@@ -80,7 +81,7 @@ def validate_bounds(bounds: Any) -> Bounds:
         Normalized bounds tuple (min_x, min_y, max_x, max_y).
 
     Raises:
-        ValueError: If bounds is not a 4-element sequence.
+        ValueError: If bounds is not a 4-element sequence of finite numbers with min < max.
     """
     if type(bounds) is not tuple:
         bounds = tuple(bounds)
@@ -88,7 +89,25 @@ def validate_bounds(bounds: Any) -> Bounds:
         raise ValueError(
             "bounds must be a tuple of four numeric values (min_x, min_y, max_x, max_y)"
         )
-    return bounds  # type: ignore[return-value]
+
+    numeric_vals: list[float | int] = []
+    floats_for_checks: list[float] = []
+    for v in bounds:
+        if not isinstance(v, (int, float)):
+            raise ValueError("bounds must contain numeric values")
+        numeric_vals.append(
+            int(v) if isinstance(v, int) and not isinstance(v, bool) else float(v)
+        )
+        floats_for_checks.append(float(v))
+
+    if not all(math.isfinite(v) for v in floats_for_checks):
+        raise ValueError("bounds must be finite numbers")
+
+    min_x, min_y, max_x, max_y = floats_for_checks
+    if min_x >= max_x or min_y >= max_y:
+        raise ValueError("bounds must satisfy min < max for both axes")
+
+    return tuple(numeric_vals)  # type: ignore[return-value]
 
 
 def validate_np_dtype(geoms: Any, expected_dtype: QuadTreeDType) -> None:
