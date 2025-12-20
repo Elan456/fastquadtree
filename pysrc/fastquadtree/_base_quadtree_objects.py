@@ -543,6 +543,38 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             return False
         return self.delete(it.id_)
 
+    def _update_geom(self, id_: int, old_geom: G, new_geom: G) -> bool:
+        """
+        Update an item's geometry by moving it from old_geom to new_geom.
+
+        This is an internal helper used by subclass update() methods.
+
+        Args:
+            id_: The ID of the item to update.
+            old_geom: The old geometry.
+            new_geom: The new geometry.
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new geometry is outside bounds.
+        """
+        # Delete from old position
+        if not self._native.delete(id_, old_geom):
+            return False
+
+        # Insert at new position
+        if not self._native.insert(id_, new_geom):
+            # Rollback: reinsert at old position
+            self._native.insert(id_, old_geom)
+            min_x, min_y, max_x, max_y = self._bounds
+            raise ValueError(
+                f"New geometry {new_geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
+            )
+
+        return True
+
     def clear(self) -> None:
         """Empty the tree in place, preserving bounds, capacity, and max_depth."""
         self._native = self._new_native(self._bounds, self._capacity, self._max_depth)

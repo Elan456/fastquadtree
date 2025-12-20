@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._base_quadtree import Bounds
 from ._base_quadtree_objects import _BaseQuadTreeObjects
+from ._common import Bounds
 from ._item import RectItem
 from ._native import (
     RectQuadTree as RectQuadTreeF32,
@@ -168,21 +168,52 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
             return False
 
         old_rect = item.geom
-
-        # Delete from old position
-        if not self._native.delete(id_, old_rect):
-            return False
-
-        # Insert at new position
         new_rect = (new_min_x, new_min_y, new_max_x, new_max_y)
-        if not self._native.insert(id_, new_rect):
-            # Rollback: reinsert at old position
-            self._native.insert(id_, old_rect)
-            min_x, min_y, max_x, max_y = self._bounds
-            raise ValueError(
-                f"New rectangle {new_rect!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
-            )
+
+        # Use base class _update_geom to handle deletion and insertion
+        if not self._update_geom(id_, old_rect, new_rect):
+            return False
 
         # Update stored item
         self._store.add(RectItem(id_, new_rect, item.obj))
         return True
+
+    def update_by_object(
+        self,
+        obj: Any,
+        new_min_x: float,
+        new_min_y: float,
+        new_max_x: float,
+        new_max_y: float,
+    ) -> bool:
+        """
+        Move an existing rectangle to a new location by object reference.
+
+        If multiple items have this object, updates the one with the lowest ID.
+
+        Args:
+            obj: The Python object to search for.
+            new_min_x: New min x coordinate.
+            new_min_y: New min y coordinate.
+            new_max_x: New max x coordinate.
+            new_max_y: New max y coordinate.
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new coordinates are outside bounds.
+
+        Example:
+            ```python
+            my_obj = {"data": "example"}
+            rqt.insert((1.0, 1.0, 2.0, 2.0), obj=my_obj)
+            ok = rqt.update_by_object(my_obj, 3.0, 3.0, 4.0, 4.0)
+            assert ok is True
+            ```
+        """
+        item = self._store.by_obj(obj)
+        if item is None:
+            return False
+
+        return self.update(item.id_, new_min_x, new_min_y, new_max_x, new_max_y)

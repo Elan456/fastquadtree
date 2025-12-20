@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ._base_quadtree import Bounds
 from ._base_quadtree_objects import _BaseQuadTreeObjects
+from ._common import Bounds
 from ._item import Point, PointItem
 from ._native import QuadTree as QuadTreeF32, QuadTreeF64, QuadTreeI32, QuadTreeI64
 
@@ -145,22 +145,44 @@ class QuadTreeObjects(_BaseQuadTreeObjects[Point, PointItem]):
         if item is None:
             return False
 
-        old_x, old_y = item.geom
-
-        # Delete from old position
-        if not self._native.delete(id_, (old_x, old_y)):
-            return False
-
-        # Insert at new position
+        old_point = item.geom
         new_point = (new_x, new_y)
-        if not self._native.insert(id_, new_point):
-            # Rollback: reinsert at old position
-            self._native.insert(id_, (old_x, old_y))
-            bx0, by0, bx1, by1 = self._bounds
-            raise ValueError(
-                f"New point {new_point!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
-            )
+
+        # Use base class _update_geom to handle deletion and insertion
+        if not self._update_geom(id_, old_point, new_point):
+            return False
 
         # Update stored item
         self._store.add(PointItem(id_, new_point, item.obj))
         return True
+
+    def update_by_object(self, obj: Any, new_x: float, new_y: float) -> bool:
+        """
+        Move an existing point to a new location by object reference.
+
+        If multiple items have this object, updates the one with the lowest ID.
+
+        Args:
+            obj: The Python object to search for.
+            new_x: New x coordinate.
+            new_y: New y coordinate.
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new coordinates are outside bounds.
+
+        Example:
+            ```python
+            my_obj = {"data": "example"}
+            qt.insert((1.0, 1.0), obj=my_obj)
+            ok = qt.update_by_object(my_obj, 2.0, 2.0)
+            assert ok is True
+            ```
+        """
+        item = self._store.by_obj(obj)
+        if item is None:
+            return False
+
+        return self.update(item.id_, new_x, new_y)
