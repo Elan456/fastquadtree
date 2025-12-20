@@ -263,6 +263,8 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         rid = self._store.alloc_id()
 
         if not self._native.insert(rid, geom):
+            # Return the allocated id to the free-list to avoid id gaps
+            self._store._free.append(rid)
             min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
                 f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
@@ -779,10 +781,15 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             obj = id_to_obj.get(id_)
             add(mk(id_, geom, obj), handle_out_of_order=True)  # type: ignore[arg-type]
 
-        qt._store = store
+        # Populate free-list from None holes created during deserialization.
+        # This ensures holes are reusable for future inserts, matching the
+        # behavior of the original tree before serialization.
+        # Note: store._arr[i] is None checks for empty slots, NOT items with obj=None.
+        # Items with obj=None are valid Item objects, empty slots are literally None.
+        for i in range(len(store._arr)):
+            if store._arr[i] is None:
+                store._free.append(i)
 
-        # Important: ensure dense allocation continues after max id.
-        # ObjStore likely derives alloc_id() from internal array size; we used add() which should
-        # grow it appropriately. If ObjStore requires an explicit "seal" or "set_next_id", do it here.
+        qt._store = store
 
         return qt

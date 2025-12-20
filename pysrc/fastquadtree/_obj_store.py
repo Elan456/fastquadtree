@@ -40,6 +40,11 @@ class ObjStore(Generic[TItem]):
             for it in items:
                 self.add(it, handle_out_of_order=True)
 
+            # Populate free-list from None holes created during initialization
+            for i in range(len(self._arr)):
+                if self._arr[i] is None:
+                    self._free.append(i)
+
     # ---- Serialization ----
     def to_dict(self) -> dict[str, Any]:
         """
@@ -75,6 +80,12 @@ class ObjStore(Generic[TItem]):
         """
         Insert or replace the mapping at item.id_. Reverse map updated so obj points to id.
         If the same object is inserted multiple times, all IDs are tracked.
+
+        Args:
+            item: The item to add.
+            handle_out_of_order: If True, fill gaps with None instead of raising.
+                Used during deserialization to preserve original IDs from serialized data.
+                Gaps are NOT added to the free-list (permanent holes until post-processing).
         """
         id_ = item.id_
         obj = item.obj
