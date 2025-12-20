@@ -1,5 +1,4 @@
-# point_quadtree.py
-"""QuadTree - High-performance point spatial index without object association."""
+"""High-performance point spatial index without object association."""
 
 from __future__ import annotations
 
@@ -21,34 +20,33 @@ DTYPE_MAP = {
 
 class QuadTree(_BaseQuadTree[Point]):
     """
-    High-performance spatial index for 2D points.
+    Spatial index for 2D points without object association.
 
-    This class provides fast spatial indexing without Python object association.
-    Points are stored with integer IDs that you can use to correlate with external
-    data structures. For object association, see QuadTreeObjects.
-
-    Performance characteristics:
-        Inserts: average O(log n)
-        Rect queries: average O(log n + k) where k is matches returned
-        Nearest neighbor: average O(log n)
-
-    Thread-safety:
-        Instances are not thread-safe. Use external synchronization if you
-        mutate the same tree from multiple threads.
+    This class provides fast spatial indexing for points using integer IDs that you
+    can correlate with external data structures. For automatic object association,
+    see `QuadTreeObjects`.
 
     Args:
         bounds: World bounds as (min_x, min_y, max_x, max_y).
-        capacity: Max number of points per node before splitting.
-        max_depth: Optional max tree depth. If omitted, engine decides.
-        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
+        capacity: Maximum points per node before splitting.
+        max_depth: Optional maximum tree depth (uses engine default if not specified).
+        dtype: Coordinate data type ('f32', 'f64', 'i32', 'i64'). Default: 'f32'.
+
+    Performance:
+        - Inserts: O(log n) average
+        - Queries: O(log n + k) average, where k is the number of matches
+        - Nearest neighbor: O(log n) average
+
+    Thread Safety:
+        Not thread-safe. Use external synchronization for concurrent access.
 
     Raises:
-        ValueError: If parameters are invalid or inserts are out of bounds.
+        ValueError: If parameters are invalid or geometry is outside bounds.
 
     Example:
         ```python
         qt = QuadTree((0.0, 0.0, 100.0, 100.0), capacity=10)
-        id_ = qt.insert((10.0, 20.0))
+        point_id = qt.insert((10.0, 20.0))
         results = qt.query((5.0, 5.0, 25.0, 25.0))
         for id_, x, y in results:
             print(f"Point {id_} at ({x}, {y})")
@@ -78,34 +76,34 @@ class QuadTree(_BaseQuadTree[Point]):
 
     def query(self, rect: Bounds) -> list[_IdCoord]:
         """
-        Return all points inside an axis-aligned rectangle.
+        Find all points within a rectangular region.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
-            List of (id, x, y) tuples.
+            List of (id, x, y) tuples for points inside the rectangle.
 
         Example:
             ```python
             results = qt.query((10.0, 10.0, 20.0, 20.0))
             for id_, x, y in results:
-                print(f"Found point id={id_} at ({x}, {y})")
+                print(f"Point {id_} at ({x}, {y})")
             ```
         """
         return self._native.query(rect)
 
     def query_np(self, rect: Bounds) -> tuple[Any, Any]:
         """
-        Return all points inside an axis-aligned rectangle as NumPy arrays.
+        Find all points within a rectangular region, returning NumPy arrays.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
             Tuple of (ids, coords) where:
-                ids: NDArray[np.int64] with shape (N,)
-                coords: NDArray with shape (N, 2) and dtype matching tree
+                - ids: NDArray[np.int64] with shape (N,)
+                - coords: NDArray with shape (N, 2) and dtype matching the tree
 
         Raises:
             ImportError: If NumPy is not installed.
@@ -114,7 +112,7 @@ class QuadTree(_BaseQuadTree[Point]):
             ```python
             ids, coords = qt.query_np((10.0, 10.0, 20.0, 20.0))
             for id_, (x, y) in zip(ids, coords):
-                print(f"Found point id={id_} at ({x}, {y})")
+                print(f"Point {id_} at ({x}, {y})")
             ```
         """
         return self._native.query_np(rect)
@@ -199,6 +197,67 @@ class QuadTree(_BaseQuadTree[Point]):
     def delete_tuple(self, t: _IdCoord) -> bool:
         id_, x, y = t
         return self._delete_geom(id_, (x, y))
+
+    # ---- Mutation ----
+
+    def update(
+        self, id_: int, old_x: float, old_y: float, new_x: float, new_y: float
+    ) -> bool:
+        """
+        Move a point to new coordinates.
+
+        Old coordinates must be provided since this class doesn't store geometry internally.
+
+        Args:
+            id_: ID of the point to move.
+            old_x: Current X coordinate.
+            old_y: Current Y coordinate.
+            new_x: New X coordinate.
+            new_y: New Y coordinate.
+
+        Returns:
+            True if the update succeeded, False if the point was not found.
+
+        Raises:
+            ValueError: If new coordinates are outside tree bounds.
+
+        Example:
+            ```python
+            point_id = qt.insert((1.0, 1.0))
+            success = qt.update(point_id, 1.0, 1.0, 2.0, 2.0)
+            assert success is True
+            ```
+        """
+        old_point = (old_x, old_y)
+        new_point = (new_x, new_y)
+        return self._update_geom(id_, old_point, new_point)
+
+    def update_tuple(self, id_: int, old_point: Point, new_point: Point) -> bool:
+        """
+        Move an existing point to a new location using tuple geometry.
+
+        This is a convenience method that accepts geometry as tuples,
+        reducing the number of parameters compared to update().
+
+        Args:
+            id_: The ID of the point to move.
+            old_point: Current point as (x, y).
+            new_point: New point as (x, y).
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new coordinates are outside bounds.
+
+        Example:
+            ```python
+            i = qt.insert((1.0, 1.0))
+            ok = qt.update_tuple(i, (1.0, 1.0), (2.0, 2.0))
+            assert ok is True
+            ```
+        """
+        return self._update_geom(id_, old_point, new_point)
 
     # ---- Utilities ----
 

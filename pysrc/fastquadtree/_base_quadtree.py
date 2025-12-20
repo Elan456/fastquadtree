@@ -219,16 +219,16 @@ class _BaseQuadTree(Generic[G], ABC):
 
     # ---- Mutation ----
 
-    def update(self, id_: int, old_geom: G, new_geom: G) -> bool:
+    def _update_geom(self, id_: int, old_geom: G, new_geom: G) -> bool:
         """
-        Move an existing item to a new location.
+        Update an item's geometry by moving it from old_geom to new_geom.
 
-        Old geometry is required because non-Objects classes don't store it.
+        This is an internal helper used by subclass update() methods.
 
         Args:
-            id_: The ID of the item to move.
-            old_geom: Current geometry.
-            new_geom: New geometry.
+            id_: The ID of the item to update.
+            old_geom: The old geometry.
+            new_geom: The new geometry.
 
         Returns:
             True if the update succeeded.

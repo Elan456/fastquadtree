@@ -1,5 +1,4 @@
-# point_quadtree_objects.py
-"""QuadTreeObjects - Point quadtree with Python object association."""
+"""Point quadtree with Python object association."""
 
 from __future__ import annotations
 
@@ -20,29 +19,28 @@ DTYPE_MAP = {
 
 class QuadTreeObjects(_BaseQuadTreeObjects[Point, PointItem]):
     """
-    Point quadtree with Python object association.
+    Spatial index for 2D points with Python object association.
 
-    This class provides spatial indexing for 2D points with the ability to
-    associate arbitrary Python objects with each point. IDs are managed
-    internally using dense allocation for efficient object lookup.
-
-    Performance characteristics:
-        Inserts: average O(log n)
-        Rect queries: average O(log n + k) where k is matches returned
-        Nearest neighbor: average O(log n)
-
-    Thread-safety:
-        Instances are not thread-safe. Use external synchronization if you
-        mutate the same tree from multiple threads.
+    This class provides fast spatial indexing for points while allowing you to
+    associate arbitrary Python objects with each point. IDs are managed internally
+    using dense allocation for efficient lookup.
 
     Args:
         bounds: World bounds as (min_x, min_y, max_x, max_y).
-        capacity: Max number of points per node before splitting.
-        max_depth: Optional max tree depth. If omitted, engine decides.
-        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
+        capacity: Maximum points per node before splitting.
+        max_depth: Optional maximum tree depth (uses engine default if not specified).
+        dtype: Coordinate data type ('f32', 'f64', 'i32', 'i64'). Default: 'f32'.
+
+    Performance:
+        - Inserts: O(log n) average
+        - Queries: O(log n + k) average, where k is the number of matches
+        - Nearest neighbor: O(log n) average
+
+    Thread Safety:
+        Not thread-safe. Use external synchronization for concurrent access.
 
     Raises:
-        ValueError: If parameters are invalid or inserts are out of bounds.
+        ValueError: If parameters are invalid or geometry is outside bounds.
 
     Example:
         ```python
@@ -83,22 +81,22 @@ class QuadTreeObjects(_BaseQuadTreeObjects[Point, PointItem]):
 
     def delete_at(self, x: float, y: float) -> bool:
         """
-        Delete one item at the given coordinates.
+        Delete an item at specific coordinates.
 
-        If multiple items exist at (x, y), deletes the one with the lowest ID.
+        If multiple items exist at the same point, deletes the one with the lowest ID.
 
         Args:
             x: X coordinate.
             y: Y coordinate.
 
         Returns:
-            True if an item was found and deleted.
+            True if an item was found and deleted, False otherwise.
 
         Example:
             ```python
             qt.insert((5.0, 5.0))
-            ok = qt.delete_at(5.0, 5.0)
-            assert ok is True
+            success = qt.delete_at(5.0, 5.0)
+            assert success is True
             ```
         """
         # Query a tiny rect around the point
@@ -119,26 +117,26 @@ class QuadTreeObjects(_BaseQuadTreeObjects[Point, PointItem]):
 
     def update(self, id_: int, new_x: float, new_y: float) -> bool:
         """
-        Move an existing point to a new location.
+        Move a point to new coordinates.
 
-        This is efficient because the old coordinates are stored with the object.
+        This is efficient because old coordinates are retrieved from internal storage.
 
         Args:
-            id_: The ID of the point to move.
-            new_x: New x coordinate.
-            new_y: New y coordinate.
+            id_: ID of the point to move.
+            new_x: New X coordinate.
+            new_y: New Y coordinate.
 
         Returns:
-            True if the update succeeded.
+            True if the update succeeded, False if the ID was not found.
 
         Raises:
-            ValueError: If new coordinates are outside bounds.
+            ValueError: If new coordinates are outside tree bounds.
 
         Example:
             ```python
-            i = qt.insert((1.0, 1.0))
-            ok = qt.update(i, 2.0, 2.0)
-            assert ok is True
+            point_id = qt.insert((1.0, 1.0))
+            success = qt.update(point_id, 2.0, 2.0)
+            assert success is True
             ```
         """
         item = self._store.by_id(id_)
@@ -158,27 +156,27 @@ class QuadTreeObjects(_BaseQuadTreeObjects[Point, PointItem]):
 
     def update_by_object(self, obj: Any, new_x: float, new_y: float) -> bool:
         """
-        Move an existing point to a new location by object reference.
+        Move a point to new coordinates by finding it via its associated object.
 
-        If multiple items have this object, updates the one with the lowest ID.
+        If multiple items have the same object, updates the one with the lowest ID.
 
         Args:
-            obj: The Python object to search for.
-            new_x: New x coordinate.
-            new_y: New y coordinate.
+            obj: Python object to search for (by identity).
+            new_x: New X coordinate.
+            new_y: New Y coordinate.
 
         Returns:
-            True if the update succeeded.
+            True if the update succeeded, False if object was not found.
 
         Raises:
-            ValueError: If new coordinates are outside bounds.
+            ValueError: If new coordinates are outside tree bounds.
 
         Example:
             ```python
             my_obj = {"data": "example"}
             qt.insert((1.0, 1.0), obj=my_obj)
-            ok = qt.update_by_object(my_obj, 2.0, 2.0)
-            assert ok is True
+            success = qt.update_by_object(my_obj, 2.0, 2.0)
+            assert success is True
             ```
         """
         item = self._store.by_obj(obj)

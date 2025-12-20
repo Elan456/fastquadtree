@@ -1,4 +1,5 @@
-# item.py
+"""Item wrappers for quadtree query results and object tracking."""
+
 from __future__ import annotations
 
 from typing import Any, Generic, TypeVar
@@ -10,12 +11,15 @@ G = TypeVar("G", Point, Bounds)
 
 class Item(Generic[G]):
     """
-    Lightweight view of an index entry.
+    Generic container for quadtree index entries.
+
+    This class provides a lightweight wrapper around spatial index entries,
+    containing an ID, geometry, and optional associated Python object.
 
     Attributes:
-        id_: Integer identifier.
-        geom: The geometry, either a Point or Rectangle Bounds.
-        obj: The attached Python object if available, else None.
+        id_: Integer identifier for this entry.
+        geom: Geometry data (Point or Bounds depending on tree type).
+        obj: Associated Python object, or None if not set.
     """
 
     __slots__ = ("geom", "id_", "obj")
@@ -30,7 +34,7 @@ class Item(Generic[G]):
         Serialize the item to a dictionary.
 
         Returns:
-            A dictionary with 'id', 'geom', and 'obj' keys.
+            Dictionary with 'id', 'geom', and 'obj' keys.
         """
         return {
             "id": self.id_,
@@ -44,10 +48,10 @@ class Item(Generic[G]):
         Deserialize an item from a dictionary.
 
         Args:
-            data: A dictionary with 'id', 'geom', and 'obj' keys.
+            data: Dictionary with 'id', 'geom', and 'obj' keys.
 
         Returns:
-            An Item instance populated with the deserialized data.
+            Item instance populated with the deserialized data.
         """
         id_ = data["id"]
         geom = data["geom"]
@@ -57,12 +61,17 @@ class Item(Generic[G]):
 
 class PointItem(Item[Point]):
     """
-    Lightweight point item wrapper for tracking and as_items results.
+    Specialized item container for point geometries.
+
+    This subclass of Item adds convenient x and y attributes for direct
+    access to point coordinates.
 
     Attributes:
         id_: Integer identifier.
-        geom: The point geometry as (x, y).
-        obj: The attached Python object if available, else None.
+        geom: Point geometry as (x, y) tuple.
+        obj: Associated Python object, or None if not set.
+        x: X coordinate (convenience accessor).
+        y: Y coordinate (convenience accessor).
     """
 
     __slots__ = ("x", "y")
@@ -74,12 +83,19 @@ class PointItem(Item[Point]):
 
 class RectItem(Item[Bounds]):
     """
-    Lightweight rectangle item wrapper for tracking and as_items results.
+    Specialized item container for rectangle geometries.
+
+    This subclass of Item adds convenient min_x, min_y, max_x, and max_y
+    attributes for direct access to rectangle bounds.
 
     Attributes:
         id_: Integer identifier.
-        geom: The rectangle geometry as (min_x, min_y, max_x, max_y
-        obj: The attached Python object if available, else None.
+        geom: Rectangle geometry as (min_x, min_y, max_x, max_y) tuple.
+        obj: Associated Python object, or None if not set.
+        min_x: Minimum X coordinate (convenience accessor).
+        min_y: Minimum Y coordinate (convenience accessor).
+        max_x: Maximum X coordinate (convenience accessor).
+        max_y: Maximum Y coordinate (convenience accessor).
     """
 
     __slots__ = ("max_x", "max_y", "min_x", "min_y")

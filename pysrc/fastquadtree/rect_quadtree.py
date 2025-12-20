@@ -1,5 +1,4 @@
-# rect_quadtree.py
-"""RectQuadTree - High-performance rectangle spatial index without object association."""
+"""High-performance rectangle spatial index without object association."""
 
 from __future__ import annotations
 
@@ -26,34 +25,33 @@ DTYPE_MAP = {
 
 class RectQuadTree(_BaseQuadTree[Bounds]):
     """
-    High-performance spatial index for axis-aligned rectangles.
+    Spatial index for axis-aligned rectangles without object association.
 
-    This class provides fast spatial indexing without Python object association.
-    Rectangles are stored with integer IDs that you can use to correlate with
-    external data structures. For object association, see RectQuadTreeObjects.
-
-    Performance characteristics:
-        Inserts: average O(log n)
-        Rect queries: average O(log n + k) where k is matches returned
-        Nearest neighbor: average O(log n)
-
-    Thread-safety:
-        Instances are not thread-safe. Use external synchronization if you
-        mutate the same tree from multiple threads.
+    This class provides fast spatial indexing for rectangles using integer IDs that
+    you can correlate with external data structures. For automatic object association,
+    see `RectQuadTreeObjects`.
 
     Args:
         bounds: World bounds as (min_x, min_y, max_x, max_y).
-        capacity: Max number of rectangles per node before splitting.
-        max_depth: Optional max tree depth. If omitted, engine decides.
-        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
+        capacity: Maximum rectangles per node before splitting.
+        max_depth: Optional maximum tree depth (uses engine default if not specified).
+        dtype: Coordinate data type ('f32', 'f64', 'i32', 'i64'). Default: 'f32'.
+
+    Performance:
+        - Inserts: O(log n) average
+        - Queries: O(log n + k) average, where k is the number of matches
+        - Nearest neighbor: O(log n) average
+
+    Thread Safety:
+        Not thread-safe. Use external synchronization for concurrent access.
 
     Raises:
-        ValueError: If parameters are invalid or inserts are out of bounds.
+        ValueError: If parameters are invalid or geometry is outside bounds.
 
     Example:
         ```python
         rqt = RectQuadTree((0.0, 0.0, 100.0, 100.0), capacity=10)
-        id_ = rqt.insert((10.0, 20.0, 30.0, 40.0))
+        rect_id = rqt.insert((10.0, 20.0, 30.0, 40.0))
         results = rqt.query((5.0, 5.0, 35.0, 35.0))
         for id_, min_x, min_y, max_x, max_y in results:
             print(f"Rect {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
@@ -83,34 +81,34 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
 
     def query(self, rect: Bounds) -> list[_IdRect]:
         """
-        Return all rectangles that intersect the query rectangle.
+        Find all rectangles that intersect with a query rectangle.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
-            List of (id, min_x, min_y, max_x, max_y) tuples.
+            List of (id, min_x, min_y, max_x, max_y) tuples for intersecting rectangles.
 
         Example:
             ```python
             results = rqt.query((10.0, 10.0, 20.0, 20.0))
             for id_, min_x, min_y, max_x, max_y in results:
-                print(f"Found rect id={id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
+                print(f"Rect {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.query(rect)
 
     def query_np(self, rect: Bounds) -> tuple[Any, Any]:
         """
-        Return all rectangles that intersect the query rectangle as NumPy arrays.
+        Find intersecting rectangles, returning NumPy arrays.
 
         Args:
             rect: Query rectangle as (min_x, min_y, max_x, max_y).
 
         Returns:
             Tuple of (ids, coords) where:
-                ids: NDArray[np.int64] with shape (N,)
-                coords: NDArray with shape (N, 4) and dtype matching tree
+                - ids: NDArray[np.int64] with shape (N,)
+                - coords: NDArray with shape (N, 4) and dtype matching the tree
 
         Raises:
             ImportError: If NumPy is not installed.
@@ -119,22 +117,22 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             ```python
             ids, coords = rqt.query_np((10.0, 10.0, 20.0, 20.0))
             for id_, (min_x, min_y, max_x, max_y) in zip(ids, coords):
-                print(f"Found rect id={id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
+                print(f"Rect {id_} at ({min_x}, {min_y}, {max_x}, {max_y})")
             ```
         """
         return self._native.query_np(rect)
 
     def nearest_neighbor(self, point: Point) -> _IdRect | None:
         """
-        Return the single nearest rectangle to the query point.
+        Find the nearest rectangle to a query point.
 
-        Uses Euclidean distance to the nearest edge of rectangles.
+        Distance is measured as Euclidean distance to the nearest edge of each rectangle.
 
         Args:
-            point: Query point (x, y).
+            point: Query point as (x, y).
 
         Returns:
-            Tuple of (id, min_x, min_y, max_x, max_y) or None if the tree is empty.
+            Tuple of (id, min_x, min_y, max_x, max_y), or None if tree is empty.
 
         Example:
             ```python
@@ -210,6 +208,80 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
     def delete_tuple(self, t: _IdRect) -> bool:
         id_, min_x, min_y, max_x, max_y = t
         return self._delete_geom(id_, (min_x, min_y, max_x, max_y))
+
+    # ---- Mutation ----
+
+    def update(
+        self,
+        id_: int,
+        old_min_x: float,
+        old_min_y: float,
+        old_max_x: float,
+        old_max_y: float,
+        new_min_x: float,
+        new_min_y: float,
+        new_max_x: float,
+        new_max_y: float,
+    ) -> bool:
+        """
+        Move an existing rectangle to a new location.
+
+        Old geometry is required because this class doesn't store it.
+
+        Args:
+            id_: The ID of the rectangle to move.
+            old_min_x: Current min x coordinate.
+            old_min_y: Current min y coordinate.
+            old_max_x: Current max x coordinate.
+            old_max_y: Current max y coordinate.
+            new_min_x: New min x coordinate.
+            new_min_y: New min y coordinate.
+            new_max_x: New max x coordinate.
+            new_max_y: New max y coordinate.
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new coordinates are outside bounds.
+
+        Example:
+            ```python
+            i = rqt.insert((1.0, 1.0, 2.0, 2.0))
+            ok = rqt.update(i, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0)
+            assert ok is True
+            ```
+        """
+        old_rect = (old_min_x, old_min_y, old_max_x, old_max_y)
+        new_rect = (new_min_x, new_min_y, new_max_x, new_max_y)
+        return self._update_geom(id_, old_rect, new_rect)
+
+    def update_tuple(self, id_: int, old_rect: Bounds, new_rect: Bounds) -> bool:
+        """
+        Move an existing rectangle to a new location using tuple geometry.
+
+        This is a convenience method that accepts geometry as tuples,
+        reducing the number of parameters compared to update().
+
+        Args:
+            id_: The ID of the rectangle to move.
+            old_rect: Current rectangle as (min_x, min_y, max_x, max_y).
+            new_rect: New rectangle as (min_x, min_y, max_x, max_y).
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new coordinates are outside bounds.
+
+        Example:
+            ```python
+            i = rqt.insert((1.0, 1.0, 2.0, 2.0))
+            ok = rqt.update_tuple(i, (1.0, 1.0, 2.0, 2.0), (3.0, 3.0, 4.0, 4.0))
+            assert ok is True
+            ```
+        """
+        return self._update_geom(id_, old_rect, new_rect)
 
     # ---- Utilities ----
     def __contains__(self, rect: Bounds) -> bool:

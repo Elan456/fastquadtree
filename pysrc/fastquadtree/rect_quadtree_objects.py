@@ -1,5 +1,4 @@
-# rect_quadtree_objects.py
-"""RectQuadTreeObjects - Rectangle quadtree with Python object association."""
+"""Rectangle quadtree with Python object association."""
 
 from __future__ import annotations
 
@@ -25,34 +24,33 @@ DTYPE_MAP = {
 
 class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
     """
-    Rectangle quadtree with Python object association.
+    Spatial index for axis-aligned rectangles with Python object association.
 
-    This class provides spatial indexing for axis-aligned rectangles with the
-    ability to associate arbitrary Python objects with each rectangle. IDs are
-    managed internally using dense allocation for efficient object lookup.
-
-    Performance characteristics:
-        Inserts: average O(log n)
-        Rect queries: average O(log n + k) where k is matches returned
-        Nearest neighbor: average O(log n)
-
-    Thread-safety:
-        Instances are not thread-safe. Use external synchronization if you
-        mutate the same tree from multiple threads.
+    This class provides fast spatial indexing for rectangles while allowing you to
+    associate arbitrary Python objects with each rectangle. IDs are managed internally
+    using dense allocation for efficient lookup.
 
     Args:
         bounds: World bounds as (min_x, min_y, max_x, max_y).
-        capacity: Max number of rectangles per node before splitting.
-        max_depth: Optional max tree depth. If omitted, engine decides.
-        dtype: Data type for coordinates ('f32', 'f64', 'i32', 'i64'). Default is 'f32'.
+        capacity: Maximum rectangles per node before splitting.
+        max_depth: Optional maximum tree depth (uses engine default if not specified).
+        dtype: Coordinate data type ('f32', 'f64', 'i32', 'i64'). Default: 'f32'.
+
+    Performance:
+        - Inserts: O(log n) average
+        - Queries: O(log n + k) average, where k is the number of matches
+        - Nearest neighbor: O(log n) average
+
+    Thread Safety:
+        Not thread-safe. Use external synchronization for concurrent access.
 
     Raises:
-        ValueError: If parameters are invalid or inserts are out of bounds.
+        ValueError: If parameters are invalid or geometry is outside bounds.
 
     Example:
         ```python
         rqt = RectQuadTreeObjects((0.0, 0.0, 100.0, 100.0), capacity=10)
-        id_ = rqt.insert((10.0, 20.0, 30.0, 40.0), obj="my data")
+        rect_id = rqt.insert((10.0, 20.0, 30.0, 40.0), obj="my data")
         results = rqt.query((5.0, 5.0, 35.0, 35.0))
         for item in results:
             print(f"Rect {item.id_} at ({item.min_x}, {item.min_y}, {item.max_x}, {item.max_y})")
@@ -88,24 +86,24 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
 
     def delete_at(self, min_x: float, min_y: float, max_x: float, max_y: float) -> bool:
         """
-        Delete one item at the given rectangle coordinates.
+        Delete a rectangle at specific coordinates.
 
-        If multiple items exist at the same coordinates, deletes the one with the lowest ID.
+        If multiple rectangles exist at the same coordinates, deletes the one with the lowest ID.
 
         Args:
-            min_x: Min x coordinate.
-            min_y: Min y coordinate.
-            max_x: Max x coordinate.
-            max_y: Max y coordinate.
+            min_x: Minimum X coordinate.
+            min_y: Minimum Y coordinate.
+            max_x: Maximum X coordinate.
+            max_y: Maximum Y coordinate.
 
         Returns:
-            True if an item was found and deleted.
+            True if a rectangle was found and deleted, False otherwise.
 
         Example:
             ```python
             rqt.insert((5.0, 5.0, 10.0, 10.0))
-            ok = rqt.delete_at(5.0, 5.0, 10.0, 10.0)
-            assert ok is True
+            success = rqt.delete_at(5.0, 5.0, 10.0, 10.0)
+            assert success is True
             ```
         """
         # Query for overlapping rectangles
@@ -139,28 +137,28 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
         new_max_y: float,
     ) -> bool:
         """
-        Move an existing rectangle to a new location.
+        Move a rectangle to new coordinates.
 
-        This is efficient because the old coordinates are stored with the object.
+        This is efficient because old coordinates are retrieved from internal storage.
 
         Args:
-            id_: The ID of the rectangle to move.
-            new_min_x: New min x coordinate.
-            new_min_y: New min y coordinate.
-            new_max_x: New max x coordinate.
-            new_max_y: New max y coordinate.
+            id_: ID of the rectangle to move.
+            new_min_x: New minimum X coordinate.
+            new_min_y: New minimum Y coordinate.
+            new_max_x: New maximum X coordinate.
+            new_max_y: New maximum Y coordinate.
 
         Returns:
-            True if the update succeeded.
+            True if the update succeeded, False if the ID was not found.
 
         Raises:
-            ValueError: If new coordinates are outside bounds.
+            ValueError: If new coordinates are outside tree bounds.
 
         Example:
             ```python
-            i = rqt.insert((1.0, 1.0, 2.0, 2.0))
-            ok = rqt.update(i, 3.0, 3.0, 4.0, 4.0)
-            assert ok is True
+            rect_id = rqt.insert((1.0, 1.0, 2.0, 2.0))
+            success = rqt.update(rect_id, 3.0, 3.0, 4.0, 4.0)
+            assert success is True
             ```
         """
         item = self._store.by_id(id_)
@@ -187,29 +185,29 @@ class RectQuadTreeObjects(_BaseQuadTreeObjects[Bounds, RectItem]):
         new_max_y: float,
     ) -> bool:
         """
-        Move an existing rectangle to a new location by object reference.
+        Move a rectangle to new coordinates by finding it via its associated object.
 
-        If multiple items have this object, updates the one with the lowest ID.
+        If multiple items have the same object, updates the one with the lowest ID.
 
         Args:
-            obj: The Python object to search for.
-            new_min_x: New min x coordinate.
-            new_min_y: New min y coordinate.
-            new_max_x: New max x coordinate.
-            new_max_y: New max y coordinate.
+            obj: Python object to search for (by identity).
+            new_min_x: New minimum X coordinate.
+            new_min_y: New minimum Y coordinate.
+            new_max_x: New maximum X coordinate.
+            new_max_y: New maximum Y coordinate.
 
         Returns:
-            True if the update succeeded.
+            True if the update succeeded, False if object was not found.
 
         Raises:
-            ValueError: If new coordinates are outside bounds.
+            ValueError: If new coordinates are outside tree bounds.
 
         Example:
             ```python
             my_obj = {"data": "example"}
             rqt.insert((1.0, 1.0, 2.0, 2.0), obj=my_obj)
-            ok = rqt.update_by_object(my_obj, 3.0, 3.0, 4.0, 4.0)
-            assert ok is True
+            success = rqt.update_by_object(my_obj, 3.0, 3.0, 4.0, 4.0)
+            assert success is True
             ```
         """
         item = self._store.by_obj(obj)

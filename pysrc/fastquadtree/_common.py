@@ -1,4 +1,3 @@
-# _common.py
 """Common utilities and constants shared across quadtree implementations."""
 
 from __future__ import annotations
@@ -15,10 +14,10 @@ SECTION_OBJECTS: int = 2  # unsafe: pickle payload (opt-in)
 
 # Type aliases
 Bounds = tuple[float, float, float, float]
-"""Axis-aligned rectangle as (min_x, min_y, max_x, max_y)."""
+"""Type alias for axis-aligned rectangle bounds as (min_x, min_y, max_x, max_y)."""
 
 Point = tuple[float, float]
-"""2D point as (x, y)."""
+"""Type alias for 2D point coordinates as (x, y)."""
 
 # Dtype mappings
 QuadTreeDType = Literal["f32", "f64", "i32", "i64"]
@@ -56,9 +55,15 @@ DTYPE_BOUNDS_SIZE_BYTES: Final[dict[QuadTreeDType, int]] = {
 
 def _is_np_array(x: Any) -> bool:
     """
-    Check if x is a NumPy array without importing NumPy.
+    Check if an object is a NumPy array without importing NumPy.
 
     This allows dtype checking without forcing NumPy as a hard dependency.
+
+    Args:
+        x: Object to check.
+
+    Returns:
+        True if x appears to be a NumPy array.
     """
     mod = getattr(x.__class__, "__module__", "")
     return mod.startswith("numpy") and hasattr(x, "ndim") and hasattr(x, "shape")
@@ -66,7 +71,16 @@ def _is_np_array(x: Any) -> bool:
 
 def validate_bounds(bounds: Any) -> Bounds:
     """
-    Validate and normalize bounds to a tuple (min_x, min_y, max_x, max_y).
+    Validate and normalize bounds to a tuple.
+
+    Args:
+        bounds: Bounds specification to validate.
+
+    Returns:
+        Normalized bounds tuple (min_x, min_y, max_x, max_y).
+
+    Raises:
+        ValueError: If bounds is not a 4-element sequence.
     """
     if type(bounds) is not tuple:
         bounds = tuple(bounds)
@@ -79,7 +93,14 @@ def validate_bounds(bounds: Any) -> Bounds:
 
 def validate_np_dtype(geoms: Any, expected_dtype: QuadTreeDType) -> None:
     """
-    Validate that a NumPy array's dtype matches expected dtype.
+    Validate that a NumPy array's dtype matches the expected dtype.
+
+    Args:
+        geoms: NumPy array to validate.
+        expected_dtype: Expected quadtree dtype string.
+
+    Raises:
+        TypeError: If the array's dtype doesn't match the expected dtype.
     """
     expected_np_dtype = QUADTREE_DTYPE_TO_NP_DTYPE.get(expected_dtype)
     if expected_np_dtype is None:
@@ -96,7 +117,7 @@ def validate_np_dtype(geoms: Any, expected_dtype: QuadTreeDType) -> None:
 
 
 class SerializationError(ValueError):
-    """Raised when serialized bytes are malformed or incompatible."""
+    """Exception raised when serialized data is malformed or incompatible with the current version."""
 
 
 def dtype_to_code(dtype: str) -> int:
@@ -125,9 +146,19 @@ def pack_bounds(bounds: Bounds, dtype: Literal["i64"]) -> bytes: ...
 
 def pack_bounds(bounds: Bounds, dtype: QuadTreeDType) -> bytes:
     """
-    Pack bounds as 4 numbers encoded in the tree dtype, little-endian.
+    Encode bounds as binary data using the specified dtype.
 
-    This ensures bounds round-trip consistently with dtype semantics.
+    This ensures bounds round-trip consistently with dtype semantics in little-endian format.
+
+    Args:
+        bounds: Bounds tuple (min_x, min_y, max_x, max_y).
+        dtype: Data type for encoding ('f32', 'f64', 'i32', 'i64').
+
+    Returns:
+        Binary representation of the bounds.
+
+    Raises:
+        SerializationError: If dtype is unsupported.
     """
     import struct
 
@@ -155,8 +186,19 @@ def unpack_bounds(
     buf: memoryview, offset: int, dtype: QuadTreeDType
 ) -> tuple[Bounds, int]:
     """
-    Unpack bounds from buf starting at offset, according to dtype.
-    Returns (bounds, new_offset).
+    Decode bounds from binary data.
+
+    Args:
+        buf: Memory buffer containing the serialized data.
+        offset: Starting position in the buffer.
+        dtype: Data type for decoding ('f32', 'f64', 'i32', 'i64').
+
+    Returns:
+        Tuple of (bounds, new_offset) where bounds is the decoded tuple
+        and new_offset is the position after reading.
+
+    Raises:
+        SerializationError: If data is too short or dtype is unsupported.
     """
     import struct
 
@@ -211,12 +253,27 @@ def build_container(
     extra_sections: list[tuple[int, bytes]] | None = None,
 ) -> bytes:
     """
-    Build the shared fastquadtree bytes container.
+    Build the fastquadtree serialization container.
 
-    extra_sections (optional):
-        list of (section_type, payload_bytes) appended after core.
-        section_type is u16; payload length is u32.
-        Objects trees can store pickled objects here in a guarded section.
+    This function creates a binary container with header, metadata, and optional sections.
+
+    Args:
+        fmt_ver: Serialization format version.
+        dtype: Quadtree data type.
+        flags: Serialization flags bitfield.
+        capacity: Tree capacity value.
+        max_depth: Optional maximum tree depth.
+        next_id: Next auto-assigned ID.
+        count: Number of items in the tree.
+        bounds: Tree bounds.
+        core: Core tree data as bytes.
+        extra_sections: Optional list of (section_type, payload_bytes) for additional data.
+
+    Returns:
+        Complete serialized container as bytes.
+
+    Raises:
+        SerializationError: If data is invalid or too large.
     """
     import struct
 
@@ -282,11 +339,27 @@ def build_container(
 
 def parse_container(data: bytes) -> dict[str, Any]:
     """
-    Parse the shared fastquadtree bytes container.
+    Parse a fastquadtree serialization container.
 
-    Returns dict with:
-      magic, fmt_ver, flags, dtype, capacity, max_depth, next_id, count, bounds, core, sections
-    sections is list[(section_type:int, payload:bytes)]
+    Args:
+        data: Serialized container bytes.
+
+    Returns:
+        Dictionary containing parsed fields:
+            - magic: Magic header bytes
+            - fmt_ver: Format version
+            - flags: Flags bitfield
+            - dtype: Quadtree data type
+            - capacity: Tree capacity
+            - max_depth: Optional maximum depth
+            - next_id: Next auto-assigned ID
+            - count: Number of items
+            - bounds: Tree bounds
+            - core: Core tree data
+            - sections: List of (section_type, payload) tuples
+
+    Raises:
+        SerializationError: If data is malformed or has invalid magic header.
     """
     import struct
 

@@ -1,4 +1,16 @@
-"""fastquadtree - High-performance spatial indexing for Python."""
+"""
+fastquadtree - High-performance spatial indexing for Python.
+
+This package provides fast quadtree-based spatial indexing with multiple variants
+to suit different use cases:
+
+- `QuadTree`: Point quadtree without object association
+- `QuadTreeObjects`: Point quadtree with Python object association
+- `RectQuadTree`: Rectangle quadtree without object association
+- `RectQuadTreeObjects`: Rectangle quadtree with Python object association
+
+All implementations are backed by a high-performance Rust core for optimal speed.
+"""
 
 from ._insert_result import InsertResult
 from ._item import Item, PointItem, RectItem
