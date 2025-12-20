@@ -515,15 +515,11 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Returns:
             Number of items deleted.
         """
+        items = self._store.by_obj_all(obj)
         deleted_count = 0
-        while True:
-            it = self._store.by_obj(obj)
-            if it is None:
-                break
-            if self.delete(it.id_):
+        for item in items:
+            if self.delete(item.id_):
                 deleted_count += 1
-            else:
-                break
         return deleted_count
 
     def delete_one_by_object(self, obj: Any) -> bool:

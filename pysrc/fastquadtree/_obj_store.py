@@ -16,20 +16,23 @@ class ObjStore(Generic[TItem]):
     Storage
       - _arr[id]  -> Item or None
       - _objs[id] -> Python object or None
-      - _obj_to_id: reverse identity map id(obj) -> id
+      - _obj_to_ids: reverse identity map id(obj) -> set[id]
       - _free: LIFO free-list of reusable ids
 
     Assumptions
       - Ids are assigned by the shim and are dense [0..len) with possible holes
         created by deletes. New inserts reuse holes via the free-list.
+      - If the same object is inserted multiple times, all IDs are tracked.
+        by_obj() returns the item with the lowest ID (deterministic).
+        delete_by_object() deletes all instances of the object.
     """
 
-    __slots__ = ("_arr", "_free", "_len", "_obj_to_id", "_objs")
+    __slots__ = ("_arr", "_free", "_len", "_obj_to_ids", "_objs")
 
     def __init__(self, items: Iterable[TItem] | None = None) -> None:
         self._arr: list[TItem | None] = []
         self._objs: list[Any | None] = []
-        self._obj_to_id: dict[int, int] = {}
+        self._obj_to_ids: dict[int, set[int]] = {}
         self._free: list[int] = []  # LIFO
         self._len: int = 0  # live items
 
@@ -71,6 +74,7 @@ class ObjStore(Generic[TItem]):
     def add(self, item: TItem, handle_out_of_order: bool = False) -> None:
         """
         Insert or replace the mapping at item.id_. Reverse map updated so obj points to id.
+        If the same object is inserted multiple times, all IDs are tracked.
         """
         id_ = item.id_
         obj = item.obj
@@ -97,19 +101,44 @@ class ObjStore(Generic[TItem]):
             if old is None:
                 self._len += 1
             elif old.obj is not None:
-                self._obj_to_id.pop(id(old.obj), None)
+                # Remove old object mapping for this ID (fixes attach() bug)
+                old_obj_id = id(old.obj)
+                if old_obj_id in self._obj_to_ids:
+                    self._obj_to_ids[old_obj_id].discard(id_)
+                    if not self._obj_to_ids[old_obj_id]:
+                        del self._obj_to_ids[old_obj_id]
             self._arr[id_] = item
             self._objs[id_] = obj
 
+        # Add new object mapping
         if obj is not None:
-            self._obj_to_id[id(obj)] = id_
+            obj_id = id(obj)
+            if obj_id not in self._obj_to_ids:
+                self._obj_to_ids[obj_id] = set()
+            self._obj_to_ids[obj_id].add(id_)
 
     def by_id(self, id_: int) -> TItem | None:
         return self._arr[id_] if 0 <= id_ < len(self._arr) else None
 
     def by_obj(self, obj: Any) -> TItem | None:
-        id_ = self._obj_to_id.get(id(obj))
-        return self.by_id(id_) if id_ is not None else None
+        """Return the item with the LOWEST id for this object (deterministic)."""
+        obj_id = id(obj)
+        ids = self._obj_to_ids.get(obj_id)
+        if not ids:
+            return None
+        min_id = min(ids)
+        return self.by_id(min_id)
+
+    def by_obj_all(self, obj: Any) -> list[TItem]:
+        """Return ALL items associated with this object, sorted by ID."""
+        obj_id = id(obj)
+        ids = self._obj_to_ids.get(obj_id, set())
+        result = []
+        for i in sorted(ids):
+            item = self.by_id(i)
+            if item is not None:
+                result.append(item)
+        return result
 
     def pop_id(self, id_: int) -> TItem | None:
         """Remove by id. Dense ids go to the free-list for reuse."""
@@ -120,8 +149,15 @@ class ObjStore(Generic[TItem]):
             return None
         self._arr[id_] = None
         self._objs[id_] = None
+
+        # Remove from reverse mapping
         if it.obj is not None:
-            self._obj_to_id.pop(id(it.obj), None)
+            obj_id = id(it.obj)
+            if obj_id in self._obj_to_ids:
+                self._obj_to_ids[obj_id].discard(id_)
+                if not self._obj_to_ids[obj_id]:
+                    del self._obj_to_ids[obj_id]
+
         self._free.append(id_)
         self._len -= 1
         return it
@@ -174,7 +210,7 @@ class ObjStore(Generic[TItem]):
     def clear(self) -> None:
         self._arr.clear()
         self._objs.clear()
-        self._obj_to_id.clear()
+        self._obj_to_ids.clear()
         self._free.clear()
         self._len = 0
 
@@ -182,7 +218,7 @@ class ObjStore(Generic[TItem]):
         return 0 <= id_ < len(self._arr) and self._arr[id_] is not None
 
     def contains_obj(self, obj: Any) -> bool:
-        return id(obj) in self._obj_to_id
+        return id(obj) in self._obj_to_ids
 
     def items_by_id(self) -> Iterator[tuple[int, TItem]]:
         for i, it in enumerate(self._arr):

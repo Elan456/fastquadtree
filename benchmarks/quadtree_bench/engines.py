@@ -15,8 +15,7 @@ from pyquadtree.quadtree import QuadTree as EPyQuadTree  # e-pyquadtree
 from shapely import box as shp_box, points  # Shapely 2.x
 from shapely.strtree import STRtree
 
-from fastquadtree import QuadTree as FQTQuadTree
-from fastquadtree import QuadTreeObjects as FQTQuadTreeObjects
+from fastquadtree import QuadTree as FQTQuadTree, QuadTreeObjects as FQTQuadTreeObjects
 
 
 class Engine:
