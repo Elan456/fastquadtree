@@ -716,13 +716,15 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
         Args:
             data: Bytes from to_bytes().
-            allow_objects: If True, allow loading pickled Python objects (unsafe).
+            allow_objects: If True, load pickled Python objects (unsafe).
+                          If False (default), object payloads are silently ignored.
 
         Returns:
             A new instance.
 
-        Raises:
-            ValueError: If allow_objects=False but data contains objects.
+        Note:
+            Object deserialization uses pickle-like semantics. Never load
+            serialized data from untrusted sources with allow_objects=True.
         """
         parsed = parse_container(data)
 
@@ -749,18 +751,13 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         if items_section is None:
             raise SerializationError("Missing required items section")
 
-        if objects_section is not None and not allow_objects:
-            raise ValueError(
-                "Serialized data contains Python objects but allow_objects=False. "
-                "Set allow_objects=True to load objects (unsafe for untrusted data)."
-            )
-
         # Decode items safely (id + geom)
         id_geom_pairs = _decode_items_section(items_section)
 
-        # Decode objects (unsafe) if present/allowed
+        # Decode objects (unsafe) if present AND allowed
+        # If objects_section exists but allow_objects=False
         id_to_obj: dict[int, Any] = {}
-        if objects_section is not None:
+        if objects_section is not None and allow_objects:
             # Rewrite as dict comprehension
             id_to_obj = dict(_decode_objects_section(objects_section))
 
