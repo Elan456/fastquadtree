@@ -192,9 +192,48 @@ class QuadTree(_BaseQuadTree[Point]):
 
     # ---- Deletion ----
     def delete(self, id_: int, x: float, y: float) -> bool:
+        """
+        Remove a point from the quadtree.
+
+        Coordinates must be provided since this class doesn't store geometry internally.
+
+        Args:
+            id_: ID of the point to delete.
+            x: X coordinate of the point.
+            y: Y coordinate of the point.
+
+        Returns:
+            True if the point was found and deleted, False if not found.
+
+        Example:
+            ```python
+            point_id = qt.insert((10.0, 20.0))
+            success = qt.delete(point_id, 10.0, 20.0)
+            assert success is True
+            ```
+        """
         return self._delete_geom(id_, (x, y))
 
     def delete_tuple(self, t: _IdCoord) -> bool:
+        """
+        Remove a point from the quadtree using a tuple.
+
+        This is a convenience method that accepts the point data as a single tuple,
+        typically from query results.
+
+        Args:
+            t: Tuple of (id, x, y) representing the point to delete.
+
+        Returns:
+            True if the point was found and deleted, False if not found.
+
+        Example:
+            ```python
+            point_id = qt.insert((10.0, 20.0))
+            success = qt.delete_tuple((point_id, 10.0, 20.0))
+            assert success is True
+            ```
+        """
         id_, x, y = t
         return self._delete_geom(id_, (x, y))
 

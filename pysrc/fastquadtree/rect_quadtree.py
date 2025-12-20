@@ -203,9 +203,50 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
     def delete(
         self, id_: int, min_x: float, min_y: float, max_x: float, max_y: float
     ) -> bool:
+        """
+        Remove a rectangle from the quadtree.
+
+        Coordinates must be provided since this class doesn't store geometry internally.
+
+        Args:
+            id_: ID of the rectangle to delete.
+            min_x: Minimum x coordinate of the rectangle.
+            min_y: Minimum y coordinate of the rectangle.
+            max_x: Maximum x coordinate of the rectangle.
+            max_y: Maximum y coordinate of the rectangle.
+
+        Returns:
+            True if the rectangle was found and deleted, False if not found.
+
+        Example:
+            ```python
+            rect_id = rqt.insert((10.0, 20.0, 30.0, 40.0))
+            success = rqt.delete(rect_id, 10.0, 20.0, 30.0, 40.0)
+            assert success is True
+            ```
+        """
         return self._delete_geom(id_, (min_x, min_y, max_x, max_y))
 
     def delete_tuple(self, t: _IdRect) -> bool:
+        """
+        Remove a rectangle from the quadtree using a tuple.
+
+        This is a convenience method that accepts the rectangle data as a single tuple,
+        typically from query results.
+
+        Args:
+            t: Tuple of (id, min_x, min_y, max_x, max_y) representing the rectangle to delete.
+
+        Returns:
+            True if the rectangle was found and deleted, False if not found.
+
+        Example:
+            ```python
+            rect_id = rqt.insert((10.0, 20.0, 30.0, 40.0))
+            success = rqt.delete_tuple((rect_id, 10.0, 20.0, 30.0, 40.0))
+            assert success is True
+            ```
+        """
         id_, min_x, min_y, max_x, max_y = t
         return self._delete_geom(id_, (min_x, min_y, max_x, max_y))
 
