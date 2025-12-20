@@ -112,3 +112,49 @@ def test_serialization_perserves_ids():
     ids_after_delete_deserialized = [item.id_ for item in qt3.get_all_items()]
     assert sorted(ids_after_delete) == [0, 2]
     assert sorted(ids_after_delete_deserialized) == [0, 2]
+
+
+def test_serialization_reconstructs_freelist():
+    """Test that deserialization properly reconstructs the free-list from holes.
+
+    This ensures that deserialized trees reuse deleted IDs just like the original tree.
+    """
+    qt = QuadTree((0, 0, 100, 100), capacity=4, track_objects=True)
+
+    # Insert three items with IDs 0, 1, 2
+    qt.insert((10, 10), obj="A")
+    qt.insert((20, 20), obj="B")
+    qt.insert((30, 30), obj="C")
+
+    # Delete ID 1, which should add it to the free-list
+    qt.delete(1, (20, 20))
+
+    # Verify state: items [0, 2], ID 1 is free
+    ids_after_delete = sorted([item.id_ for item in qt.get_all_items()])
+    assert ids_after_delete == [0, 2]
+
+    # Insert new item - should reuse ID 1
+    new_id_before_serialization = qt.insert((40, 40), obj="D")
+    assert new_id_before_serialization == 1, "Original tree should reuse deleted ID 1"
+
+    # Now delete ID 1 again for serialization test
+    qt.delete(1, (40, 40))
+
+    # Serialize and deserialize
+    data = qt.to_bytes()
+    qt_deserialized = QuadTree.from_bytes(data)
+
+    # Verify IDs are preserved
+    ids_deserialized = sorted([item.id_ for item in qt_deserialized.get_all_items()])
+    assert ids_deserialized == [0, 2]
+
+    # CRITICAL TEST: Insert into deserialized tree should reuse ID 1
+    new_id_after_deserialization = qt_deserialized.insert((50, 50), obj="E")
+    assert new_id_after_deserialization == 1, (
+        "Deserialized tree should reuse deleted ID 1, not append at ID 3. "
+        "Free-list should be reconstructed from None holes during deserialization."
+    )
+
+    # Verify final state
+    final_ids = sorted([item.id_ for item in qt_deserialized.get_all_items()])
+    assert final_ids == [0, 1, 2], "Should have items at IDs 0, 1 (reused), and 2"

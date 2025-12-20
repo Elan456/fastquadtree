@@ -52,6 +52,8 @@ pip install fastquadtree
 ```python
 from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
+from fastquadtree import QuadTreeObjects  # Point handling with object tracking
+from fastquadtree import RectQuadTreeObjects  # Bounding box handling with object tracking
 from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (6.791x faster while keeping the same API)
 ```
 
@@ -88,25 +90,24 @@ See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) f
 
 [See the full API](https://elan456.github.io/fastquadtree/api/quadtree/)
 
-### `QuadTree(bounds, capacity, max_depth=None, track_objects=False, dtype="f32")`
+### `QuadTree(bounds, capacity, max_depth=None, dtype="f32")`
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
 * `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
-* `track_objects` — if `True`, the wrapper maintains an id → object map for convenience.
 * `dtype` — data type for coordinates, e.g., `"f32"`, `"f64"`, `"i32"`, `"i64"`
 
 ### Key Methods
 
-- `insert(xy, *, obj=None) -> int`
+- `insert(xy, id_=None) -> int`
 
-- `query(rect, *, as_items=False) -> list`
+- `query(rect) -> list[tuple[int, float, float]]`
 
-- `nearest_neighbor(xy, *, as_item=False) -> (id, x, y) | Item | None`
+- `nearest_neighbor(xy) -> tuple[int, float, float] | None`
 
-- `delete(id, xy) -> bool`
+- `delete(id, x, y) -> bool`
 
-There are more methods and object tracking versions in the [docs](https://elan456.github.io/fastquadtree/api/quadtree/).
+For object tracking, use `QuadTreeObjects` instead. See the [docs](https://elan456.github.io/fastquadtree/api/quadtree/) for more methods.
 
 ### Geometric conventions
 
@@ -120,7 +121,7 @@ There are more methods and object tracking versions in the [docs](https://elan45
 * Choose `capacity` so that leaves keep a small batch of points. Typical values are 8 to 64.
 * If your data is very skewed, set a `max_depth` to prevent long chains.
 * For fastest local runs, use `maturin develop --release`.
-* The wrapper maintains an object map only if the quadtree was constructed with `track_objects=True`. If you don't need it, leave it off for best performance.
+* Use `QuadTree` when you only need spatial indexing. Use `QuadTreeObjects` when you need to store Python objects with your points.
 * Refer to the [Native vs Shim Benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim-benchmark) for overhead details.
 
 ### Pygame Ball Pit Demo
@@ -135,16 +136,26 @@ See the [runnables guide](https://elan456.github.io/fastquadtree/runnables/) for
 ## FAQ
 
 **Can I delete items from the quadtree?**
-Yes! Use `delete(id, xy)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `track_objects=True`, you can also use `delete_by_object(obj)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
+Yes! Use `delete(id, x, y)` to remove specific items. You must provide both the ID and exact location for precise deletion. This handles cases where multiple items exist at the same location. If you're using `QuadTreeObjects`, you can also use `delete_by_object(obj)` for convenient object-based deletion with O(1) lookup. The tree automatically merges nodes when item counts drop below capacity.
 
 **Can I store rectangles or circles?**
 Yes, you can store rectangles using the `RectQuadTree` class. Circles can be approximated with bounding boxes. See the [RectQuadTree docs](https://elan456.github.io/fastquadtree/api/rect_quadtree/) for details.
 
-**Do I need NumPy installed?**  
-No, NumPy is a fully optional dependency. If you do have NumPy installed, you can use methods such as `query_np` and the NumPy array variant of `insert_many` for better performance. The Rust core is able to handle NumPy arrays faster than Python lists, so there's a lot of time savings in utilizing the NumPy functions. See the [Native vs Shim benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim) for details on how returing NumPy arrays can speed up queries.
+**Do I need NumPy installed?**
+No, NumPy is a fully optional dependency. If you do have NumPy installed, you can use methods such as `query_np` and `insert_many_np` for better performance. Note that `insert_many` raises `TypeError` on NumPy input—you must use `insert_many_np` explicitly for NumPy arrays. The Rust core is able to handle NumPy arrays faster than Python lists, so there's a lot of time savings in utilizing the NumPy functions. See the [Native vs Shim benchmark](https://elan456.github.io/fastquadtree/benchmark/#native-vs-shim) for details on how returing NumPy arrays can speed up queries.
 
-**Does fastquadtree support multiprocessing?**  
-Yes, fastquadtree objects can be serialized to bytes using the `to_bytes()` method and deserialized back using `from_bytes()`. This allows you to share quadtree data across processes and even cache prebuilt trees to disk. See the [interactive v2 demo](https://github.com/Elan456/fastquadtree/blob/main/interactive/interactive_v2.py) for an example of saving and loading a quadtree.
+```python
+# Using Python lists
+qt.insert_many([(10, 20), (30, 40), (50, 60)])
+
+# Using NumPy arrays (requires NumPy)
+import numpy as np
+points = np.array([[10, 20], [30, 40], [50, 60]])
+qt.insert_many_np(points)  # Use insert_many_np for NumPy arrays
+```
+
+**Does fastquadtree support multiprocessing?**
+Yes, fastquadtree objects can be serialized to bytes using the `to_bytes()` method and deserialized back using `from_bytes()`. This allows you to share quadtree data across processes and even cache prebuilt trees to disk. When using `QuadTreeObjects` or `RectQuadTreeObjects`, you must pass `include_objects=True` to `to_bytes()` to serialize Python objects, and `allow_objects=True` to `from_bytes()` when loading. By default, objects are skipped for safety, as deserializing untrusted Python objects can be unsafe. See the [interactive v2 demo](https://github.com/Elan456/fastquadtree/blob/main/interactive/interactive_v2.py) for an example of saving and loading a quadtree, and the [QuadTreeObjects API docs](https://elan456.github.io/fastquadtree/api/quadtree_objects/#fastquadtree.QuadTreeObjects.to_bytes) for full details on the serialization methods.
 
 ## License
 

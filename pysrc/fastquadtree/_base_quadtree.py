@@ -128,8 +128,15 @@ class _BaseQuadTree(Generic[G], ABC):
             InsertResult with count, start_id, and end_id.
 
         Raises:
+            TypeError: If geoms is a NumPy array (use insert_many_np instead).
             ValueError: If any geometry is outside bounds.
         """
+        if _is_np_array(geoms):
+            raise TypeError(
+                "NumPy arrays are not supported by insert_many. "
+                "Use insert_many_np() for NumPy arrays."
+            )
+
         if len(geoms) == 0:
             return InsertResult(
                 count=0, start_id=self._next_id, end_id=self._next_id - 1

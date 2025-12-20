@@ -280,6 +280,10 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         """
         Bulk insert geometries with auto-assigned contiguous IDs.
 
+        Note:
+            For performance, this method always appends new items and does not reuse
+            IDs from the free-list created by deletions. Use insert() to fill holes.
+
         Args:
             geoms: List of geometries.
             objs: Optional list of Python objects aligned with geoms.
@@ -288,8 +292,15 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             InsertResult with count, start_id, and end_id.
 
         Raises:
+            TypeError: If geoms is a NumPy array (use insert_many_np instead).
             ValueError: If any geometry is outside bounds or objs length doesn't match.
         """
+        if _is_np_array(geoms):
+            raise TypeError(
+                "NumPy arrays are not supported by insert_many. "
+                "Use insert_many_np() for NumPy arrays."
+            )
+
         if len(geoms) == 0:
             start_id = len(self._store._arr)
             return InsertResult(count=0, start_id=start_id, end_id=start_id - 1)
@@ -319,6 +330,10 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
     def insert_many_np(self, geoms: Any, objs: list[Any] | None = None) -> InsertResult:
         """
         Bulk insert geometries from NumPy array with auto-assigned contiguous IDs.
+
+        Note:
+            For performance, this method always appends new items and does not reuse
+            IDs from the free-list created by deletions. Use insert() to fill holes.
 
         Args:
             geoms: NumPy array with dtype matching the tree's dtype.

@@ -152,7 +152,9 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
             point: Query point (x, y).
 
         Returns:
-            Tuple of (id, coords) or None if tree is empty, where coords is ndarray shape (4,).
+            Tuple of (id, coords) or None if tree is empty, where:
+                id: int (uint64)
+                coords: NDArray with shape (4,) and dtype matching tree
 
         Raises:
             ImportError: If NumPy is not installed.
@@ -191,7 +193,7 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
 
         Returns:
             Tuple of (ids, coords) where:
-                ids: NDArray[np.int64] with shape (k,)
+                ids: NDArray[np.uint64] with shape (k,)
                 coords: NDArray with shape (k, 4) and dtype matching tree
 
         Raises:

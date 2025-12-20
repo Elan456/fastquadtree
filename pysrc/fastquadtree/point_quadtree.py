@@ -145,7 +145,9 @@ class QuadTree(_BaseQuadTree[Point]):
             point: Query point (x, y).
 
         Returns:
-            Tuple of (id, coords) or None if tree is empty, where coords is ndarray shape (2,).
+            Tuple of (id, coords) or None if tree is empty, where:
+                id: int (uint64)
+                coords: NDArray with shape (2,) and dtype matching tree
 
         Raises:
             ImportError: If NumPy is not installed.
@@ -182,7 +184,7 @@ class QuadTree(_BaseQuadTree[Point]):
 
         Returns:
             Tuple of (ids, coords) where:
-                ids: NDArray[np.int64] with shape (k,)
+                ids: NDArray[np.uint64] with shape (k,)
                 coords: NDArray with shape (k, 2) and dtype matching tree
 
         Raises:

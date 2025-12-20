@@ -268,6 +268,29 @@ macro_rules! define_point_quadtree_pyclass {
                 self.inner.nearest_neighbor(Point { x, y }).map(item_to_tuple)
             }
 
+            /// Returns (id, coords) or None, where coords is ndarray shape (2,)
+            pub fn nearest_neighbor_np<'py>(
+                &self,
+                py: Python<'py>,
+                xy: ($t, $t),
+            ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+                let (x, y) = xy;
+                match self.inner.nearest_neighbor(Point { x, y }) {
+                    None => Ok(None),
+                    Some(item) => {
+                        let (id, px, py_) = item_to_tuple(item);
+                        unsafe {
+                            let coords_arr = PyArray1::<$t>::new(py, [2], false);
+                            let mut a = coords_arr.as_array_mut();
+                            a[0] = px;
+                            a[1] = py_;
+                            let out = PyTuple::new(py, &[id.into_pyobject(py)?.as_any(), coords_arr.as_any()])?;
+                            Ok(Some(out))
+                        }
+                    }
+                }
+            }
+
             pub fn nearest_neighbors(&self, xy: ($t, $t), k: usize) -> Vec<(u64, $t, $t)> {
                 let (x, y) = xy;
                 self.inner
@@ -275,6 +298,44 @@ macro_rules! define_point_quadtree_pyclass {
                     .into_iter()
                     .map(item_to_tuple)
                     .collect()
+            }
+
+            /// Returns (ids, coords) where ids is ndarray shape (k,) and coords is ndarray shape (k, 2)
+            pub fn nearest_neighbors_np<'py>(
+                &self,
+                py: Python<'py>,
+                xy: ($t, $t),
+                k: usize,
+            ) -> PyResult<Bound<'py, PyTuple>> {
+                let (x, y) = xy;
+                let (ids_vec, xs_vec, ys_vec) = py.detach(|| {
+                    let items = self.inner.nearest_neighbors(Point { x, y }, k);
+                    let n = items.len();
+                    let mut ids = Vec::with_capacity(n);
+                    let mut xs = Vec::with_capacity(n);
+                    let mut ys = Vec::with_capacity(n);
+                    for item in items {
+                        let (id, px, py_) = item_to_tuple(item);
+                        ids.push(id);
+                        xs.push(px);
+                        ys.push(py_);
+                    }
+                    (ids, xs, ys)
+                });
+
+                let n = ids_vec.len();
+                let ids_arr = PyArray1::<u64>::from_vec(py, ids_vec);
+
+                unsafe {
+                    let coords_arr = PyArray2::<$t>::new(py, [n, 2], false);
+                    let mut a = coords_arr.as_array_mut();
+                    for i in 0..n {
+                        a[[i, 0]] = xs_vec[i];
+                        a[[i, 1]] = ys_vec[i];
+                    }
+                    let out = PyTuple::new(py, &[ids_arr.as_any(), coords_arr.as_any()])?;
+                    Ok(out)
+                }
             }
 
             pub fn get_all_node_boundaries(&self) -> Vec<($t, $t, $t, $t)> {
@@ -503,7 +564,31 @@ macro_rules! define_rect_quadtree_pyclass {
                 let (x, y) = xy;
                 self.inner.nearest_neighbor(Point { x, y }).map(|item| (item.id, item.rect.min_x, item.rect.min_y, item.rect.max_x, item.rect.max_y))
             }
-            
+
+            /// Returns (id, coords) or None, where coords is ndarray shape (4,)
+            pub fn nearest_neighbor_np<'py>(
+                &self,
+                py: Python<'py>,
+                xy: ($t, $t),
+            ) -> PyResult<Option<Bound<'py, PyTuple>>> {
+                let (x, y) = xy;
+                match self.inner.nearest_neighbor(Point { x, y }) {
+                    None => Ok(None),
+                    Some(item) => {
+                        let id = item.id;
+                        unsafe {
+                            let coords_arr = PyArray1::<$t>::new(py, [4], false);
+                            let mut a = coords_arr.as_array_mut();
+                            a[0] = item.rect.min_x;
+                            a[1] = item.rect.min_y;
+                            a[2] = item.rect.max_x;
+                            a[3] = item.rect.max_y;
+                            let out = PyTuple::new(py, &[id.into_pyobject(py)?.as_any(), coords_arr.as_any()])?;
+                            Ok(Some(out))
+                        }
+                    }
+                }
+            }
 
             /// Returns K nearest neighbors as a list[(id, min_x, min_y, max_x, max_y)]
             pub fn nearest_neighbors(&self, xy: ($t, $t), k: usize) -> Vec<(u64, $t, $t, $t, $t)> {
@@ -513,6 +598,49 @@ macro_rules! define_rect_quadtree_pyclass {
                     .into_iter()
                     .map(|item| (item.id, item.rect.min_x, item.rect.min_y, item.rect.max_x, item.rect.max_y))
                     .collect()
+            }
+
+            /// Returns (ids, coords) where ids is ndarray shape (k,) and coords is ndarray shape (k, 4)
+            pub fn nearest_neighbors_np<'py>(
+                &self,
+                py: Python<'py>,
+                xy: ($t, $t),
+                k: usize,
+            ) -> PyResult<Bound<'py, PyTuple>> {
+                let (x, y) = xy;
+                let (ids_vec, mins_x, mins_y, maxs_x, maxs_y) = py.detach(|| {
+                    let items = self.inner.nearest_neighbors(Point { x, y }, k);
+                    let n = items.len();
+                    let mut ids = Vec::with_capacity(n);
+                    let mut v_minx = Vec::with_capacity(n);
+                    let mut v_miny = Vec::with_capacity(n);
+                    let mut v_maxx = Vec::with_capacity(n);
+                    let mut v_maxy = Vec::with_capacity(n);
+                    for item in items {
+                        ids.push(item.id);
+                        v_minx.push(item.rect.min_x);
+                        v_miny.push(item.rect.min_y);
+                        v_maxx.push(item.rect.max_x);
+                        v_maxy.push(item.rect.max_y);
+                    }
+                    (ids, v_minx, v_miny, v_maxx, v_maxy)
+                });
+
+                let n = ids_vec.len();
+                let ids_arr = PyArray1::<u64>::from_vec(py, ids_vec);
+
+                unsafe {
+                    let coords_arr = PyArray2::<$t>::new(py, [n, 4], false);
+                    let mut a = coords_arr.as_array_mut();
+                    for i in 0..n {
+                        a[[i, 0]] = mins_x[i];
+                        a[[i, 1]] = mins_y[i];
+                        a[[i, 2]] = maxs_x[i];
+                        a[[i, 3]] = maxs_y[i];
+                    }
+                    let out = PyTuple::new(py, &[ids_arr.as_any(), coords_arr.as_any()])?;
+                    Ok(out)
+                }
             }
 
             pub fn get_all_node_boundaries(&self) -> Vec<($t, $t, $t, $t)> {
