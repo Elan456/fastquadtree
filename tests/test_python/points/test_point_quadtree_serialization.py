@@ -1,6 +1,7 @@
 import pytest
 from tests.test_python.conftest import (
     corrupt_magic,
+    get_bounds_for_dtype,
     inflate_core_length,
     truncate_bytes,
 )
@@ -10,7 +11,7 @@ from fastquadtree.point_quadtree import QuadTree
 
 
 def test_to_bytes_from_bytes_round_trip_preserves_state(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, max_depth=5, dtype=dtype)
     pt1 = (1, 1) if dtype.startswith("i") else (1.0, 1.0)
     pt2 = (2, 2) if dtype.startswith("i") else (2.0, 2.0)
@@ -41,7 +42,7 @@ def test_to_bytes_from_bytes_round_trip_preserves_state(bounds, dtype):
 
 
 def test_from_bytes_rejects_corrupted_payload(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=2, dtype=dtype)
     qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0))
     data = qt.to_bytes()

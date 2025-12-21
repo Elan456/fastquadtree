@@ -1,3 +1,5 @@
+from tests.test_python.conftest import get_bounds_for_dtype
+
 from fastquadtree.rect_quadtree_objects import RectQuadTreeObjects
 
 
@@ -6,7 +8,7 @@ def rect_for_dtype(dtype: str, coords: tuple[float, float, float, float]) -> tup
 
 
 def test_delete_and_delete_at(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=6, dtype=dtype)
     rect = rect_for_dtype(dtype, (5.0, 5.0, 6.0, 6.0))
     rqt.insert(rect)
@@ -21,7 +23,7 @@ def test_delete_and_delete_at(bounds, dtype):
 
 
 def test_delete_by_object_and_attach(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=6, dtype=dtype)
     obj = object()
     rqt.insert(rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0)), obj=obj)
@@ -43,7 +45,7 @@ def test_delete_by_object_and_attach(bounds, dtype):
 
 
 def test_update_and_update_by_object(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     initial = rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0))
     rid = rqt.insert(initial, obj="obj")

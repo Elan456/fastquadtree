@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Final, Literal, overload
+from typing import Any, Final, Literal, Union, overload
 
 SERIALIZATION_FORMAT_VERSION: Final[int] = 1
 
@@ -14,10 +14,12 @@ SECTION_ITEMS: int = 1  # safe: ids + geometry only
 SECTION_OBJECTS: int = 2  # unsafe: pickle payload (opt-in)
 
 # Type aliases
-Bounds = tuple[float, float, float, float]
+Bounds = tuple[
+    Union[float, int], Union[float, int], Union[float, int], Union[float, int]
+]
 """Type alias for axis-aligned rectangle bounds as (min_x, min_y, max_x, max_y)."""
 
-Point = tuple[float, float]
+Point = tuple[Union[float, int], Union[float, int]]
 """Type alias for 2D point coordinates as (x, y)."""
 
 # Dtype mappings

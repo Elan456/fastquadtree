@@ -1,4 +1,5 @@
 import pytest
+from tests.test_python.conftest import get_bounds_for_dtype
 
 from fastquadtree._base_quadtree_objects import _encode_items_section
 from fastquadtree._common import SerializationError
@@ -6,7 +7,7 @@ from fastquadtree.point_quadtree_objects import QuadTreeObjects
 
 
 def test_serialization_include_objects_gate(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     obj = {"a": 1}
     qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0), obj=obj)
@@ -24,7 +25,7 @@ def test_serialization_include_objects_gate(bounds, dtype):
 
 
 def test_free_list_restored_after_load(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     ids = [
         qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0)),

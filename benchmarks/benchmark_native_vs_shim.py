@@ -12,7 +12,7 @@ from pyqtree import Index as PyQTreeIndex
 from system_info_collector import collect_system_info, format_system_info_markdown_lite
 from tqdm import tqdm
 
-from fastquadtree import QuadTree as ShimQuadTree
+from fastquadtree import QuadTree, QuadTreeObjects
 from fastquadtree._native import QuadTree as NativeQuadTree
 from fastquadtree.pyqtree import Index as FQTIndex
 
@@ -40,7 +40,8 @@ def gen_queries(m: int, rng: random.Random):
 def bench_native(points, queries):
     t0 = now()
     qt = NativeQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
-    qt.insert_many(0, points)
+    for i, p in enumerate(points):
+        qt.insert(i, p)
     t_build = now() - t0
 
     t0 = now()
@@ -54,8 +55,8 @@ def bench_np_shim(points, queries):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
     t0 = now()
-    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
-    qt.insert_many(np_points)
+    qt = QuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH, dtype="f32")
+    qt.insert_many_np(np_points)
     t_build = now() - t0
     t0 = now()
     for q in queries:
@@ -64,22 +65,33 @@ def bench_np_shim(points, queries):
     return t_build, t_query
 
 
-def bench_shim(points, queries, *, track_objects: bool, with_objs: bool):
-    # track_objects controls the map. with_objs decides if we actually store objects.
-    objs = [f"obj_{i}" for i in range(len(points))] if with_objs else None
+def bench_shim_no_objects(points, queries):
+    # QuadTree without object tracking
     t0 = now()
-    qt = ShimQuadTree(
-        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
-    )
-    if with_objs:
-        qt.insert_many(points, objs)
-    else:
-        qt.insert_many(points)
+    qt = QuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    for p in points:
+        qt.insert(p)
     t_build = now() - t0
 
     t0 = now()
     for q in queries:
-        _ = qt.query(q, as_items=track_objects)  # tuples path for speed
+        _ = qt.query(q)
+    t_query = now() - t0
+    return t_build, t_query
+
+
+def bench_shim_with_objects(points, queries):
+    # QuadTreeObjects with object tracking
+    objs = [f"obj_{i}" for i in range(len(points))]
+    t0 = now()
+    qt = QuadTreeObjects(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    for p, obj in zip(points, objs):
+        qt.insert(p, obj=obj)
+    t_build = now() - t0
+
+    t0 = now()
+    for q in queries:
+        _ = qt.query(q)
     t_query = now() - t0
     return t_build, t_query
 
@@ -142,7 +154,7 @@ def main():
     # Warmup to load modules
     print("Warming up...")
     _ = bench_native(points[:1000], queries[:50])
-    _ = bench_shim(points[:1000], queries[:50], track_objects=False, with_objs=False)
+    _ = bench_shim_no_objects(points[:1000], queries[:50])
     print()
 
     print("Running benchmarks...")
@@ -153,26 +165,26 @@ def main():
         args.repeats,
         desc="Native",
     )
-    s_build_no_map, s_query_no_map = median_times(
-        lambda pts, qs: bench_shim(pts, qs, track_objects=False, with_objs=False),
+    s_build_no_objs, s_query_no_objs = median_times(
+        lambda pts, qs: bench_shim_no_objects(pts, qs),
         points,
         queries,
         args.repeats,
-        desc="Shim (no tracking)",
+        desc="QuadTree (no objects)",
     )
-    s_build_map, s_query_map = median_times(
-        lambda pts, qs: bench_shim(pts, qs, track_objects=True, with_objs=True),
+    s_build_objs, s_query_objs = median_times(
+        lambda pts, qs: bench_shim_with_objects(pts, qs),
         points,
         queries,
         args.repeats,
-        desc="Shim (tracking)",
+        desc="QuadTreeObjects",
     )
     np_build, np_query = median_times(
         lambda pts, qs: bench_np_shim(pts, qs),
         points,
         queries,
         args.repeats,
-        desc="Shim (numpy points)",
+        desc="QuadTree (numpy, no objects)",
     )
     p_build, p_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
@@ -206,18 +218,18 @@ def main():
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
-| Shim (no tracking) | {fmt(s_build_no_map)} | {fmt(s_query_no_map)} | {fmt(s_build_no_map + s_query_no_map)} |
-| Shim (object return) | {fmt(s_build_map)} | {fmt(s_query_map)} | {fmt(s_build_map + s_query_map)} |
-| Shim (numpy points) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
+| QuadTree (no objects) | {fmt(s_build_no_objs)} | {fmt(s_query_no_objs)} | {fmt(s_build_no_objs + s_query_no_objs)} |
+| QuadTreeObjects | {fmt(s_build_objs)} | {fmt(s_query_objs)} | {fmt(s_build_objs + s_query_objs)} |
+| QuadTree (numpy, no objects) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
 
 ### Summary
 
-- The Python shim is {fmt((s_build_no_map + s_query_no_map) / (n_build + n_query))}x slower than the native engine due to Python overhead.
+- The Python shim (QuadTree) is {fmt((s_build_no_objs + s_query_no_objs) / (n_build + n_query))}x slower than the native engine due to Python overhead.
 
-- NumPy points without tracking are the fastest path: build is **{fmt(s_build_no_map / np_build)}x faster** than the non-tracking list path and queries are **{fmt(s_query_no_map / np_query)}x faster**,
-  for a **{fmt((s_build_no_map + s_query_no_map) / (np_build + np_query))}x** total speedup vs the non-tracking list path.
+- NumPy points are the fastest path: build is **{fmt(s_build_no_objs / np_build)}x faster** than the list path and queries are **{fmt(s_query_no_objs / np_query)}x faster**,
+  for a **{fmt((s_build_no_objs + s_query_no_objs) / (np_build + np_query))}x** total speedup vs the list path.
 
-- Adding the object map mainly impacts build time. Query time is largely unchanged.
+- QuadTreeObjects adds object association overhead. Build time increases significantly, query time is moderately slower.
 
 ## pyqtree drop-in shim performance gains
 

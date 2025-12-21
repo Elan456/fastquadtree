@@ -344,7 +344,7 @@ while True:
         b.update()
 
         # update quadtree
-        qt.update(idx, (old_x, old_y), (b.x, b.y))
+        qt.update_tuple(idx, (old_x, old_y), (b.x, b.y))
 
     # Mouse world position
     mx, my = pygame.mouse.get_pos()

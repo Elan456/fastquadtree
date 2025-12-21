@@ -7,6 +7,7 @@ from tests.test_python.conftest import (
 from fastquadtree._common import (
     DTYPE_BOUNDS_SIZE_BYTES,
     SECTION_ITEMS,
+    QuadTreeDType,
     SerializationError,
     build_container,
     parse_container,
@@ -15,7 +16,7 @@ from fastquadtree._common import (
 
 @pytest.mark.parametrize("dtype", ["f32", "f64", "i32", "i64"])
 @pytest.mark.parametrize("with_max_depth", [False, True])
-def test_build_and_parse_round_trip(dtype: str, with_max_depth: bool):
+def test_build_and_parse_round_trip(dtype: QuadTreeDType, with_max_depth: bool):
     flags = 1 if with_max_depth else 0
     max_depth = 3 if with_max_depth else None
     core = b"core-" + dtype.encode()

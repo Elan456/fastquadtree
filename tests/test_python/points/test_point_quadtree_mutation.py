@@ -1,10 +1,11 @@
 import pytest
+from tests.test_python.conftest import get_bounds_for_dtype
 
 from fastquadtree.point_quadtree import QuadTree
 
 
 def test_delete_by_coords_and_tuple(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     pt = (5, 5) if dtype.startswith("i") else (5.0, 5.0)
     rid = qt.insert(pt)
@@ -21,7 +22,7 @@ def test_delete_by_coords_and_tuple(bounds, dtype):
 
 
 def test_update_and_update_tuple_success(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     start = (1, 1) if dtype.startswith("i") else (1.0, 1.0)
     rid = qt.insert(start)
@@ -37,7 +38,7 @@ def test_update_and_update_tuple_success(bounds, dtype):
 
 
 def test_update_rollback_on_out_of_bounds(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     pt_old = (10, 10) if dtype.startswith("i") else (10.0, 10.0)
     rid = qt.insert(pt_old)
@@ -54,7 +55,7 @@ def test_update_rollback_on_out_of_bounds(bounds, dtype):
 
 
 def test_clear_resets_count_and_next_id(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0))
     qt.insert((2, 2) if dtype.startswith("i") else (2.0, 2.0))

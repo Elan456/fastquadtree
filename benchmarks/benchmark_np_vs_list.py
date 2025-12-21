@@ -12,7 +12,9 @@ from system_info_collector import (
     format_system_info_markdown_lite,
 )
 
-from fastquadtree import QuadTree as ShimQuadTree  # high level wrapper with insert_many
+from fastquadtree import (
+    QuadTree as ShimQuadTree,  # high level wrapper with insert_many
+)
 
 BOUNDS: tuple[float, float, float, float] = (0.0, 0.0, 1000.0, 1000.0)
 CAPACITY = 64
@@ -30,44 +32,40 @@ def gen_np_points(n: int, dtype: np.dtype) -> np.ndarray:
     return arr
 
 
-def _build_tree_np(points_np: np.ndarray, track_objects: bool) -> float:
+def _build_tree_np(points_np: np.ndarray) -> float:
     t0 = now()
-    qt = ShimQuadTree(
-        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
-    )
+    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
     # Direct NumPy path
-    inserted = qt.insert_many(points_np)
+    inserted = qt.insert_many_np(points_np)
     dt = now() - t0
-    assert inserted == points_np.shape[0], (
-        f"Inserted {inserted} != {points_np.shape[0]}"
-    )
+    assert (
+        inserted.count == points_np.shape[0]
+    ), f"Inserted {inserted} != {points_np.shape[0]}"
     return dt
 
 
-def _build_tree_list(
-    points_list: list[tuple[float, float]], track_objects: bool
-) -> float:
+def _build_tree_list(points_list: list[tuple[float, float]]) -> float:
     t0 = now()
-    qt = ShimQuadTree(
-        BOUNDS, CAPACITY, max_depth=MAX_DEPTH, track_objects=track_objects
-    )
+    qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
     inserted = qt.insert_many(points_list)
     dt = now() - t0
-    assert inserted == len(points_list), f"Inserted {inserted} != {len(points_list)}"
+    assert inserted.count == len(
+        points_list
+    ), f"Inserted {inserted} != {len(points_list)}"
     return dt
 
 
-def bench_np_direct(points_np: np.ndarray, repeats: int, track_objects: bool) -> float:
+def bench_np_direct(points_np: np.ndarray, repeats: int) -> float:
     times = []
     for _ in range(repeats):
         gc.disable()
-        times.append(_build_tree_np(points_np, track_objects))
+        times.append(_build_tree_np(points_np))
         gc.enable()
     return stats.median(times)
 
 
 def bench_list_from_np(
-    points_np: np.ndarray, repeats: int, track_objects: bool, include_conversion: bool
+    points_np: np.ndarray, repeats: int, include_conversion: bool
 ) -> float:
     times = []
     if not include_conversion:
@@ -80,11 +78,11 @@ def bench_list_from_np(
             t0 = now()
             points_list = [tuple(map(float, row)) for row in points_np]
             convert_time = now() - t0
-            build_time = _build_tree_list(points_list, track_objects)  # type: ignore
+            build_time = _build_tree_list(points_list)  # type: ignore
             times.append(convert_time + build_time)
         else:
             # Insert only
-            times.append(_build_tree_list(points_list, track_objects))  # pyright: ignore[reportPossiblyUnboundVariable, reportArgumentType]
+            times.append(_build_tree_list(points_list))  # pyright: ignore[reportPossiblyUnboundVariable, reportArgumentType]
         gc.enable()
     return stats.median(times)
 
@@ -102,11 +100,6 @@ def main():
         choices=["float32", "float64", "int32", "int64"],
         help="Dtype for generated NumPy points",
     )
-    ap.add_argument(
-        "--track-objects",
-        action="store_true",
-        help="Enable object tracking in the shim to include store overhead",
-    )
     args = ap.parse_args()
 
     dtype_map = {
@@ -123,34 +116,31 @@ def main():
     print(f"  Points: {args.points:,}")
     print(f"  Repeats: {args.repeats}")
     print(f"  Dtype: {args.dtype}")
-    print(f"  Track objects: {args.track_objects}")
     print()
 
     # Data
     pts_np = gen_np_points(args.points, dtype=dtype)
 
     # Warmup
-    _ = bench_np_direct(pts_np[:10_000], repeats=1, track_objects=args.track_objects)
+    _ = bench_np_direct(pts_np[:10_000], repeats=1)
     _ = bench_list_from_np(
         pts_np[:10_000],
         repeats=1,
-        track_objects=args.track_objects,
         include_conversion=False,
     )
     _ = bench_list_from_np(
         pts_np[:10_000],
         repeats=1,
-        track_objects=args.track_objects,
         include_conversion=True,
     )
 
     # Actual runs
-    t_np = bench_np_direct(pts_np, args.repeats, args.track_objects)
+    t_np = bench_np_direct(pts_np, args.repeats)
     t_list_insert_only = bench_list_from_np(
-        pts_np, args.repeats, args.track_objects, include_conversion=False
+        pts_np, args.repeats, include_conversion=False
     )
     t_list_with_convert = bench_list_from_np(
-        pts_np, args.repeats, args.track_objects, include_conversion=True
+        pts_np, args.repeats, include_conversion=True
     )
 
     def fmt(x: float) -> str:

@@ -1,12 +1,16 @@
 import numpy as np
 import pytest
-from tests.test_python.conftest import assert_query_matches_np, make_np_coords
+from tests.test_python.conftest import (
+    assert_query_matches_np,
+    get_bounds_for_dtype,
+    make_np_coords,
+)
 
 from fastquadtree.point_quadtree_objects import QuadTreeObjects
 
 
 def test_insert_many_np_with_and_without_objects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=8, dtype=dtype)
     coords = make_np_coords(dtype, [(1.0, 1.0), (2.0, 2.0)])
     res = qt.insert_many_np(coords)
@@ -38,7 +42,7 @@ def test_insert_many_np_errors(bounds):
 
 
 def test_insert_many_np_empty(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     empty = np.empty((0, 2), dtype=make_np_coords(dtype, [(0.0, 0.0)]).dtype)
     res = qt.insert_many_np(empty)

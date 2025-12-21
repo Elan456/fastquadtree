@@ -1,6 +1,7 @@
 import pytest
 from tests.test_python.conftest import (
     corrupt_magic,
+    get_bounds_for_dtype,
     inflate_core_length,
     truncate_bytes,
 )
@@ -10,7 +11,7 @@ from fastquadtree.rect_quadtree import RectQuadTree
 
 
 def test_serialization_round_trip(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=5, max_depth=7, dtype=dtype)
     r1 = (1, 1, 2, 2) if dtype.startswith("i") else (1.0, 1.0, 2.0, 2.0)
     r2 = (3, 3, 4, 4) if dtype.startswith("i") else (3.0, 3.0, 4.0, 4.0)
@@ -38,7 +39,7 @@ def test_serialization_round_trip(bounds, dtype):
 
 
 def test_serialization_errors(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=2, dtype=dtype)
     rect = (1, 1, 2, 2) if dtype.startswith("i") else (1.0, 1.0, 2.0, 2.0)
     rqt.insert(rect)

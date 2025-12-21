@@ -1,10 +1,14 @@
-import pytest
+from typing import List
 
+import pytest
+from tests.test_python.conftest import get_bounds_for_dtype
+
+from fastquadtree._common import Point
 from fastquadtree.point_quadtree_objects import QuadTreeObjects
 
 
 def test_insert_and_query_points_with_objects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     p1 = (1, 1) if dtype.startswith("i") else (1.0, 1.0)
     p2 = (2, 2) if dtype.startswith("i") else (2.0, 2.0)
@@ -29,9 +33,9 @@ def test_insert_and_query_points_with_objects(bounds, dtype):
 
 
 def test_insert_many_with_optional_objects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=10, dtype=dtype)
-    geoms = (
+    geoms: List[Point] = (
         [(1, 1), (2, 2), (3, 3)]
         if dtype.startswith("i")
         else [(1.0, 1.0), (2.0, 2.0), (3.0, 3.0)]

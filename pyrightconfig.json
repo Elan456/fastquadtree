@@ -1,0 +1,17 @@
+{
+  "include": [
+    "pysrc",
+    "tests",
+    "benchmarks",
+    "interactive"
+  ],
+  "extraPaths": [
+    "pysrc"
+  ],
+  "pythonVersion": "3.9",
+  "pythonPlatform": "All",
+  "typeCheckingMode": "basic",
+  "useLibraryCodeForTypes": true,
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false
+}

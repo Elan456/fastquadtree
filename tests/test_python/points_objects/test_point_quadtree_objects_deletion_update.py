@@ -1,8 +1,10 @@
+from tests.test_python.conftest import get_bounds_for_dtype
+
 from fastquadtree.point_quadtree_objects import QuadTreeObjects
 
 
 def test_delete_and_delete_at_with_duplicates(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=6, dtype=dtype)
     pt = (5, 5) if dtype.startswith("i") else (5.0, 5.0)
     rid1 = qt.insert(pt)
@@ -24,7 +26,7 @@ def test_delete_and_delete_at_with_duplicates(bounds, dtype):
 
 
 def test_delete_by_object_variants(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=6, dtype=dtype)
     obj = {"k": 1}
     qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0), obj=obj)
@@ -42,7 +44,7 @@ def test_delete_by_object_variants(bounds, dtype):
 
 
 def test_attach_replaces_object_and_update_paths(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     rid = qt.insert((1, 1) if dtype.startswith("i") else (1.0, 1.0), obj="old")
     qt.attach(rid, "new")

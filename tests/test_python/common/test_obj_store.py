@@ -45,6 +45,7 @@ def test_handle_out_of_order_fill_and_free_list_population():
     store.add(_mk(3, obj="late"), handle_out_of_order=True)
     assert len(store._arr) == 4
     assert store._arr[0] is None
+    assert store._arr[3] is not None
     assert store._arr[3].obj == "late"
     assert store._free == []  # holes not added until explicit population
 

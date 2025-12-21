@@ -6,7 +6,7 @@ import pygame
 from pyqtree import Index as PyQIndex
 
 # Spatial backends -------------------------------------------------------------
-from fastquadtree import QuadTree
+from fastquadtree import QuadTreeObjects
 
 # ---------------------------- Ball object ---------------------------- #
 
@@ -130,12 +130,12 @@ class FastQTIndex(SpatialBase):
         self.width = width
         self.height = height
         self.capacity = capacity
-        self.qt = QuadTree((0, 0, width, height), capacity, track_objects=True)
+        self.qt = QuadTreeObjects((0, 0, width, height), capacity)
 
     def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
         if width != self.width or height != self.height:
             self.width, self.height = width, height
-            self.qt = QuadTree((0, 0, width, height), self.capacity, track_objects=True)
+            self.qt = QuadTreeObjects((0, 0, width, height), self.capacity)
         else:
             self.qt.clear()
         for b in balls:
@@ -144,7 +144,7 @@ class FastQTIndex(SpatialBase):
     def neighbors(self, b: Ball) -> Iterable[Ball]:
         r2 = 2 * b.r
         min_x, min_y, max_x, max_y = b.x - r2, b.y - r2, b.x + r2, b.y + r2
-        neighbors = self.qt.query((min_x, min_y, max_x, max_y), as_items=True)
+        neighbors = self.qt.query((min_x, min_y, max_x, max_y))
         for it in neighbors:
             other = it.obj
             if other is not None and other is not b:

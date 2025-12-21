@@ -1,6 +1,10 @@
 import numpy as np
 import pytest
-from tests.test_python.conftest import assert_query_matches_np, make_np_coords
+from tests.test_python.conftest import (
+    assert_query_matches_np,
+    get_bounds_for_dtype,
+    make_np_coords,
+)
 
 from fastquadtree.rect_quadtree import RectQuadTree
 
@@ -10,7 +14,7 @@ def rect_for_dtype(dtype: str, coords: tuple[float, float, float, float]) -> tup
 
 
 def test_insert_many_np_round_trip(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=8, dtype=dtype)
     rects = make_np_coords(
         dtype,
@@ -26,14 +30,15 @@ def test_insert_many_np_round_trip(bounds, dtype):
 
 
 def test_insert_many_np_dtype_mismatch(bounds):
-    rqt = RectQuadTree(tuple(map(int, bounds)), capacity=4, dtype="i32")
+    bounds = get_bounds_for_dtype(bounds, "i32")
+    rqt = RectQuadTree(bounds, capacity=4, dtype="i32")
     wrong = np.array([[1.0, 1.0, 2.0, 2.0]], dtype=np.float64)
     with pytest.raises(TypeError):
         rqt.insert_many_np(wrong)
 
 
 def test_numpy_into_non_np_methods_raises(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     rects = make_np_coords(dtype, [rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0))])
     with pytest.raises(TypeError):
@@ -41,7 +46,7 @@ def test_numpy_into_non_np_methods_raises(bounds, dtype):
 
 
 def test_insert_many_np_empty(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     empty = np.empty(
         (0, 4),

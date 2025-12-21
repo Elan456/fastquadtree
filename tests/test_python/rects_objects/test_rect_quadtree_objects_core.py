@@ -1,4 +1,5 @@
 import pytest
+from tests.test_python.conftest import get_bounds_for_dtype
 
 from fastquadtree.rect_quadtree_objects import RectQuadTreeObjects
 
@@ -8,7 +9,7 @@ def rect_for_dtype(dtype: str, coords: tuple[float, float, float, float]) -> tup
 
 
 def test_insert_and_query_rects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     rect1 = rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0))
     rect2 = rect_for_dtype(dtype, (3.0, 3.0, 4.0, 4.0))
@@ -31,7 +32,7 @@ def test_insert_and_query_rects(bounds, dtype):
 
 
 def test_insert_many_and_mismatch_errors(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=10, dtype=dtype)
     rects = [
         rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0)),

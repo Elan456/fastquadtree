@@ -4,10 +4,24 @@ from typing import Any, Iterable, Sequence, Tuple
 import numpy as np
 import pytest
 
-from fastquadtree._common import DTYPE_BOUNDS_SIZE_BYTES, parse_container
+from fastquadtree._common import (
+    DTYPE_BOUNDS_SIZE_BYTES,
+    Bounds,
+    QuadTreeDType,
+    parse_container,
+)
 
 DEFAULT_BOUNDS = (0.0, 0.0, 100.0, 100.0)
 DTYPE_TO_NP = {"f32": np.float32, "f64": np.float64, "i32": np.int32, "i64": np.int64}
+
+
+def get_bounds_for_dtype(bounds: Bounds, dtype: QuadTreeDType) -> Bounds:
+    """Convert bounds to appropriate type for dtype."""
+    if dtype.startswith("i"):
+        bound_use = tuple(map(int, bounds))
+        assert len(bound_use) == 4
+        return bound_use
+    return bounds
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 import pytest
-from tests.test_python.conftest import truncate_bytes
+from tests.test_python.conftest import get_bounds_for_dtype, truncate_bytes
 
 from fastquadtree._base_quadtree_objects import _encode_items_section
 from fastquadtree._common import SerializationError
@@ -11,7 +11,7 @@ def rect_for_dtype(dtype: str, coords: tuple[float, float, float, float]) -> tup
 
 
 def test_serialization_with_and_without_objects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     obj = {"k": "v"}
     rqt.insert(rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0)), obj=obj)
@@ -27,7 +27,7 @@ def test_serialization_with_and_without_objects(bounds, dtype):
 
 
 def test_free_list_restored_after_deserialize(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=6, dtype=dtype)
     ids = [
         rqt.insert(rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0))),
@@ -50,7 +50,7 @@ def test_encode_items_section_mixed_geometry_error():
 
 
 def test_truncated_items_section_raises(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     rqt.insert(rect_for_dtype(dtype, (1.0, 1.0, 2.0, 2.0)), obj="x")
     data = rqt.to_bytes(include_objects=True)

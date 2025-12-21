@@ -1,6 +1,10 @@
 import numpy as np
 import pytest
-from tests.test_python.conftest import assert_query_matches_np, make_np_coords
+from tests.test_python.conftest import (
+    assert_query_matches_np,
+    get_bounds_for_dtype,
+    make_np_coords,
+)
 
 from fastquadtree.rect_quadtree_objects import RectQuadTreeObjects
 
@@ -10,7 +14,7 @@ def rect_for_dtype(dtype: str, coords: tuple[float, float, float, float]) -> tup
 
 
 def test_insert_many_np_with_objects(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=8, dtype=dtype)
     rects = make_np_coords(
         dtype,
@@ -56,7 +60,7 @@ def test_insert_many_np_errors(bounds):
 
 
 def test_insert_many_np_empty(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
     empty = np.empty(
         (0, 4),

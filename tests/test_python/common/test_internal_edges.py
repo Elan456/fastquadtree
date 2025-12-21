@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import struct
 from typing import Any, Iterable
 
@@ -16,12 +18,13 @@ from fastquadtree._common import (
     SECTION_ITEMS,
     SECTION_OBJECTS,
     SERIALIZATION_FORMAT_VERSION,
+    QuadTreeDType,
     SerializationError,
     build_container,
     parse_container,
     unpack_bounds,
 )
-from fastquadtree._item import Item, PointItem, RectItem
+from fastquadtree._item import Item, PointItem
 from fastquadtree._obj_store import ObjStore
 from fastquadtree.point_quadtree import QuadTree
 from fastquadtree.point_quadtree_objects import QuadTreeObjects
@@ -45,6 +48,7 @@ class StubNative:
         self.to_bytes_value = b"core"
         self.boundaries = [(0.0, 0.0, 1.0, 1.0)]
         self.max_depth = 2
+        self.from_bytes_payload: bytes | None = None
 
     def insert(self, id_: int, geom: Any) -> bool:
         return self.insert_result
@@ -104,7 +108,7 @@ class StubTree(_BaseQuadTree[tuple]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str):
+    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
         native = StubNative()
         native.from_bytes_payload = data
         return native
@@ -116,7 +120,7 @@ class StubObjTree(_BaseQuadTreeObjects[tuple, Item]):
         native: StubNative | None = None,
         *,
         max_depth: int | None = None,
-        dtype: str = "f32",
+        dtype: QuadTreeDType = "f32",
     ):
         self._stub_native = native or StubNative()
         super().__init__(
@@ -129,7 +133,7 @@ class StubObjTree(_BaseQuadTreeObjects[tuple, Item]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str):
+    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
         native = StubNative()
         native.from_bytes_payload = data
         return native
@@ -336,7 +340,7 @@ def test_base_quadtree_from_bytes_rejects_future_version():
 def test_encode_items_section_edge_cases():
     assert _encode_items_section([]) == struct.pack("<BBI", 0, 0, 0)
 
-    weird_item = Item(0, (0, 1, 2))
+    weird_item = Item(0, (0, 1, 2))  # type: ignore[arg-type]
     with pytest.raises(SerializationError):
         _encode_items_section([weird_item])  # type: ignore[arg-type]
 
@@ -638,7 +642,7 @@ def test_obj_store_edges_and_reverse_mapping_cleanup():
     store.add(PointItem(ids[0], (2.0, 2.0)))
     store.add(PointItem(ids[1], (3.0, 3.0)))
     objs = ["o1", "o2"]
-    store.add(RectItem(ids[1], (0.0, 0.0, 1.0, 1.0), obj=objs[1]))
+    store.add(PointItem(ids[1], (0.0, 0.0), obj=objs[1]))  # pyright: ignore[reportArgumentType]
     assert store.get_many_by_ids(ids, chunk=1)[0].id_ == ids[0]
     assert store.get_many_objects(ids) == [None, objs[1]]
     popped = store.pop_id(ids[1])

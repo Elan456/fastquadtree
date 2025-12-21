@@ -12,18 +12,18 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.067 s**
+- Fastest total: **fastquadtree** at **0.089 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.050 | 0.017 | 0.067 | 44.95× |
-| Shapely STRtree | 0.209 | 0.103 | 0.312 | 9.58× |
-| fastquadtree (obj tracking) | 0.289 | 0.178 | 0.467 | 6.41× |
-| nontree-QuadTree | 0.878 | 1.030 | 1.908 | 1.57× |
-| Rtree        | 1.742 | 0.523 | 2.265 | 1.32× |
-| e-pyquadtree | 1.425 | 0.975 | 2.400 | 1.25× |
-| quads        | 2.094 | 0.782 | 2.876 | 1.04× |
-| PyQtree      | 2.607 | 0.385 | 2.992 | 1.00× |
+| fastquadtree | 0.063 | 0.026 | 0.089 | 48.99× |
+| Shapely STRtree | 0.314 | 0.178 | 0.492 | 8.90× |
+| fastquadtree (obj tracking) | 0.388 | 0.244 | 0.632 | 6.93× |
+| nontree-QuadTree | 1.180 | 1.287 | 2.467 | 1.77× |
+| Rtree        | 1.905 | 0.622 | 2.527 | 1.73× |
+| e-pyquadtree | 2.083 | 1.479 | 3.562 | 1.23× |
+| quads        | 3.058 | 1.140 | 4.198 | 1.04× |
+| PyQtree      | 3.775 | 0.603 | 4.378 | 1.00× |
 
 #### Benchmark Configuration
 | Parameter | Value |
@@ -48,38 +48,38 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.058 | 2.124 | 2.182 |
-| Shim (no tracking) | 0.056 | 1.980 | 2.035 |
-| Shim (object return) | 0.412 | 1.619 | 2.031 |
-| Shim (numpy points) | 0.034 | 0.110 | 0.144 |
+| Native | 0.141 | 1.858 | 1.999 |
+| QuadTree (no objects) | 0.235 | 1.920 | 2.155 |
+| QuadTreeObjects | 0.927 | 2.052 | 2.979 |
+| QuadTree (numpy, no objects) | 0.046 | 0.252 | 0.297 |
 
 ### Summary
 
-- The Python shim does not make the query and build times larger.
+- The Python shim (QuadTree) is 1.078x slower than the native engine due to Python overhead.
 
-- NumPy points without tracking are the fastest path: build is **1.635x faster** than the non-tracking list path and queries are **17.968x faster**,
-  for a **14.110x** total speedup vs the non-tracking list path.
+- NumPy points are the fastest path: build is **5.157x faster** than the list path and queries are **7.627x faster**,
+  for a **7.249x** total speedup vs the list path.
 
-- Object tracking increases build time because objects have to be stored in the lookup table. It also increases query time because the objects have to be recovered from the table. 
+- QuadTreeObjects adds object association overhead. Build time increases significantly, query time is moderately slower.
 
 ## pyqtree drop-in shim performance gains
 
 ### Configuration
 - Points: 500,000
-- Queries: 1000
-- Repeats: 5
+- Queries: 500
+- Repeats: 3
 
 ### Results
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| pyqtree (fastquadtree) | 0.375 | 3.192 | 3.567 |
-| pyqtree (original) | 2.358 | 21.862 | 24.221 |
+| pyqtree (fastquadtree) | 0.485 | 2.086 | 2.571 |
+| pyqtree (original) | 3.463 | 13.209 | 16.672 |
 
 ### Summary
 
-If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.375s and query time of 3.192s.
-This is a **total speedup of 6.791x** compared to the original pyqtree and requires no code changes.
+If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.485s and query time of 2.086s.
+This is a **total speedup of 6.486x** compared to the original pyqtree and requires no code changes.
 
 ---------
 
@@ -89,24 +89,23 @@ This is a **total speedup of 6.791x** compared to the original pyqtree and requi
 - Points: 500,000
 - Repeats: 5
 - Dtype: float32
-- Track objects: False
 
-### Results (median of repeats)
+Results (median of repeats)
 
 | Variant | Build time |
 |---|---:|
-| NumPy array direct | 42.8 ms |
-| Python list insert only | 51.1 ms |
-| Python list including conversion | 540.2 ms |
+| NumPy array direct | 42.3 ms |
+| Python list insert only | 58.2 ms |
+| Python list including conversion | 573.4 ms |
 
 Key:  
 
-- *NumPy array direct*: Using the `insert_many` method with a NumPy array of shape (N, 2).  
+- *NumPy array direct*: Using the `insert_many_np` method with a NumPy array of shape (N, 2).  
 - *Python list insert only*: Using the `insert_many` method with a Python list of tuples.  
 - *Python list including conversion*: Time taken to convert a NumPy array to a Python list of tuples, then inserting.  
 
 ### Summary
-If your data is already in a NumPy array, using the `insert_many` method directly with the array is significantly faster than converting to a Python list first.
+If your data is already in a NumPy array, using the `insert_many_np` method directly with the array is significantly faster than converting to a Python list first.
 
 ---------
 
@@ -136,10 +135,10 @@ If your data is already in a NumPy array, using the `insert_many` method directl
 ----------------
 
 ## System Info
-- **OS**: CachyOS 6.17.9-2-cachyos x86_64
-- **Python**: CPython 3.13.7
+- **OS**: Windows 11 AMD64
+- **Python**: CPython 3.12.2
 - **CPU**: AMD Ryzen 7 3700X 8-Core Processor (16 threads)
-- **Memory**: 31.3 GB
+- **Memory**: 31.9 GB
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks

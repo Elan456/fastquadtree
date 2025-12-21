@@ -5,6 +5,7 @@ from fastquadtree._common import (
     CODE_TO_DTYPE,
     DTYPE_BOUNDS_SIZE_BYTES,
     QUADTREE_DTYPE_TO_NP_DTYPE,
+    QuadTreeDType,
     SerializationError,
     _is_np_array,
     code_to_dtype,
@@ -65,7 +66,7 @@ def test_is_np_array_detects_numpy_and_rejects_non_numpy():
 
 
 @pytest.mark.parametrize("dtype", ["f32", "f64", "i32", "i64"])
-def test_validate_np_dtype_allows_matching_dtype(dtype: str):
+def test_validate_np_dtype_allows_matching_dtype(dtype: QuadTreeDType):
     np_dtype = QUADTREE_DTYPE_TO_NP_DTYPE[dtype]
     arr = np.zeros((2, 2), dtype=np_dtype)
     validate_np_dtype(arr, dtype)  # should not raise
@@ -77,7 +78,7 @@ def test_validate_np_dtype_rejects_mismatch_and_unknown_dtype():
         validate_np_dtype(arr, "f64")
 
     with pytest.raises(TypeError):
-        validate_np_dtype(arr, "bad_dtype")  # unknown dtype string
+        validate_np_dtype(arr, "bad_dtype")  # type: ignore # unknown dtype string
 
 
 def test_dtype_code_mappings_and_errors():
@@ -92,7 +93,7 @@ def test_dtype_code_mappings_and_errors():
 
 
 @pytest.mark.parametrize("dtype", ["f32", "f64", "i32", "i64"])
-def test_pack_and_unpack_bounds_round_trip(dtype: str):
+def test_pack_and_unpack_bounds_round_trip(dtype: QuadTreeDType):
     bounds = (1.5, 2.5, 3.5, 4.5)
     if dtype in ("i32", "i64"):
         # Int dtypes cast inputs to ints during packing

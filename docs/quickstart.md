@@ -29,12 +29,18 @@ c = qt.insert((999, 500))
 print("Range hits:", qt.query((0, 0, 250, 350)))  # -> [(id, x, y), ...]
 
 print("Nearest to (210, 310):", qt.nearest_neighbor((210, 310)))
+# -> (1, 200.0, 300.0)
 
 print("Top 3 near (210, 310):", qt.nearest_neighbors((210, 310), 3))
+# -> [(1, 200.0, 300.0), (0, 10.0, 10.0), (2, 999.0, 500.0)]
 
 # 4) Delete by id and exact location
 print("Deleted:", qt.delete(b, 200, 300))
-print("Count:", len(qt))
+print("Count:", len(qt))  # -> 2
+
+# 5) Update position by id and exact location
+success = qt.update(a, 10, 10, 35, 35)  # Move point a to (35, 35)
+print("Update success:", success)  # -> True
 ```
 
 ## Range queries that feel natural

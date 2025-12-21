@@ -1,8 +1,11 @@
+from tests.test_python.conftest import get_bounds_for_dtype
+
+from fastquadtree._common import Bounds
 from fastquadtree.rect_quadtree import RectQuadTree
 
 
-def test_insert_query_contains_and_iter(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+def test_insert_query_contains_and_iter(bounds: Bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     rects = (
         [(1, 1, 2, 2), (3, 3, 4, 4)]
@@ -23,7 +26,7 @@ def test_insert_query_contains_and_iter(bounds, dtype):
 
 
 def test_custom_id_insertion(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     rect = (5, 5, 6, 6) if dtype.startswith("i") else (5.0, 5.0, 6.0, 6.0)
     rid = rqt.insert(rect, id_=7)
@@ -33,7 +36,7 @@ def test_custom_id_insertion(bounds, dtype):
 
 
 def test_overlapping_rectangles_query(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     r1 = (10, 10, 30, 30) if dtype.startswith("i") else (10.0, 10.0, 30.0, 30.0)
     r2 = (20, 20, 40, 40) if dtype.startswith("i") else (20.0, 20.0, 40.0, 40.0)
@@ -46,7 +49,7 @@ def test_overlapping_rectangles_query(bounds, dtype):
 
 
 def test_nearest_neighbor_variants(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=4, dtype=dtype)
     rects = [
         (10, 10, 12, 12),
@@ -80,7 +83,7 @@ def test_nearest_neighbor_variants(bounds, dtype):
 
 
 def test_node_boundaries_and_max_depth(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     rqt = RectQuadTree(bounds_use, capacity=2, max_depth=4, dtype=dtype)
     r1 = (10, 10, 15, 15) if dtype.startswith("i") else (10.0, 10.0, 15.0, 15.0)
     r2 = (80, 80, 90, 90) if dtype.startswith("i") else (80.0, 80.0, 90.0, 90.0)

@@ -1,10 +1,12 @@
+from tests.test_python.conftest import get_bounds_for_dtype
+
 from fastquadtree.point_quadtree import QuadTree
 
 
 def test_insert_query_len_contains_and_iter(bounds, dtype):
     # Use integer bounds/coords when dtype is integral to satisfy native expectations
     if dtype.startswith("i"):
-        bounds_use = tuple(map(int, bounds))
+        bounds_use = get_bounds_for_dtype(bounds, dtype)
         coords = [(1, 1), (2, 2), (3, 3)]
     else:
         bounds_use = bounds
@@ -28,7 +30,7 @@ def test_insert_query_len_contains_and_iter(bounds, dtype):
 
 
 def test_query_empty_region_and_outside_bounds(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     assert qt.query(bounds_use) == []
     outside = (
@@ -41,7 +43,7 @@ def test_query_empty_region_and_outside_bounds(bounds, dtype):
 
 
 def test_custom_id_insertion(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     pt = (5, 5) if dtype.startswith("i") else (5.0, 5.0)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     rid = qt.insert(pt, id_=42)
@@ -51,11 +53,10 @@ def test_custom_id_insertion(bounds, dtype):
 
 
 def test_nearest_neighbor_variants(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     if dtype.startswith("i"):
-        bounds_use = tuple(map(int, bounds))
         pts = [(10, 10), (20, 20), (35, 35)]
     else:
-        bounds_use = bounds
         pts = [(10.0, 10.0), (20.0, 20.0), (35.0, 35.0)]
 
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
@@ -86,7 +87,7 @@ def test_nearest_neighbor_variants(bounds, dtype):
 
 
 def test_nearest_neighbor_empty_and_k_exceeds_count(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=4, dtype=dtype)
     query_pt = (5, 5) if dtype.startswith("i") else (5.0, 5.0)
     assert qt.nearest_neighbor(query_pt) is None
@@ -100,7 +101,7 @@ def test_nearest_neighbor_empty_and_k_exceeds_count(bounds, dtype):
 
 
 def test_get_all_node_boundaries_and_max_depth(bounds, dtype):
-    bounds_use = tuple(map(int, bounds)) if dtype.startswith("i") else bounds
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
     qt = QuadTree(bounds_use, capacity=2, max_depth=6, dtype=dtype)
     pt1 = (10, 10) if dtype.startswith("i") else (10.0, 10.0)
     pt2 = (90, 90) if dtype.startswith("i") else (90.0, 90.0)
