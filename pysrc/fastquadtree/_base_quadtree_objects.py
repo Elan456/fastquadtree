@@ -658,7 +658,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         if len(coords) == 2:
             # Point
             x, y = coords
-            eps = 1e-9
+            eps = 1 if self._dtype[0] == "i" else 1e-5
             rect = (x - eps, y - eps, x + eps, y + eps)
             candidates = self._native.query(rect)
             return any(item_coords[1:3] == coords for item_coords in candidates)

@@ -53,3 +53,77 @@ def test_insert_many_with_optional_objects(bounds, dtype):
 
     with pytest.raises(ValueError):
         qt.insert_many(geoms, objs=["only two"])
+
+
+def test_contains_robust(bounds, dtype):
+    """Comprehensive test for __contains__ with various dtypes and edge cases."""
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    qt = QuadTreeObjects(bounds_use, capacity=4, dtype=dtype)
+
+    # Test empty tree
+    test_pt = (10, 10) if dtype.startswith("i") else (10.0, 10.0)
+    assert test_pt not in qt, "Empty tree should not contain any point"
+
+    # Insert points and test exact matches
+    if dtype.startswith("i"):
+        pts = [(10, 20), (30, 40), (50, 60)]
+    else:
+        pts = [(10.0, 20.0), (30.0, 40.0), (50.0, 60.0)]
+
+    for pt in pts:
+        qt.insert(pt)
+
+    # Test exact matches
+    for pt in pts:
+        assert pt in qt, f"Point {pt} should be found in tree"
+
+    # Test non-existent points
+    if dtype.startswith("i"):
+        non_existent = [(11, 20), (10, 21), (99, 99)]
+    else:
+        non_existent = [(10.1, 20.0), (10.0, 20.1), (99.0, 99.0)]
+
+    for pt in non_existent:
+        assert pt not in qt, f"Point {pt} should not be found in tree"
+
+    # Test with duplicates at same location
+    dup_pt = (70, 80) if dtype.startswith("i") else (70.0, 80.0)
+    qt.insert(dup_pt)
+    qt.insert(dup_pt)  # Insert same point twice
+    assert dup_pt in qt, "Duplicate point should be found"
+
+    # Test integer dtype with exact integer coordinates
+    if dtype.startswith("i"):
+        exact_int_pt = (25, 35)
+        qt.insert(exact_int_pt)
+        assert exact_int_pt in qt, "Integer point should be found with exact match"
+        assert (25, 36) not in qt, "Off-by-one integer should not match"
+
+    # Test float dtype with floating point precision
+    if dtype.startswith("f"):
+        float_pt = (12.5, 22.5)
+        qt.insert(float_pt)
+        assert float_pt in qt, "Float point should be found with exact match"
+        # These should NOT match due to floating point difference
+        assert (12.50001, 22.5) not in qt, "Slightly different float should not match"
+        assert (12.5, 22.50001) not in qt, "Slightly different float should not match"
+
+    # Test boundaries (points at tree edges)
+    min_x, min_y, max_x, max_y = bounds_use
+    if dtype.startswith("i"):
+        edge_pts = [
+            (min_x, min_y),  # Bottom-left corner
+            (max_x - 1, max_y - 1),  # Near top-right (inside bounds)
+        ]
+    else:
+        edge_pts = [
+            (float(min_x), float(min_y)),  # Bottom-left corner
+            (
+                float(max_x) - 1.0,
+                float(max_y) - 1.0,
+            ),  # Near top-right (use exact value)
+        ]
+
+    for pt in edge_pts:
+        qt.insert(pt)
+        assert pt in qt, f"Edge point {pt} should be found in tree"

@@ -320,7 +320,7 @@ class QuadTree(_BaseQuadTree[Point]):
             ```
         """
         x, y = point
-        eps = 1e-9
+        eps = 1 if self._dtype[0] == "i" else 1e-5
         rect = (x - eps, y - eps, x + eps, y + eps)
         candidates = self._native.query(rect)
         return any(px == x and py == y for _, px, py in candidates)
