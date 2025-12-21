@@ -95,7 +95,6 @@ nav:
       - RectItem: api/rect_item.md
       - PointItem: api/point_item.md
   - v1.x to v2.0 Migration Guide: 2.0_migration_guide.md
-  - Version 2 Proposal: 2.0_proposal.md
 
 extra:
   social:
