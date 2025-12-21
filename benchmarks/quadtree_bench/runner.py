@@ -5,13 +5,15 @@ This module handles the execution of benchmarks, data generation,
 and result collection for performance analysis.
 """
 
+from __future__ import annotations
+
 import gc
 import math
 import random
 import statistics as stats
 from dataclasses import dataclass
 from time import perf_counter as now
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from tqdm import tqdm
 
@@ -22,7 +24,7 @@ from .engines import Engine
 class BenchmarkConfig:
     """Configuration for benchmark runs."""
 
-    bounds: Tuple[int, int, int, int] = (0, 0, 1000, 1000)
+    bounds: tuple[int, int, int, int] = (0, 0, 1000, 1000)
     max_points: int = 64  # node capacity where supported
     max_depth: int = 1_000  # depth cap for fairness where supported
     n_queries: int = 100  # queries per experiment
@@ -49,7 +51,7 @@ class BenchmarkRunner:
 
     def generate_points(
         self, n: int, rng: random.Random | None = None
-    ) -> List[Tuple[int, int]]:
+    ) -> list[tuple[int, int]]:
         """Generate n random points within bounds."""
         if rng is None:
             rng = self.rng
@@ -61,7 +63,7 @@ class BenchmarkRunner:
 
     def generate_queries(
         self, m: int, rng: random.Random | None = None
-    ) -> List[Tuple[int, int, int, int]]:
+    ) -> list[tuple[int, int, int, int]]:
         """Generate m random rectangular queries within bounds."""
         if rng is None:
             rng = self.rng
@@ -78,9 +80,9 @@ class BenchmarkRunner:
     def benchmark_engine_once(
         self,
         engine: Engine,
-        points: List[Tuple[int, int]],
-        queries: List[Tuple[int, int, int, int]],
-    ) -> Tuple[float, float]:
+        points: list[tuple[int, int]],
+        queries: list[tuple[int, int, int, int]],
+    ) -> tuple[float, float]:
         """Run a single benchmark iteration for an engine."""
         # Separate build vs query timing
         t0 = now()
@@ -93,13 +95,13 @@ class BenchmarkRunner:
 
         return t_build, t_query
 
-    def median_or_nan(self, vals: List[float]) -> float:
+    def median_or_nan(self, vals: list[float]) -> float:
         """Calculate median, returning NaN for empty/invalid data."""
         cleaned = [x for x in vals if isinstance(x, (int, float)) and not math.isnan(x)]
         return stats.median(cleaned) if cleaned else math.nan
 
     def _print_experiment_summary(
-        self, n: int, results: Dict[str, Any], exp_idx: int
+        self, n: int, results: dict[str, Any], exp_idx: int
     ) -> None:
         """Print a summary of results for the current experiment."""
 
@@ -136,7 +138,7 @@ class BenchmarkRunner:
             )
         print()
 
-    def run_benchmark(self, engines: Dict[str, Engine]) -> Dict[str, Any]:
+    def run_benchmark(self, engines: dict[str, Engine]) -> dict[str, Any]:
         """
         Run complete benchmark suite.
 
@@ -268,7 +270,7 @@ class BenchmarkRunner:
 
         return results
 
-    def print_summary(self, results: Dict[str, Any]) -> None:
+    def print_summary(self, results: dict[str, Any]) -> None:
         """Print markdown summary of benchmark results."""
         total = results["total"]
         build = results["build"]

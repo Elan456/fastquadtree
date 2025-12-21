@@ -42,7 +42,7 @@ def make_points():
 
 def build_original(pts: np.ndarray) -> QuadTree:
     qt = QuadTree((0, 0, 1000, 1000), capacity=CAPACITY, max_depth=MAX_DEPTH)
-    qt.insert_many(pts)
+    qt.insert_many_np(pts)
     return qt
 
 
@@ -51,7 +51,7 @@ def main():
     original_qt = build_original(pts)
 
     # correctness baseline
-    base_count = original_qt.count_items()
+    base_count = len(original_qt)
     assert base_count == N
 
     # serialize timing
@@ -66,14 +66,14 @@ def main():
 
     def rebuild_points():
         qt = QuadTree((0, 0, 1000, 1000), capacity=CAPACITY, max_depth=MAX_DEPTH)
-        qt.insert_many(pts)
-        assert qt.count_items() == base_count
+        qt.insert_many_np(pts)
+        assert len(qt) == base_count
         _ = qt.query((100, 100, 200, 200))
         return qt
 
     def rebuild_from_mem():
         qt = QuadTree.from_bytes(qt_bytes)
-        assert qt.count_items() == base_count
+        assert len(qt) == base_count
         _ = qt.query((100, 100, 200, 200))
         return qt
 
@@ -81,7 +81,7 @@ def main():
         with Path(fname).open("rb") as f:
             data = f.read()
         qt = QuadTree.from_bytes(data)
-        assert qt.count_items() == base_count
+        assert len(qt) == base_count
         _ = qt.query((100, 100, 200, 200))
         return qt
 

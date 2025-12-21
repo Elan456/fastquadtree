@@ -15,7 +15,7 @@ from pyquadtree.quadtree import QuadTree as EPyQuadTree  # e-pyquadtree
 from shapely import box as shp_box, points  # Shapely 2.x
 from shapely.strtree import STRtree
 
-from fastquadtree import QuadTree as RustQuadTree  # fastquadtree
+from fastquadtree import QuadTree as FQTQuadTree, QuadTreeObjects as FQTQuadTreeObjects
 
 
 class Engine:
@@ -103,7 +103,7 @@ def _create_fastquadtree_np_engine(
     """Create engine adapter for fastquadtree."""
 
     def build(points):
-        qt = RustQuadTree(bounds, max_points, max_depth=max_depth)
+        qt = FQTQuadTree(bounds, max_points, max_depth=max_depth)
         qt.insert_many(points)
         return qt
 
@@ -125,13 +125,13 @@ def _create_fastquadtree_items_engine(
     """Create engine adapter for fastquadtree."""
 
     def build(points):
-        qt = RustQuadTree(bounds, max_points, max_depth=max_depth, track_objects=True)
+        qt = FQTQuadTreeObjects(bounds, max_points, max_depth=max_depth)
         qt.insert_many(points)
         return qt
 
     def query(qt, queries):
         for q in queries:
-            _ = qt.query(q, as_items=True)
+            _ = qt.query(q)
 
     return Engine(
         "fastquadtree (obj tracking)",

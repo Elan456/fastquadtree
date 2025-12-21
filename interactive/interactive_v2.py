@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pygame
 
-from fastquadtree import QuadTree
+from fastquadtree import QuadTreeObjects
 
 pygame.init()
 pygame.font.init()
@@ -73,11 +73,10 @@ font = pygame.font.SysFont("Consolas", 12)
 # ------------------------------
 # Quadtree and actors
 # ------------------------------
-qtree = QuadTree(
+qtree = QuadTreeObjects(
     (WORLD_MIN_X, WORLD_MIN_Y, WORLD_MAX_X + 1, WORLD_MAX_Y + 1),
     6,
     max_depth=12,
-    track_objects=True,
 )
 
 
@@ -217,7 +216,7 @@ def draw_query_circle(cx, cy, r, blink):
 def draw_nn_rays():
     for obj in list(qtree.get_all_objects()):
         wx, wy = obj.x, obj.y
-        out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
+        out = qtree.nearest_neighbors((wx, wy), 2)
         if len(out) < 2:
             continue
         nn = out[1].obj  # second nearest (first is self)
@@ -262,7 +261,7 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target
                 zoom_target = clamp(zoom_target / ZOOM_FACTOR, ZOOM_MIN, ZOOM_MAX)
             elif ev.key == pygame.K_c:
                 # Save quadtree state
-                data = qtree.to_bytes()
+                data = qtree.to_bytes(include_objects=True)
                 with Path("quadtree_state.bin").open("wb") as f:
                     f.write(data)
                 print("Quadtree state saved to quadtree_state.bin")
@@ -271,7 +270,7 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target
                 try:
                     with Path("quadtree_state.bin").open("rb") as f:
                         data = f.read()
-                    qtree = QuadTree.from_bytes(data)
+                    qtree = QuadTreeObjects.from_bytes(data, allow_objects=True)
                     print("Quadtree state loaded from quadtree_state.bin")
                 except Exception as e:  # noqa: BLE001
                     print(f"Failed to load quadtree state: {e}")
@@ -295,7 +294,7 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails, zoom_target
             mx, my = ev.pos
             wx = mx / max(zoom, 1e-6) + camera_x
             wy = my / max(zoom, 1e-6) + camera_y
-            nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+            nn = qtree.nearest_neighbor((wx, wy))
             if nn is not None:
                 qtree.delete_by_object(nn.obj)
 
@@ -324,7 +323,7 @@ def handle_continuous_input(
     if pygame.mouse.get_pressed(3)[2] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
         wx = mx / max(zoom, 1e-6) + camera_x
         wy = my / max(zoom, 1e-6) + camera_y
-        nn = qtree.nearest_neighbor((wx, wy), as_item=True)
+        nn = qtree.nearest_neighbor((wx, wy))
         if nn is not None:
             qtree.delete_by_object(nn.obj)
 
@@ -400,7 +399,7 @@ def main():
 
         # Mouse-following rectangle
         rect_q = get_mouse_rect()
-        rect_hits = qtree.query(rect_q, as_items=True)
+        rect_hits = qtree.query(rect_q)
 
         # ------------ Rendering ------------
         screen.fill(COL_BG_1)

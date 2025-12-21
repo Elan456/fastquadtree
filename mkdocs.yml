@@ -89,10 +89,12 @@ nav:
   - API:
       - QuadTree: api/quadtree.md
       - RectQuadTree: api/rect_quadtree.md
+      - QuadTreeObjects: api/quadtree_objects.md
+      - RectQuadTreeObjects: api/rect_quadtree_objects.md
       - pyqtree: api/pyqtree.md
       - RectItem: api/rect_item.md
       - PointItem: api/point_item.md
-  - Version 2 Proposal: 2.0_proposal.md
+  - v1.x to v2.0 Migration Guide: 2.0_migration_guide.md
 
 extra:
   social:

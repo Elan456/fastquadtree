@@ -21,20 +21,26 @@ from fastquadtree import QuadTree
 qt = QuadTree(bounds=(0, 0, 1000, 1000), capacity=20)
 
 # 2) Add some stuff (a, b, and c are auto-generated ids)
-a = qt.insert((10, 10))                 
-b = qt.insert((200, 300))              
-c = qt.insert((999, 500))     
+a = qt.insert((10, 10))
+b = qt.insert((200, 300))
+c = qt.insert((999, 500))
 
 # 3) Ask spatial questions
 print("Range hits:", qt.query((0, 0, 250, 350)))  # -> [(id, x, y), ...]
 
 print("Nearest to (210, 310):", qt.nearest_neighbor((210, 310)))
+# -> (1, 200.0, 300.0)
 
 print("Top 3 near (210, 310):", qt.nearest_neighbors((210, 310), 3))
+# -> [(1, 200.0, 300.0), (0, 10.0, 10.0), (2, 999.0, 500.0)]
 
 # 4) Delete by id and exact location
-print("Deleted:", qt.delete(b, (200, 300)))
-print("Count:", qt.count_items())
+print("Deleted:", qt.delete(b, 200, 300))
+print("Count:", len(qt))  # -> 2
+
+# 5) Update position by id and exact location
+success = qt.update(a, 10, 10, 35, 35)  # Move point a to (35, 35)
+print("Update success:", success)  # -> True
 ```
 
 ## Range queries that feel natural
@@ -71,10 +77,12 @@ for id_, x, y in qt.nearest_neighbors(cursor, k=5):
 
 ## Track Python objects when you need them
 
-Turn on object tracking to bind your own objects to ids. Object lookups for deletion are O(1).
+Use `QuadTreeObjects` to bind your own objects to spatial coordinates. Object lookups for deletion are O(1).
 
 ```python
-qt = QuadTree((0, 0, 1000, 1000), capacity=16, track_objects=True)
+from fastquadtree import QuadTreeObjects
+
+qt = QuadTreeObjects((0, 0, 1000, 1000), capacity=16)
 
 player = {"name": "Alice", "hp": 100}
 enemy  = {"name": "Boblin", "hp": 60}
@@ -82,16 +90,16 @@ enemy  = {"name": "Boblin", "hp": 60}
 pid = qt.insert((50, 50), obj=player)
 eid = qt.insert((80, 60), obj=enemy)
 
-# Query as Item objects for convenience
-items = qt.query((0, 0, 200, 200), as_items=True)
-for it in items:
-    print(it.id, it.x, it.y, it.obj)
+# Query returns Item objects with both coordinates and the stored object
+items = qt.query((0, 0, 200, 200))
+for item in items:
+    print(item.id_, item.x, item.y, item.obj)
 
-# Remove by object identity
-qt.delete_by_object(player)            # True
+# Remove by object identity (returns deletion count)
+deleted = qt.delete_by_object(player)  # 1
 ```
 
-Tip: leave `track_objects=False` for max speed when you do not need object mapping.
+Tip: Use `QuadTree` instead of `QuadTreeObjects` for max speed when you do not need object tracking.
 
 ---
 

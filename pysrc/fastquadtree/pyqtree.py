@@ -1,6 +1,8 @@
 """
-Python Shim to mimic the interface of pyqtree and allow for a
-drop-in replacement to fastquadtree.
+Compatibility layer providing the pyqtree interface.
+
+This module provides a drop-in replacement for the pyqtree package with
+significantly improved performance through a Rust-backed implementation.
 """
 
 from __future__ import annotations
@@ -35,31 +37,39 @@ def gather_objs(objs, ids, chunk=2048):
 
 class Index:
     """
-    The interface of the class below is taken from the pyqtree package, but the implementation
-    has been modified to use the fastquadtree package as a backend instead of
-    the original pure-python implementation.
-    Based on the benchmarks, this gives a overall performance boost of 6.514x.
-    See the benchmark section of the docs for more details and the latest numbers.
+    Pyqtree-compatible spatial index with improved performance.
 
-    Index is  the top-level class for creating and using a quadtree spatial index
-    with the original pyqtree interface. If you are not migrating from pyqtree,
-    consider using the RectQuadTree class for detailed control and better performance.
+    This class provides the same interface as pyqtree.Index but is backed by
+    a high-performance Rust implementation. Based on benchmarks, this provides
+    an overall performance boost of approximately 6.5x compared to the original
+    pure-Python implementation.
 
-    This class wraps a RectQuadTree instance and provides methods to insert items with bounding boxes,
-    remove items, and query for items intersecting a given bounding box.
+    For new projects not requiring pyqtree compatibility, consider using
+    `RectQuadTreeObjects` for more control and better performance.
 
-    Example usage:
-    ```python
-    from fastquadtree.pyqtree import Index
+    Args:
+        bbox: Coordinate system bounding box as (xmin, ymin, xmax, ymax).
+        x: X center coordinate (alternative to bbox).
+        y: Y center coordinate (alternative to bbox).
+        width: Width from center (alternative to bbox).
+        height: Height from center (alternative to bbox).
+        max_items: Maximum items per quad before splitting (default: 10).
+        max_depth: Maximum nesting levels (default: 20).
 
+    Note:
+        Either `bbox` or all of (`x`, `y`, `width`, `height`) must be provided.
 
-    spindex = Index(bbox=(0, 0, 100, 100))
-    spindex.insert('duck', (50, 30, 53, 60))
-    spindex.insert('cookie', (10, 20, 15, 25))
-    spindex.insert('python', (40, 50, 95, 90))
-    results = spindex.intersect((51, 51, 86, 86))
-    sorted(results) # ['duck', 'python']
-    ```
+    Example:
+        ```python
+        from fastquadtree.pyqtree import Index
+
+        spindex = Index(bbox=(0, 0, 100, 100))
+        spindex.insert('duck', (50, 30, 53, 60))
+        spindex.insert('cookie', (10, 20, 15, 25))
+        spindex.insert('python', (40, 50, 95, 90))
+        results = spindex.intersect((51, 51, 86, 86))
+        print(sorted(results))  # ['duck', 'python']
+        ```
     """
 
     __slots__ = ("_free", "_item_to_id", "_objects", "_qt")
@@ -75,31 +85,27 @@ class Index:
         max_depth: int = MAX_DEPTH,
     ):
         """
-        Initiate by specifying either 1) a bbox to keep track of, or 2) with an xy centerpoint and a width and height.
+        Initialize the spatial index.
+
+        Specify either a bounding box or center point with dimensions.
 
         Args:
-          bbox: The coordinate system bounding box of the area that the quadtree should
-            keep track of, as a 4-length sequence (xmin,ymin,xmax,ymax)
-          x:
-            The x center coordinate of the area that the quadtree should keep track of.
-          y:
-            The y center coordinate of the area that the quadtree should keep track of.
-          width:
-            How far from the xcenter that the quadtree should look when keeping track.
-          height:
-            How far from the ycenter that the quadtree should look when keeping track
-          max_items (optional): The maximum number of items allowed per quad before splitting
-              up into four new subquads. Default is 10.
-          max_depth (optional): The maximum levels of nested subquads, after which no more splitting
-            occurs and the bottommost quad nodes may grow indefinately. Default is 20.
+            bbox: Bounding box as (xmin, ymin, xmax, ymax).
+            x: X center coordinate (alternative to bbox).
+            y: Y center coordinate (alternative to bbox).
+            width: Distance from x center to edges (alternative to bbox).
+            height: Distance from y center to edges (alternative to bbox).
+            max_items: Maximum items per quad before splitting (default: 10).
+            max_depth: Maximum nesting levels (default: 20).
 
-        Note:
-            Either the bbox argument must be set, or the x, y, width, and height
-            arguments must be set.
+        Raises:
+            ValueError: If neither bbox nor (x, y, width, height) are provided.
         """
         if bbox is not None:
-            x1, y1, x2, y2 = bbox
-            self._qt = RectQuadTree((x1, y1, x2, y2), max_items, max_depth=max_depth)
+            min_x, min_y, max_x, max_y = bbox
+            self._qt = RectQuadTree(
+                (min_x, min_y, max_x, max_y), max_items, max_depth=max_depth
+            )
 
         elif (
             x is not None and y is not None and width is not None and height is not None
@@ -121,11 +127,11 @@ class Index:
 
     def insert(self, item: Any, bbox: Iterable[SupportsFloat]):
         """
-        Inserts an item into the quadtree along with its bounding box.
+        Insert an item with its bounding box.
 
         Args:
-          item: The item to insert into the index, which will be returned by the intersection method
-          bbox: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
+            item: Item to insert (will be returned by intersect queries).
+            bbox: Spatial bounding box as (xmin, ymin, xmax, ymax).
         """
         if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
@@ -141,14 +147,14 @@ class Index:
 
     def remove(self, item: Any, bbox: Iterable[SupportsFloat]):
         """
-        Removes an item from the quadtree.
+        Remove an item from the index.
 
         Args:
-          item: The item to remove from the index
-          bbox: The spatial bounding box tuple of the item, with four members (xmin,ymin,xmax,ymax)
+            item: Item to remove (must match the inserted item).
+            bbox: Bounding box as (xmin, ymin, xmax, ymax) (must match insertion).
 
         Note:
-            Both parameters need to exactly match the parameters provided to the insert method.
+            Both parameters must exactly match those used during insertion.
         """
         if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
@@ -160,14 +166,13 @@ class Index:
 
     def intersect(self, bbox: Iterable[SupportsFloat]) -> list:
         """
-        Intersects an input bounding box rectangle with all of the items
-        contained in the quadtree.
+        Query items that intersect with a bounding box.
 
         Args:
-          bbox: A spatial bounding box tuple with four members (xmin,ymin,xmax,ymax)
+            bbox: Query bounding box as (xmin, ymin, xmax, ymax).
 
         Returns:
-          A list of inserted items whose bounding boxes intersect with the input bbox.
+            List of items whose bounding boxes intersect the query box.
         """
         if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)

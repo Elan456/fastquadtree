@@ -5,7 +5,7 @@ import random
 
 import pygame
 
-from fastquadtree import RectQuadTree
+from fastquadtree import RectQuadTreeObjects
 
 pygame.init()
 pygame.font.init()
@@ -68,11 +68,10 @@ font = pygame.font.SysFont("Consolas", 12)
 # ------------------------------
 # Quadtree and actors
 # ------------------------------
-qtree = RectQuadTree(
+qtree = RectQuadTreeObjects(
     (WORLD_MIN_X, WORLD_MIN_Y, WORLD_MAX_X + 1, WORLD_MAX_Y + 1),
     6,
     max_depth=12,
-    track_objects=True,
 )
 
 
@@ -218,7 +217,7 @@ def draw_query_circle(cx, cy, r, blink):
 def draw_nn_rays():
     for obj in list(qtree.get_all_objects()):
         wx, wy = obj.x, obj.y
-        out = qtree.nearest_neighbors((wx, wy), 2, as_items=True)
+        out = qtree.nearest_neighbors((wx, wy), 2)
         if len(out) < 2:
             continue
         nn = out[1].obj  # second nearest (first is self)
@@ -271,8 +270,7 @@ def handle_events(running, paused, show_nodes, show_nn, show_trails):
             mx, my = ev.pos
             wx = mx + camera_x
             wy = my + camera_y
-            #       nn = qtree.nearest_neighbor((wx, wy), as_item=True)
-            nn = None
+            nn = qtree.nearest_neighbor((wx, wy))
             if nn is not None:
                 qtree.delete_by_object(nn.obj)
 
@@ -299,8 +297,7 @@ def handle_continuous_input(dt, camera_x, camera_y, rect_half_width, rect_half_h
     if pygame.mouse.get_pressed(3)[2] and pygame.key.get_mods() & pygame.KMOD_SHIFT:
         wx = mx + camera_x
         wy = my + camera_y
-        #     nn = qtree.nearest_neighbor((wx, wy), as_item=True)
-        nn = None
+        nn = qtree.nearest_neighbor((wx, wy))
         if nn is not None:
             qtree.delete_by_object(nn.obj)
 
@@ -369,7 +366,7 @@ def main():
 
         # Mouse-following rectangle
         rect_q = get_mouse_rect()
-        rect_hits = qtree.query(rect_q, as_items=True)
+        rect_hits = qtree.query(rect_q)
 
         # ------------ Rendering ------------
         screen.fill(COL_BG_1)

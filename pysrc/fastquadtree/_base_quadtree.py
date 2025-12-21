@@ -1,57 +1,36 @@
-# _abc_quadtree.py
+# _base_quadtree.py
+"""Base class for QuadTree and RectQuadTree without object tracking (v2.0 API)."""
+
 from __future__ import annotations
 
-import pickle
 from abc import ABC, abstractmethod
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Iterable,
-    Literal,
-    Sequence,
-    SupportsFloat,
-    Tuple,
-    TypeVar,
-    overload,
+from typing import Any, Generic, TypeVar
+
+from ._common import (
+    SERIALIZATION_FORMAT_VERSION,
+    Bounds,
+    QuadTreeDType,
+    SerializationError,
+    _is_np_array,
+    build_container,
+    parse_container,
+    validate_bounds,
+    validate_np_dtype,
 )
-
-from ._item import Item  # base class for PointItem and RectItem
-from ._obj_store import ObjStore
-
-if TYPE_CHECKING:
-    from typing import Self  # Only in Python 3.11+
-
-    from numpy.typing import NDArray
-
-Bounds = Tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
+from ._insert_result import InsertResult
 
 # Generic parameters
 G = TypeVar("G")  # geometry type, e.g. Point or Bounds
-HitT = TypeVar("HitT")  # raw native tuple, e.g. (id,x,y) or (id,x0,y0,x1,y1)
-ItemType = TypeVar("ItemType", bound=Item)  # e.g. PointItem or RectItem
-
-# Quadtree dtype to numpy dtype mapping
-QUADTREE_DTYPE_TO_NP_DTYPE = {
-    "f32": "float32",
-    "f64": "float64",
-    "i32": "int32",
-    "i64": "int64",
-}
 
 
-def _is_np_array(x: Any) -> bool:
-    mod = getattr(x.__class__, "__module__", "")
-    return mod.startswith("numpy") and hasattr(x, "ndim") and hasattr(x, "shape")
-
-
-class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
+class _BaseQuadTree(Generic[G], ABC):
     """
-    Shared logic for Python QuadTree wrappers over native Rust engines.
+    Shared logic for QuadTree and RectQuadTree without object tracking.
 
-    Concrete subclasses must implement:
-      - _new_native(bounds, capacity, max_depth)
-      - _make_item(id_, geom, obj)
+    This base class implements the core functionality for spatial indexing
+    without Python object association. Concrete subclasses must implement:
+      - _new_native(bounds, capacity, max_depth, dtype)
+      - _new_native_from_bytes(data, dtype)
     """
 
     __slots__ = (
@@ -62,26 +41,22 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         "_max_depth",
         "_native",
         "_next_id",
-        "_store",
-        "_track_objects",
     )
 
-    # ---- required native hooks ----
+    # ---- Required hooks for subclasses ----
 
     @abstractmethod
-    def _new_native(self, bounds: Bounds, capacity: int, max_depth: int | None) -> Any:
+    def _new_native(
+        self, bounds: Bounds, capacity: int, max_depth: int | None, dtype: str
+    ) -> Any:
         """Create the native engine instance."""
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+    @abstractmethod
+    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
         """Create the native engine instance from serialized bytes."""
 
-    @staticmethod
-    @abstractmethod
-    def _make_item(id_: int, geom: G, obj: Any | None) -> ItemType:
-        """Build an ItemType from id, geometry, and optional object."""
-
-    # ---- ctor ----
+    # ---- Initialization ----
 
     def __init__(
         self,
@@ -89,514 +64,263 @@ class _BaseQuadTree(Generic[G, HitT, ItemType], ABC):
         capacity: int,
         *,
         max_depth: int | None = None,
-        track_objects: bool = False,
-        dtype: str = "f32",
+        dtype: QuadTreeDType = "f32",
     ):
-        # Handle some bounds validation and list --> tuple conversion
-        if type(bounds) is not tuple:
-            bounds = tuple(bounds)  # pyright: ignore[reportAssignmentType]
-        if len(bounds) != 4:
-            raise ValueError(
-                "bounds must be a tuple of four numeric values (x min, y min, x max, y max)"
-            )
-
-        self._bounds = bounds
-
-        self._max_depth = max_depth
+        self._bounds = validate_bounds(bounds)
         self._capacity = capacity
-        self._dtype = dtype
-        self._native = self._new_native(self._bounds, self._capacity, self._max_depth)
+        self._max_depth = max_depth
+        self._dtype: QuadTreeDType = dtype
 
-        self._track_objects = bool(track_objects)
-        self._store: ObjStore[ItemType] | None = ObjStore() if track_objects else None
+        self._native = self._new_native(self._bounds, capacity, max_depth, dtype)
 
-        # Auto ids when not using ObjStore.free slots
-        self._next_id = 0
+        self._next_id: int = 0
         self._count = 0
 
-    # ---- serialization ----
+    # ---- Insertion ----
 
-    def to_dict(self) -> dict[str, Any]:
+    def insert(self, geom: G, id_: int | None = None) -> int:
         """
-        Serialize the quadtree to a dict suitable for JSON or other serialization.
+        Insert a single geometry.
 
-        Returns:
-            Includes a binary 'core' key for the native engine state, plus other metadata such as bounds and capacity and the obj store if tracking is enabled.
+        IDs are auto-assigned by default. You can optionally provide a custom ID
+        to correlate with external data structures.
 
-        Example:
-            ```python
-            state = qt.to_dict()
-            assert "core" in state and "bounds" in state
-            ```
-        """
-
-        core_bytes = self._native.to_bytes()
-
-        return {
-            "core": core_bytes,
-            "store": self._store.to_dict() if self._store is not None else None,
-            "bounds": self._bounds,
-            "capacity": self._capacity,
-            "max_depth": self._max_depth,
-            "track_objects": self._track_objects,
-            "next_id": self._next_id,
-            "count": self._count,
-        }
-
-    def to_bytes(self) -> bytes:
-        """
-        Serialize the quadtree to bytes.
-
-        Returns:
-            Bytes representing the serialized quadtree. Can be saved as a file or loaded with `from_bytes()`.
-
-        Example:
-            ```python
-            blob = qt.to_bytes()
-            with open("tree.fqt", "wb") as f:
-                f.write(blob)
-            ```
-        """
-        return pickle.dumps(self.to_dict())
-
-    @classmethod
-    def from_bytes(cls, data: bytes, dtype: str = "f32") -> Self:
-        """
-        Deserialize a quadtree from bytes. Specifiy the dtype if the original tree that was serialized used a non-default dtype.
+        Warning: Mixing auto-assigned and custom IDs is dangerous. The quadtree
+        does not track which IDs have been used. If you provide a custom ID that
+        collides with an auto-assigned ID, both entries will exist with the same
+        ID, leading to undefined behavior. Users who provide custom IDs are
+        responsible for ensuring uniqueness.
 
         Args:
-            data: Bytes representing the serialized quadtree from `to_bytes()`.
-            dtype: The data type used in the native engine ('f32', 'f64', 'i32', 'i64') when saved to bytes.
+            geom: Geometry (Point or Bounds).
+            id_: Optional custom ID. If None, auto-assigns the next ID.
 
         Returns:
-            A new quadtree instance with the same state as when serialized.
-
-        Example:
-            ```python
-            blob = qt.to_bytes()
-            qt2 = type(qt).from_bytes(blob)
-            assert qt2.count_items() == qt.count_items()
-            ```
-        """
-        in_dict = pickle.loads(data)
-        core_bytes = in_dict["core"]
-        store_dict = in_dict["store"]
-
-        qt = cls.__new__(cls)  # type: ignore[call-arg]
-        try:
-            qt._native = cls._new_native_from_bytes(core_bytes, dtype=dtype)
-        except ValueError as ve:
-            raise ValueError(
-                "Failed to deserialize quadtree native core. "
-                "This may be due to a dtype mismatch. "
-                "Ensure the dtype used in from_bytes() matches the original tree. "
-                "Error details: " + str(ve)
-            ) from ve
-
-        if store_dict is not None:
-            qt._store = ObjStore.from_dict(store_dict, qt._make_item)
-        else:
-            qt._store = None
-
-        # Extract bounds, capacity, max_depth from native
-        qt._bounds = in_dict["bounds"]
-        qt._capacity = in_dict["capacity"]
-        qt._max_depth = in_dict["max_depth"]
-        qt._next_id = in_dict["next_id"]
-        qt._count = in_dict["count"]
-        qt._track_objects = in_dict["track_objects"]
-
-        return qt
-
-    # ---- internal helper ----
-
-    def _ids_to_objects(self, ids: Iterable[int]) -> list[Any]:
-        """Map ids -> Python objects via ObjStore in a batched way."""
-        if self._store is None:
-            raise ValueError("Cannot map ids to objects when track_objects=False")
-        return self._store.get_many_objects(list(ids))
-
-    # ---- shared API ----
-
-    def insert(self, geom: G, *, obj: Any | None = None) -> int:
-        """
-        Insert a single item.
-
-        The Ids are auto-assigned starting from zero and incrementing by one for each insert. <br>
-        After deletions, ids may be reused if tracking is enabled.
-
-        Args:
-            geom: Point (x, y) or Rect (x0, y0, x1, y1) depending on quadtree type.
-            obj: Optional Python object to associate with id if tracking is enabled.
-
-        Returns:
-            The id used for this insert.
+            The ID used for this geometry.
 
         Raises:
             ValueError: If geometry is outside the tree bounds.
-
-        Example:
-            ```python
-            id0 = point_qt.insert((10.0, 20.0))  # for point trees
-            id1 = rect_qt.insert((0.0, 0.0, 5.0, 5.0), obj="box")  # for rect trees
-            assert isinstance(id0, int) and isinstance(id1, int)
-            ```
         """
-        if self._store is not None:
-            # Reuse a dense free slot if available, else append
-            rid = self._store.alloc_id()
-        else:
-            rid = self._next_id
+        if id_ is None:
+            id_ = self._next_id
             self._next_id += 1
 
-        if not self._native.insert(rid, geom):
-            bx0, by0, bx1, by1 = self._bounds
+        if not self._native.insert(id_, geom):
+            min_x, min_y, max_x, max_y = self._bounds
             raise ValueError(
-                f"Geometry {geom!r} is outside bounds ({bx0}, {by0}, {bx1}, {by1})"
+                f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
             )
 
-        if self._store is not None:
-            self._store.add(self._make_item(rid, geom, obj))
-
         self._count += 1
-        return rid
+        return id_
 
-    @overload
-    def insert_many(
-        self,
-        geoms: Sequence[G],
-        objs: Sequence[Any] | None = None,
-        get_start_id: Literal[False] = False,
-    ) -> int: ...
-
-    @overload
-    def insert_many(
-        self,
-        geoms: NDArray[Any],
-        objs: Sequence[Any] | None = None,
-        get_start_id: Literal[False] = False,
-    ) -> int: ...
-
-    # ---- get_start_id=True: tuple[int, int] ----
-    # keyword form (recommended)
-    @overload
-    def insert_many(
-        self,
-        geoms: Sequence[G] | NDArray[Any],
-        objs: Sequence[Any] | None = None,
-        *,
-        get_start_id: Literal[True],
-    ) -> tuple[int, int]: ...
-
-    # optional: positional form to allow insert_many(geoms, None, True)
-    @overload
-    def insert_many(
-        self,
-        geoms: Sequence[G] | NDArray[Any],
-        objs: Sequence[Any] | None,
-        get_start_id: Literal[True],
-    ) -> tuple[int, int]: ...
-
-    # ---- get_start_id is a bool variable: union ----
-    @overload
-    def insert_many(
-        self,
-        geoms: Sequence[G] | NDArray[Any],
-        objs: Sequence[Any] | None = None,
-        *,
-        get_start_id: bool,
-    ) -> int | tuple[int, int]: ...
-    def insert_many(
-        self,
-        geoms: Sequence[G] | NDArray[Any],
-        objs: Sequence[Any] | None = None,
-        get_start_id: bool = False,
-    ) -> int | tuple[int, int]:
+    def insert_many(self, geoms: list[G]) -> InsertResult:
         """
-        Bulk insert with auto-assigned contiguous ids. Faster than inserting one-by-one.<br>
-        Starting ID on a fresh tree is 0. You can get the starting ID for this batch via `get_start_id=True` if the tree was not empty before this call. <br>
-        Can accept either a Python sequence of geometries or a NumPy array of shape (N,2) or (N,4) with a dtype that matches the quadtree's dtype. <br>
+        Bulk insert geometries with auto-assigned contiguous IDs.
 
-        The (N, 2) geometry format is for point quadtrees, and (N, 4) is for rect quadtrees. <br>
-
-        If tracking is enabled, the objects will be bulk stored internally.
-        If no objects are provided, the items will have obj=None (if tracking).
+        Custom IDs are not supported for bulk insertion. Use single insert()
+        calls if you need custom IDs.
 
         Args:
             geoms: List of geometries.
-            objs: Optional list of Python objects aligned with geoms.
 
         Returns:
-            Number of items inserted.
-            If `get_start_id` is True, returns a tuple (count, start_id).
+            InsertResult with count, start_id, and end_id.
 
         Raises:
+            TypeError: If geoms is a NumPy array (use insert_many_np instead).
             ValueError: If any geometry is outside bounds.
-
-        Example:
-            ```python
-            n = qt.insert_many([(1.0, 1.0), (2.0, 2.0)])
-            assert n == 2
-
-            import numpy as np
-            arr = np.array([[3.0, 3.0], [4.0, 4.0]], dtype=np.float32)
-            n2 = qt.insert_many(arr)
-            assert n2 == 2
-            ```
         """
-        # Determine what "start_id" would be for this call, even if empty
-        start_id_for_call = (
-            len(self._store._arr) if self._store is not None else self._next_id
-        )
-
-        if type(geoms) is list and len(geoms) == 0:
-            return (0, start_id_for_call) if get_start_id else 0
-
         if _is_np_array(geoms):
-            import numpy as _np
-        else:
-            _np = None
+            raise TypeError(
+                "NumPy arrays are not supported by insert_many. "
+                "Use insert_many_np() for NumPy arrays."
+            )
 
-        # Early return if the numpy array is empty
-        if _np is not None and isinstance(geoms, _np.ndarray):
-            if geoms.size == 0:
-                return (0, start_id_for_call) if get_start_id else 0
+        if len(geoms) == 0:
+            return InsertResult(
+                count=0, start_id=self._next_id, end_id=self._next_id - 1
+            )
 
-            # Check if dtype matches quadtree dtype
-            expected_np_dtype = QUADTREE_DTYPE_TO_NP_DTYPE.get(self._dtype)
-            if geoms.dtype != expected_np_dtype:
-                raise TypeError(
-                    f"Numpy array dtype {geoms.dtype} does not match quadtree dtype {self._dtype}"
-                )
-
-        if self._store is None:
-            # Simple contiguous path with native bulk insert
-            start_id = self._next_id
-
-            if _np is not None:
-                last_id = self._native.insert_many_np(start_id, geoms)
-            else:
-                last_id = self._native.insert_many(start_id, geoms)
-            num = last_id - start_id + 1
-            if num < len(geoms):
-                raise ValueError("One or more items are outside tree bounds")
-            self._next_id = last_id + 1
-            self._count += num
-            return (num, start_id) if get_start_id else num
-
-        # With tracking enabled:
-        start_id = len(self._store._arr)  # contiguous tail position
-        if _np is not None:
-            last_id = self._native.insert_many_np(start_id, geoms)
-        else:
-            last_id = self._native.insert_many(start_id, geoms)
+        start_id = self._next_id
+        last_id = self._native.insert_many(start_id, geoms)
         num = last_id - start_id + 1
+
         if num < len(geoms):
-            raise ValueError("One or more items are outside tree bounds")
+            raise ValueError("One or more geometries are outside tree bounds")
 
-        # For object tracking, we need the geoms to be a Python list
-        if _np is not None:
-            geoms = geoms.tolist()  # pyright: ignore[reportAttributeAccessIssue]
-
-        # Function bindings to avoid repeated attribute lookups
-        add = self._store.add
-        mk = self._make_item
-
-        # Add items to the store in one pass
-        if objs is None:
-            for off, geom in enumerate(geoms):
-                add(mk(start_id + off, geom, None))
-        else:
-            if len(objs) != len(geoms):
-                raise ValueError("objs length must match geoms length")
-            for off, (geom, o) in enumerate(zip(geoms, objs)):
-                add(mk(start_id + off, geom, o))
-
-        # Keep _next_id monotonic for the non-tracking path
-        self._next_id = max(self._next_id, last_id + 1)
-
+        self._next_id = last_id + 1
         self._count += num
+        return InsertResult(count=num, start_id=start_id, end_id=last_id)
 
-        if get_start_id:
-            return num, start_id
-
-        return num
-
-    def delete(self, id_: int, geom: G) -> bool:
+    def insert_many_np(self, geoms: Any) -> InsertResult:
         """
-        Delete an item by id and exact geometry.
+        Bulk insert geometries from NumPy array with auto-assigned contiguous IDs.
 
         Args:
-            id_: The id of the item to delete.
-            geom: The geometry of the item to delete.
+            geoms: NumPy array with dtype matching the tree's dtype.
+
+        Returns:
+            InsertResult with count, start_id, and end_id.
+
+        Raises:
+            TypeError: If geoms is not a NumPy array or dtype doesn't match.
+            ValueError: If any geometry is outside bounds.
+            ImportError: If NumPy is not installed.
+        """
+        if not _is_np_array(geoms):
+            raise TypeError("insert_many_np requires a NumPy array")
+
+        import numpy as np
+
+        if not isinstance(geoms, np.ndarray):
+            raise TypeError("insert_many_np requires a NumPy array")
+
+        if geoms.size == 0:
+            return InsertResult(
+                count=0, start_id=self._next_id, end_id=self._next_id - 1
+            )
+
+        validate_np_dtype(geoms, self._dtype)
+
+        start_id = self._next_id
+        last_id = self._native.insert_many_np(start_id, geoms)
+        num = last_id - start_id + 1
+
+        if num < len(geoms):
+            raise ValueError("One or more geometries are outside tree bounds")
+
+        self._next_id = last_id + 1
+        self._count += num
+        return InsertResult(count=num, start_id=start_id, end_id=last_id)
+
+    # ---- Deletion ----
+
+    def _delete_geom(self, id_: int, geom: G) -> bool:
+        """
+        Delete an item by ID and exact geometry.
+
+        Geometry is required because non-Objects classes don't store it.
+
+        Args:
+            id_: The ID of the item to delete.
+            geom: The exact geometry of the item.
 
         Returns:
             True if the item was found and deleted.
-
-        Example:
-            ```python
-            i = qt.insert((1.0, 2.0))
-            ok = qt.delete(i, (1.0, 2.0))
-            assert ok is True
-            ```
         """
         deleted = self._native.delete(id_, geom)
         if deleted:
             self._count -= 1
-            if self._store is not None:
-                self._store.pop_id(id_)
         return deleted
-
-    def attach(self, id_: int, obj: Any) -> None:
-        """
-        Attach or replace the Python object for an existing id.
-        Tracking must be enabled.
-
-        Args:
-            id_: The id of the item to attach the object to.
-            obj: The Python object to attach.
-
-        Example:
-            ```python
-            i = qt.insert((2.0, 3.0), obj=None)
-            qt.attach(i, {"meta": 123})
-            assert qt.get(i) == {"meta": 123}
-            ```
-        """
-        if self._store is None:
-            raise ValueError("Cannot attach objects when track_objects=False")
-        it = self._store.by_id(id_)
-        if it is None:
-            raise KeyError(f"Id {id_} not found in quadtree")
-        # Preserve geometry from existing item
-        self._store.add(self._make_item(id_, it.geom, obj))  # type: ignore[attr-defined]
-
-    def delete_by_object(self, obj: Any) -> bool:
-        """
-        Delete an item by Python object identity. Tracking must be enabled.
-
-        Args:
-            obj: The Python object to delete.
-
-        Example:
-            ```python
-            i = qt.insert((3.0, 4.0), obj="tag")
-            ok = qt.delete_by_object("tag")
-            assert ok is True
-            ```
-        """
-        if self._store is None:
-            raise ValueError("Cannot delete by object when track_objects=False")
-        it = self._store.by_obj(obj)
-        if it is None:
-            return False
-        return self.delete(it.id_, it.geom)  # type: ignore[arg-type]
 
     def clear(self) -> None:
         """
         Empty the tree in place, preserving bounds, capacity, and max_depth.
-
-        If tracking is enabled, the id -> object mapping is also cleared.
-        The ids are reset to start at zero again.
-
-        Example:
-            ```python
-            _ = qt.insert((5.0, 6.0))
-            qt.clear()
-            assert qt.count_items() == 0 and len(qt) == 0
-            ```
         """
-        self._native = self._new_native(self._bounds, self._capacity, self._max_depth)
+        self._native = self._new_native(
+            self._bounds, self._capacity, self._max_depth, self._dtype
+        )
         self._count = 0
-        if self._store is not None:
-            self._store.clear()
         self._next_id = 0
 
-    def get_all_objects(self) -> list[Any]:
-        """
-        Return all tracked Python objects in the tree.
+    # ---- Mutation ----
 
-        Example:
-            ```python
-            _ = qt.insert((7.0, 8.0), obj="a")
-            _ = qt.insert((9.0, 1.0), obj="b")
-            objs = qt.get_all_objects()
-            assert set(objs) == {"a", "b"}
-            ```
+    def _update_geom(self, id_: int, old_geom: G, new_geom: G) -> bool:
         """
-        if self._store is None:
-            raise ValueError("Cannot get objects when track_objects=False")
-        return [t.obj for t in self._store.items() if t.obj is not None]
+        Update an item's geometry by moving it from old_geom to new_geom.
 
-    def get_all_items(self) -> list[ItemType]:
-        """
-        Return all Item wrappers in the tree.
+        This is an internal helper used by subclass update() methods.
 
-         Example:
-            ```python
-            _ = qt.insert((1.0, 1.0), obj=None)
-            items = qt.get_all_items()
-            assert hasattr(items[0], "id_") and hasattr(items[0], "geom")
-            ```
+        Args:
+            id_: The ID of the item to update.
+            old_geom: The old geometry.
+            new_geom: The new geometry.
+
+        Returns:
+            True if the update succeeded.
+
+        Raises:
+            ValueError: If new geometry is outside bounds.
         """
-        if self._store is None:
-            raise ValueError("Cannot get items when track_objects=False")
-        return list(self._store.items())
+        # Delete from old position
+        if not self._native.delete(id_, old_geom):
+            return False
+
+        # Insert at new position
+        if not self._native.insert(id_, new_geom):
+            # Rollback: reinsert at old position
+            self._native.insert(id_, old_geom)
+            min_x, min_y, max_x, max_y = self._bounds
+            raise ValueError(
+                f"New geometry {new_geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
+            )
+
+        return True
+
+    # ---- Utilities ----
+
+    def __len__(self) -> int:
+        """Return the number of items in the tree."""
+        return self._count
 
     def get_all_node_boundaries(self) -> list[Bounds]:
         """
         Return all node boundaries in the tree. Useful for visualization.
-
-        Example:
-            ```python
-            bounds = qt.get_all_node_boundaries()
-            assert isinstance(bounds, list)
-            ```
         """
         return self._native.get_all_node_boundaries()
 
-    def get(self, id_: int) -> Any | None:
-        """
-        Return the object associated with id, if tracking is enabled.
-
-        Example:
-            ```python
-            i = qt.insert((1.0, 2.0), obj={"k": "v"})
-            obj = qt.get(i)
-            assert obj == {"k": "v"}
-            ```
-        """
-        if self._store is None:
-            raise ValueError("Cannot get objects when track_objects=False")
-        item = self._store.by_id(id_)
-        return None if item is None else item.obj
-
-    def count_items(self) -> int:
-        """
-        Return the number of items currently in the tree (native count).
-
-        Example:
-            ```python
-            before = qt.count_items()
-            _ = qt.insert((2.0, 2.0))
-            assert qt.count_items() == before + 1
-            ```
-        """
-        return self._native.count_items()
-
     def get_inner_max_depth(self) -> int:
         """
-        Return the maximum depth of the quadtree core.
-        Useful if you let the core chose the default max depth based on dtype
-        by constructing with max_depth=None.
+        Return the maximum depth of the quadtree.
 
-        Example:
-            ```python
-            depth = qt.get_inner_max_depth()
-            assert isinstance(depth, int)
-            ```
+        Useful if you constructed with max_depth=None.
         """
         return self._native.get_max_depth()
 
-    def __len__(self) -> int:
-        return self._count
+    # ---- Serialization ----
+
+    def to_bytes(self) -> bytes:
+        core_bytes = self._native.to_bytes()
+
+        flags = 0
+        if self._max_depth is not None:
+            flags |= 1  # max_depth_present
+
+        return build_container(
+            fmt_ver=SERIALIZATION_FORMAT_VERSION,
+            dtype=self._dtype,  # type: ignore[arg-type]
+            flags=flags,
+            capacity=self._capacity,
+            max_depth=self._max_depth,
+            next_id=self._next_id,
+            count=self._count,
+            bounds=self._bounds,
+            core=core_bytes,
+            extra_sections=None,  # reserved for Objects trees
+        )
+
+    @classmethod
+    def from_bytes(cls, data: bytes):
+        parsed = parse_container(data)
+
+        fmt_ver = parsed["fmt_ver"]
+        if fmt_ver > SERIALIZATION_FORMAT_VERSION:
+            raise SerializationError(
+                f"Unsupported serialization format version {fmt_ver}; "
+                f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
+            )
+
+        dtype = parsed["dtype"]
+        core = parsed["core"]
+
+        qt = cls.__new__(cls)
+        qt._dtype = dtype
+        qt._bounds = parsed["bounds"]
+        qt._capacity = parsed["capacity"]
+        qt._max_depth = parsed["max_depth"]
+        qt._next_id = parsed["next_id"]
+        qt._count = parsed["count"]
+        qt._native = cls._new_native_from_bytes(core, dtype)
+
+        return qt
