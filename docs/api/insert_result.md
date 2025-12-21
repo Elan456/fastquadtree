@@ -1,0 +1,2 @@
+# fastquadtree.InsertResult
+::: fastquadtree.InsertResult

@@ -92,8 +92,10 @@ nav:
       - QuadTreeObjects: api/quadtree_objects.md
       - RectQuadTreeObjects: api/rect_quadtree_objects.md
       - pyqtree: api/pyqtree.md
-      - RectItem: api/rect_item.md
+      - Item: api/item.md
       - PointItem: api/point_item.md
+      - RectItem: api/rect_item.md
+      - InsertResult: api/insert_result.md
   - v1.x to v2.0 Migration Guide: 2.0_migration_guide.md
 
 extra:
