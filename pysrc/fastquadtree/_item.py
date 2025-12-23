@@ -24,10 +24,10 @@ class Item(Generic[G]):
 
     __slots__ = ("geom", "id_", "obj")
 
-    def __init__(self, id_: int, geom: G, obj: Any | None = None):
+    def __init__(self, id_: int, geom: G, obj: Any = None):
         self.id_: int = id_
         self.geom: G = geom
-        self.obj: Any | None = obj
+        self.obj: Any = obj
 
     def to_dict(self) -> dict[str, Any]:
         """
@@ -76,7 +76,7 @@ class PointItem(Item[Point]):
 
     __slots__ = ("x", "y")
 
-    def __init__(self, id_: int, geom: Point, obj: Any | None = None):
+    def __init__(self, id_: int, geom: Point, obj: Any = None):
         super().__init__(id_, geom, obj)
         self.x, self.y = geom
 
@@ -100,6 +100,6 @@ class RectItem(Item[Bounds]):
 
     __slots__ = ("max_x", "max_y", "min_x", "min_y")
 
-    def __init__(self, id_: int, geom: Bounds, obj: Any | None = None):
+    def __init__(self, id_: int, geom: Bounds, obj: Any = None):
         super().__init__(id_, geom, obj)
         self.min_x, self.min_y, self.max_x, self.max_y = geom

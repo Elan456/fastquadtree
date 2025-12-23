@@ -1,0 +1,31 @@
+from fastquadtree import QuadTree
+
+
+class Person:
+    def __init__(self, x: float, y: float, name: str):
+        self.x = x
+        self.y = y
+        self.name = name
+
+
+qt = QuadTree((0, 0, 1000, 1000), 16)
+
+people = [
+    Person(100, 200, "Alice"),
+    Person(150, 250, "Bob"),
+    Person(300, 400, "Charlie"),
+]
+
+for idx, person in enumerate(people):
+    qt.insert((person.x, person.y), id_=idx)
+
+# Find people in a specific area
+results = qt.query((90, 190, 200, 300))
+for id_, x, y in results:
+    person = people[id_]
+    print(f"Found {person.name} at ({x}, {y})")
+
+
+# Output:
+# Found Alice at (100.0, 200.0)
+# Found Bob at (150.0, 250.0)
