@@ -100,7 +100,7 @@ def _create_pyqtree_engine(
 def _create_fastquadtree_np_engine(
     bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
-    """Create engine adapter for fastquadtree."""
+    """Create engine adapter for fastquadtree but queries are returned as numpy arrays instead of Python lists."""
 
     def build(points):
         qt = FQTQuadTree(bounds, max_points, max_depth=max_depth)
@@ -112,8 +112,30 @@ def _create_fastquadtree_np_engine(
             _ = qt.query_np(q)
 
     return Engine(
+        "fastquadtree (np)",
+        "#e55100",
+        build,
+        query,  # display name  # color (orange)
+    )
+
+
+def _create_fastquadtree_engine(
+    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+) -> Engine:
+    """Create engine adapter for fastquadtree."""
+
+    def build(points):
+        qt = FQTQuadTree(bounds, max_points, max_depth=max_depth)
+        qt.insert_many(points)
+        return qt
+
+    def query(qt, queries):
+        for q in queries:
+            _ = qt.query(q)
+
+    return Engine(
         "fastquadtree",
-        "#ff7f0e",
+        "#ff9500",
         build,
         query,  # display name  # color (orange)
     )
@@ -134,8 +156,8 @@ def _create_fastquadtree_items_engine(
             _ = qt.query(q)
 
     return Engine(
-        "fastquadtree (obj tracking)",
-        "#ffb347",
+        "fastquadtree (objs)",
+        "#ffc107",
         build,
         query,  # display name  # color (orange)
     )
@@ -314,7 +336,10 @@ def get_engines(
     """
     # Always available engines
     engines = {
-        "fastquadtree": _create_fastquadtree_np_engine(bounds, max_points, max_depth),
+        "fastquadtree (np)": _create_fastquadtree_np_engine(
+            bounds, max_points, max_depth
+        ),
+        "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
         "fastquadtree (obj tracking)": _create_fastquadtree_items_engine(
             bounds, max_points, max_depth
         ),

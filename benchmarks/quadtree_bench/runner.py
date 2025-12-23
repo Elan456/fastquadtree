@@ -35,7 +35,7 @@ class BenchmarkConfig:
 
     def __post_init__(self):
         """Generate experiment point sizes."""
-        self.experiments = [2, 4, 8, 16]
+        self.experiments = [128000]
         while self.experiments[-1] < self.max_experiment_points:
             self.experiments.append(int(self.experiments[-1] * 2))
         self.experiments[-1] = min(self.experiments[-1], self.max_experiment_points)

@@ -16,14 +16,23 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree | 0.063 | 0.026 | 0.089 | 48.99× |
-| Shapely STRtree | 0.314 | 0.178 | 0.492 | 8.90× |
-| fastquadtree (obj tracking) | 0.388 | 0.244 | 0.632 | 6.93× |
-| nontree-QuadTree | 1.180 | 1.287 | 2.467 | 1.77× |
-| Rtree        | 1.905 | 0.622 | 2.527 | 1.73× |
-| e-pyquadtree | 2.083 | 1.479 | 3.562 | 1.23× |
-| quads        | 3.058 | 1.140 | 4.198 | 1.04× |
-| PyQtree      | 3.775 | 0.603 | 4.378 | 1.00× |
+| fastquadtree (np)[^fqtnp] | 0.057 | 0.021 | 0.078 | 54.45× |
+| fastquadtree[^fqt] | 0.060 | 0.189 | 0.249 | 17.04× |
+| Shapely STRtree[^npreturn] | 0.321 | 0.196 | 0.517 | 8.21× |
+| fastquadtree (obj tracking)[^fqto] | 0.437 | 0.239 | 0.675 | 6.28× |
+| Rtree        | 1.796 | 0.561 | 2.357 | 1.80× |
+| nontree-QuadTree | 1.275 | 1.272 | 2.547 | 1.67× |
+| e-pyquadtree | 2.144 | 1.507 | 3.650 | 1.16× |
+| quads        | 3.001 | 1.171 | 4.172 | 1.02× |
+| PyQtree      | 3.677 | 0.565 | 4.242 | 1.00× |
+
+[^fqtnp]: Uses `query_np` for Numpy array return values rather than Python lists.
+[^fqt]: Uses standard `query` method returning Python lists.
+[^npreturn]: Uses Shapely STRtree with Numpy array points and returns.
+[^fqto]: Uses QuadTreeObjects with object association.
+
+
+
 
 #### Benchmark Configuration
 | Parameter | Value |

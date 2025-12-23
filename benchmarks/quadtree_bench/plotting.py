@@ -61,23 +61,27 @@ class PlotManager:
 
         # Update layout
         fig.update_layout(
-            title=(
-                f"Tree build and query benchmarks "
-                f"(Max Depth {self.config.max_depth}, "
-                f"Capacity {self.config.max_points}, "
-                f"{self.config.repeats}x median, "
-                f"{self.config.n_queries} queries)"
-            ),
+            title={
+                "text": (
+                    f"Tree build and query benchmarks "
+                    f"(Max Depth {self.config.max_depth}, "
+                    f"Capacity {self.config.max_points}, "
+                    f"{self.config.repeats}x median, "
+                    f"{self.config.n_queries} queries)"
+                ),
+                "y": 0.98,
+                "x": 0.5,
+                "xanchor": "center",
+            },
             template="plotly_dark",
             legend={
-                "orientation": "v",
-                "traceorder": "normal",
-                "xanchor": "left",
-                "x": 0,
-                "yanchor": "top",
-                "y": 1,
+                "orientation": "h",
+                "x": 0.5,
+                "xanchor": "center",
+                "y": 1.12,
+                "yanchor": "bottom",
             },
-            margin={"l": 40, "r": 20, "t": 80, "b": 40},
+            margin={"l": 40, "r": 20, "t": 140, "b": 40},  # Increase top margin
             height=520,
         )
 
@@ -93,7 +97,7 @@ class PlotManager:
         )
 
         # Set logarithmic scale for query rate
-        fig.update_yaxes(type="log", row=1, col=2)
+        fig.update_yaxes(type="log", row=1, col=2, tickformat=".0s", dtick=0.25)
 
         for name in list(self.results["query_rate"].keys()):
             # Determine color
@@ -136,16 +140,21 @@ class PlotManager:
 
         # Update layout
         fig.update_layout(
-            title="Throughput",
+            title={
+                "text": "Throughput",
+                "y": 0.98,  # Push title to very top
+                "x": 0.5,
+                "xanchor": "center",
+            },
             template="plotly_dark",
             legend={
                 "orientation": "h",
-                "x": 0,
-                "xanchor": "left",
-                "y": 1.08,  # above the subplots
+                "x": 0.5,
+                "xanchor": "center",
+                "y": 1.15,  # Move legend higher
                 "yanchor": "bottom",
             },
-            margin={"l": 60, "r": 40, "t": 120, "b": 40},
+            margin={"l": 60, "r": 40, "t": 140, "b": 40},  # Increase top margin
             height=480,
         )
 
