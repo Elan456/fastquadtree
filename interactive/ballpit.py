@@ -1,12 +1,13 @@
 import math
 import random
+import time
 from typing import Iterable, List, Set, Tuple
 
 import pygame
 from pyqtree import Index as PyQIndex
 
 # Spatial backends -------------------------------------------------------------
-from fastquadtree import QuadTreeObjects
+from fastquadtree import Quadtree
 
 # ---------------------------- Ball object ---------------------------- #
 
@@ -130,23 +131,23 @@ class FastQTIndex(SpatialBase):
         self.width = width
         self.height = height
         self.capacity = capacity
-        self.qt = QuadTreeObjects((0, 0, width, height), capacity)
+        self.qt = Quadtree((0, 0, width, height), capacity)
 
     def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
         if width != self.width or height != self.height:
             self.width, self.height = width, height
-            self.qt = QuadTreeObjects((0, 0, width, height), self.capacity)
+            self.qt.clear()
         else:
             self.qt.clear()
-        for b in balls:
-            self.qt.insert((b.x, b.y), obj=b)
 
-    def neighbors(self, b: Ball) -> Iterable[Ball]:
+        self.qt.insert_many([(b.x, b.y) for b in balls])
+
+    def neighbors(self, b: Ball, balls: List[Ball]) -> Iterable[Ball]:
         r2 = 2 * b.r
         min_x, min_y, max_x, max_y = b.x - r2, b.y - r2, b.x + r2, b.y + r2
         neighbors = self.qt.query((min_x, min_y, max_x, max_y))
         for it in neighbors:
-            other = it.obj
+            other = balls[it[0]]
             if other is not None and other is not b:
                 yield other
 
@@ -259,7 +260,7 @@ class BallPit:
     def _backend(self) -> SpatialBase:
         return self.backends[self.mode]
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> tuple[float, float]:
         # 1) Integrate motion
         ax, ay = 0.0, 0.0
         for b in self.balls:
@@ -268,13 +269,26 @@ class BallPit:
 
         # 2) Rebuild spatial index
         backend = self._backend()
+        start = time.perf_counter()
         backend.rebuild(self.balls, self.width, self.height)
+        end = time.perf_counter()
+
+        tree_build_time = end - start
+
+        total_neighbor_collection_time = 0.0
 
         # 3) Neighborhood checks with dedup on object id pairs
         self.pair_checks = 0
         processed: Set[Tuple[int, int]] = set()
         for a in self.balls:
-            for other in backend.neighbors(a):
+            start = time.perf_counter()
+            if self.mode == "fastquadtree":
+                neighbors = backend.neighbors(a, self.balls)  # type: ignore
+            else:
+                neighbors = backend.neighbors(a)
+            end = time.perf_counter()
+            total_neighbor_collection_time += end - start
+            for other in neighbors:
                 a_id = id(a)
                 o_id = id(other)
                 key = (a_id, o_id) if a_id < o_id else (o_id, a_id)
@@ -283,11 +297,11 @@ class BallPit:
                 processed.add(key)
                 self.pair_checks += 1
                 resolve_ball_ball(a, other)
+        return (total_neighbor_collection_time, tree_build_time)
 
-        # 4) Some backends benefit from post-resolution rebuild for next frame
-        backend.rebuild(self.balls, self.width, self.height)
-
-    def draw(self, fps: float):
+    def draw(
+        self, fps: float, total_neighbor_collection_time: float, tree_build_time: float
+    ):
         for ball in self.balls:
             ball.draw(self.screen)
 
@@ -295,6 +309,8 @@ class BallPit:
         font = pygame.font.SysFont(None, 20)
         hud_lines = [
             f"FPS: {fps:.1f}",
+            f"Build time: {tree_build_time * 1000:.2f} ms",
+            f"Query time: {total_neighbor_collection_time * 1000:.2f} ms",
             f"Mode: {self.mode} (Tab to cycle, 1/2/3 to select)",
             f"Balls: {len(self.balls)}",
             f"Pair checks this frame: {self.pair_checks}",
@@ -373,7 +389,7 @@ def main():
                 )
                 ball_pit.add_ball(x, y, radius=r, color=color)
 
-        ball_pit.update(dt)
+        stats = ball_pit.update(dt)
 
         screen.fill((255, 255, 255))
         fps = clock.get_fps()
@@ -387,7 +403,7 @@ def main():
             + fps
         ) / metrics[ball_pit.mode]["count"]
 
-        ball_pit.draw(fps)
+        ball_pit.draw(fps, stats[0], stats[1])
         pygame.display.flip()
 
     pygame.quit()

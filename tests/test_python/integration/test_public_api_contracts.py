@@ -13,6 +13,10 @@ def test_public_api_all_exports():
         "RectItem",
         "RectQuadTree",
         "RectQuadTreeObjects",
+        "Quadtree",  # Lowercase added in 2.0.2
+        "QuadtreeObjects",
+        "Rectquadtree",
+        "RectquadtreeObjects",
     ]
     assert sorted(fqt.__all__) == sorted(expected)
 

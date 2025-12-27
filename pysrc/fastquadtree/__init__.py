@@ -19,13 +19,23 @@ from .point_quadtree_objects import QuadTreeObjects
 from .rect_quadtree import RectQuadTree
 from .rect_quadtree_objects import RectQuadTreeObjects
 
+# Allow lowercase version of quadtree for convenience
+Quadtree = QuadTree
+QuadtreeObjects = QuadTreeObjects
+Rectquadtree = RectQuadTree
+RectquadtreeObjects = RectQuadTreeObjects
+
 __all__ = [
     "InsertResult",
     "Item",
     "PointItem",
     "QuadTree",
     "QuadTreeObjects",
+    "Quadtree",
+    "QuadtreeObjects",
     "RectItem",
     "RectQuadTree",
     "RectQuadTreeObjects",
+    "Rectquadtree",
+    "RectquadtreeObjects",
 ]

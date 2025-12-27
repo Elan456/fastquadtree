@@ -39,11 +39,6 @@ Rust-optimized quadtree with a clean Python API
 
 ----
 
-
-## Examples
-See examples of how fastquadtree can be used in the [runnables](https://elan456.github.io/fastquadtree/runnables/) section.
-
-
 ## Install
 ```bash
 pip install fastquadtree
@@ -57,6 +52,17 @@ from fastquadtree import RectQuadTreeObjects  # Bounding box handling with objec
 from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~6.5x faster while keeping the same API)
 ```
 
+
+## Quickstart
+
+```python
+from fastquadtree import QuadTree
+
+qt = QuadTree((0, 0, 1000, 1000), 16)  # bounds and capacity
+qt.insert((100, 200), id_=1)  # insert point with ID 1
+print(qt.query((0, 0, 500, 500)))  # gets all points in that area: [(1, 100.0, 200.0)]
+```
+[See the quickstart guide](https://elan456.github.io/fastquadtree/quickstart/) or the [interactive demos](https://elan456.github.io/fastquadtree/runnables/) for more details.
 ## Benchmarks
 
 fastquadtree **outperforms** all other quadtree Python packages, including the Rtree spatial index.
@@ -82,15 +88,12 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 | quads        | 3.001 | 1.171 | 4.172 | 1.02× |
 | PyQtree      | 3.677 | 0.565 | 4.242 | 1.00× |
 
-[^fqtnp]: Uses `query_np` for Numpy array return values rather than Python lists.
-[^fqt]: Uses standard `query` method returning Python lists.
-[^npreturn]: Uses Shapely STRtree with Numpy array points and returns.
-[^fqto]: Uses QuadTreeObjects with object association.
+[^fqtnp]: Uses `query_np` for Numpy array return values rather than Python lists.  
+[^fqt]: Uses standard `query` method returning Python lists.  
+[^npreturn]: Uses Shapely STRtree with Numpy array points and returns.  
+[^fqto]: Uses QuadTreeObjects with object association.  
 
 See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) for details, including configurations, system info, and native vs shim benchmarks.
-
-## Quickstart
-[See the quickstart guide](https://elan456.github.io/fastquadtree/quickstart/)
 
 ## API
 
@@ -135,7 +138,8 @@ For object tracking, use `QuadTreeObjects` instead. See the [docs](https://elan4
 ![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)
 
 A simple demo of moving objects with collision detection using **fastquadtree**. 
-You can toggle between quadtree mode and brute-force mode to see the performance difference.
+You can toggle between fastquadtree, pyqtree, and brute-force mode to see the performance difference.
+I typically see an FPS of ~70 with fastquadtree, ~25 with pyqtree, and <1 FPS with brute-force on my machine with 1500 balls. 
 
 See the [runnables guide](https://elan456.github.io/fastquadtree/runnables/) for setup instructions.
 

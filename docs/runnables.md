@@ -1,6 +1,26 @@
 
 # Runnable Examples
 
+After cloning the repository, you can run the following examples to see how fastquadtree works in practice.
+
+## Environment Setup
+
+### Clone the repo
+```bash
+git clone https://github.com/Elan456/fastquadtree.git
+cd fastquadtree
+```
+
+### Create and activate a virtual environment, install dependencies
+This step can be skipped if you already have a suitable environment.
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+pip install -e .
+maturin develop --release
+pip install -r interactive/requirements.txt
+```
+
 ## 1. Interactive demo  
 - Add and delete boids with mouse clicks
 - Visualize KNN and range queries
@@ -10,7 +30,6 @@ You can see how the quadtree subdivides as you add points, and validate the accu
 By pressing 1, you can visualize the KNN query for each boid. 
 
 ```bash
-pip install -r interactive/requirements.txt
 python interactive/interactive_v2.py
 ```
 
@@ -24,7 +43,6 @@ If you are creating a game or simulation environment where entities have boundin
 rectangular quadtree to quickly check which entities are intersecting with another. 
 
 ```bash
-pip install -r interactive/requirements.txt
 python interactive/interactive_v2_rect.py
 ```
 
@@ -38,7 +56,6 @@ The ball pit demo shows how quadtrees offer massive performance improvements for
 Rectangular queries are used to find potential collisions, and then precise circle-circle collision checks are performed.
 
 ```bash
-pip install -r interactive/requirements.txt
 python interactive/ball_pit.py
 ```
 
