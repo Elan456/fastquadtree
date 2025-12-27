@@ -116,7 +116,8 @@ class _BaseQuadTree(Generic[G], ABC):
 
     def insert_many(self, geoms: list[G]) -> InsertResult:
         """
-        Bulk insert geometries with auto-assigned contiguous IDs.
+        Bulk insert geometries with auto-assigned contiguous IDs. <br>
+        IDs start at 0 and increment by 1, so they will be aligned with the indexes of the input list if the tree started empty. <br>
 
         Custom IDs are not supported for bulk insertion. Use single insert()
         calls if you need custom IDs.
@@ -130,6 +131,16 @@ class _BaseQuadTree(Generic[G], ABC):
         Raises:
             TypeError: If geoms is a NumPy array (use insert_many_np instead).
             ValueError: If any geometry is outside bounds.
+
+        Example:
+            ```python
+            # Point Quadtree Example:
+
+            points = [(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)]
+            qt = QuadTree(bounds=(0.0, 0.0, 10.0, 10.0), capacity=16)
+            result = qt.insert_many(points) # Each point's ID corresponds to its index in the points list
+            print(result)  # InsertResult(count=3, start_id=0, end_id=2)
+            ```
         """
         if _is_np_array(geoms):
             raise TypeError(
