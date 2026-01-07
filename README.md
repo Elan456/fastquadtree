@@ -72,9 +72,8 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 ![Total time](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_time.png)
 ![Throughput](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/quadtree_bench_throughput.png)
 
-### Summary (largest dataset, PyQtree baseline)
+### Summary (PyQtree baseline, sorted by total time)
 - Points: **500,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.067 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|

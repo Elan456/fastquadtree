@@ -12,7 +12,7 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.089 s**
+- Fastest total: **fastquadtree** at **0.078 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
