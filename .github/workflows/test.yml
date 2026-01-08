@@ -36,7 +36,7 @@ jobs:
         with:
           command: develop
           args: --release
-          manylinux: manylinux2014
+          manylinux: 2014
 
       - name: Install Python test deps into .venv
         run: |
