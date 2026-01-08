@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Sequence, TypeVar
 
 from ._common import (
     SERIALIZATION_FORMAT_VERSION,
@@ -114,7 +114,7 @@ class _BaseQuadTree(Generic[G], ABC):
         self._count += 1
         return id_
 
-    def insert_many(self, geoms: list[G]) -> InsertResult:
+    def insert_many(self, geoms: Sequence[G]) -> InsertResult:
         """
         Bulk insert geometries with auto-assigned contiguous IDs. <br>
         IDs start at 0 and increment by 1, so they will be aligned with the indexes of the input list if the tree started empty. <br>
@@ -123,7 +123,7 @@ class _BaseQuadTree(Generic[G], ABC):
         calls if you need custom IDs.
 
         Args:
-            geoms: List of geometries.
+            geoms: Sequence of geometries.
 
         Returns:
             InsertResult with count, start_id, and end_id.

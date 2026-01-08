@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Sequence, TypeVar
 
 from ._common import (
     SECTION_ITEMS,
@@ -275,7 +275,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         return rid
 
     def insert_many(
-        self, geoms: list[G], objs: list[Any] | None = None
+        self, geoms: Sequence[G], objs: list[Any] | None = None
     ) -> InsertResult:
         """
         Bulk insert geometries with auto-assigned contiguous IDs.
@@ -285,7 +285,7 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             IDs from the free-list created by deletions. Use insert() to fill holes.
 
         Args:
-            geoms: List of geometries.
+            geoms: Sequence of geometries.
             objs: Optional list of Python objects aligned with geoms.
 
         Returns:
