@@ -26,7 +26,7 @@ jobs:
         with:
           command: develop
           args: --release
-          manylinux: 2014
+          manylinux: 2_28
 
       - name: Install Python test deps into .venv
         run: |
@@ -80,4 +80,4 @@ jobs:
         with:
           command: publish
           args: ${{ matrix.args }}
-          manylinux: 2014
+          manylinux: 2_28

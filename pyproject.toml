@@ -40,7 +40,7 @@ python-source = "pysrc"
 module-name = "fastquadtree._native"
 # Choose a wide wheel tag for Linux. Adjust if your build images are newer.
 # Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
-compatibility = "manylinux2014"
+compatibility = "manylinux_2_28"
 
 [tool.pytest.ini_options]
 addopts = [
