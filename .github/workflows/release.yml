@@ -64,7 +64,7 @@ jobs:
             args: "--skip-existing"
           # Linux aarch64 abi3
           - os: ubuntu-latest
-            args: "--skip-existing --target aarch64-unknown-linux-gnu --zig"
+            args: "--skip-existing --target aarch64-unknown-linux-gnu"
           # Linux armv7 abi3
           - os: ubuntu-latest
             args: "--skip-existing --target armv7-unknown-linux-gnueabihf"
