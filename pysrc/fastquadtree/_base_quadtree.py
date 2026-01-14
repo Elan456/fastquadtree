@@ -293,6 +293,12 @@ class _BaseQuadTree(Generic[G], ABC):
     # ---- Serialization ----
 
     def to_bytes(self) -> bytes:
+        """
+        Serialize the quadtree to bytes.
+
+        Returns:
+            Bytes representing the serialized quadtree.
+        """
         core_bytes = self._native.to_bytes()
 
         flags = 0
@@ -313,7 +319,16 @@ class _BaseQuadTree(Generic[G], ABC):
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes):
+    def from_bytes(cls, data: bytes) -> _BaseQuadTree[G]:
+        """
+        Deserialize a quadtree from bytes.
+
+        Args:
+            data: Bytes from to_bytes().
+
+        Returns:
+            A new instance.
+        """
         parsed = parse_container(data)
 
         fmt_ver = parsed["fmt_ver"]

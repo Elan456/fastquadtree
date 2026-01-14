@@ -728,7 +728,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes, allow_objects: bool = False):
+    def from_bytes(
+        cls, data: bytes, allow_objects: bool = False
+    ) -> _BaseQuadTreeObjects[G, ItemType]:
         """
         Deserialize a quadtree from bytes.
 
