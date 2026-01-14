@@ -1,13 +1,7 @@
-# .github/workflows/test.yml
 name: Test
 on:
   push:
     branches: [ main ]
-
-permissions:
-  contents: write
-  pages: write
-  id-token: write
 
 jobs:
   test:
@@ -26,32 +20,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-          cache: "pip"
-        
-      - name: Create venv for maturin develop
-        run: python -m venv .venv
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Create venv (uv)
+        run: uv venv .venv
 
       - name: Build with maturin into this Python
-        uses: PyO3/maturin-action@v1
-        with:
-          command: develop
-          args: --release
-          manylinux: 2_28
+        run: uv run --python .venv/bin/python maturin develop --release
+        env:
+          # keeps your manylinux intent for Linux builds in other workflows;
+          # for develop on ubuntu-latest this is mostly irrelevant
+          MATURIN_MANYLINUX: "2_28"
 
-      - name: Install Python test deps into .venv
-        run: |
-          . .venv/bin/activate
-          pip install -e '.[dev]'
+      - name: Install dev deps (uv)
+        run: uv sync --python .venv/bin/python --group dev
 
       - name: Run Python tests
-        run: |
-          . .venv/bin/activate
-          pytest
-
-      - name: Run Python tests
-        run: |
-          . .venv/bin/activate
-          pytest
+        run: uv run --python .venv/bin/python pytest
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
