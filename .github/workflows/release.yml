@@ -121,11 +121,11 @@ jobs:
           merge-multiple: true
 
       # Option A (recommended): PyPI Trusted Publisher (OIDC), no token needed.
-      - name: Publish (Trusted Publisher)
-        run: uv publish dist/*
+      # - name: Publish (Trusted Publisher)
+      #   run: uv publish dist/*
 
       # Option B: Token-based publish.
-      # - name: Publish (Token)
-      #   env:
-      #     UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: uv publish dist/*
+      - name: Publish (Token)
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish dist/*
