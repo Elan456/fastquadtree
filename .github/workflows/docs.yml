@@ -22,4 +22,4 @@ jobs:
           enable-cache: true
       - run: uv venv .venv
       - run: uv sync --python .venv/bin/python --group dev
-      - run: mkdocs gh-deploy --force
+      - run: uv run mkdocs gh-deploy --force
