@@ -13,30 +13,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.10"
+          cache: "pip"
 
-      - name: Create venv for maturin develop
-        run: python -m venv .venv
-
-      - name: Build with maturin & install into .venv
-        uses: PyO3/maturin-action@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          command: develop
-          args: --release
-          manylinux: 2_28
+          enable-cache: true
 
-      - name: Install Python test deps into .venv
-        run: |
-          . .venv/bin/activate
-          pip install -e '.[dev]'
+      - name: Create venv
+        run: uv venv .venv
+
+      # Installs your project editable + dev group deps (from [dependency-groups].dev)
+      - name: Install dev deps
+        run: uv sync --python .venv/bin/python --group dev
+
+      # Build extension into the venv so tests import the native module
+      - name: Build with maturin (develop)
+        run: uv run --python .venv/bin/python maturin develop --release
 
       - name: Run Python tests
-        run: |
-          . .venv/bin/activate
-          pytest
+        run: uv run --python .venv/bin/python pytest
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -54,30 +55,77 @@ jobs:
     needs: test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
+          # Native wheels
           - os: ubuntu-latest
-            args: "--skip-existing"
+            maturin_args: "--release --sdist --out dist"
+            manylinux: "2_28"
+
           - os: macos-latest
-            args: "--skip-existing --target universal2-apple-darwin"
+            maturin_args: "--release --sdist --out dist --target universal2-apple-darwin"
+
           - os: windows-latest
-            args: "--skip-existing"
-          # Linux aarch64 abi3
+            maturin_args: "--release --sdist --out dist"
+
+          # Linux cross-arch wheels
           - os: ubuntu-latest
-            args: "--skip-existing --target aarch64-unknown-linux-gnu"
-          # Linux armv7 abi3
+            maturin_args: "--release --out dist --target aarch64-unknown-linux-gnu"
+            manylinux: "2_28"
+
           - os: ubuntu-latest
-            args: "--skip-existing --target armv7-unknown-linux-gnueabihf"
+            maturin_args: "--release --out dist --target armv7-unknown-linux-gnueabihf"
+            manylinux: "2_28"
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      # Keep Python simple here; maturin-action brings its own Python(s) for builds.
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Build and publish with maturin
+
+      - name: Build wheels with maturin
         uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
-          command: publish
-          args: ${{ matrix.args }}
-          manylinux: 2_28
+          command: build
+          args: ${{ matrix.maturin_args }}
+          manylinux: ${{ matrix.manylinux }}
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ runner.os }}-${{ matrix.maturin_args }}
+          path: dist/*
+
+  publish:
+    name: Publish distributions to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for Trusted Publisher (recommended)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Download all dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      # Option A (recommended): PyPI Trusted Publisher (OIDC), no token needed.
+      - name: Publish (Trusted Publisher)
+        run: uv publish dist/*
+
+      # Option B: Token-based publish.
+      # - name: Publish (Token)
+      #   env:
+      #     UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      #   run: uv publish dist/*
