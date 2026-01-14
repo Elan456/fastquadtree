@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import pickle
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar
 
 from ._common import (
     SECTION_ITEMS,

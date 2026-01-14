@@ -4,7 +4,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Sequence, TypeVar
+from collections.abc import Sequence
+from typing import Any, Generic, TypeVar
 
 from ._common import (
     SERIALIZATION_FORMAT_VERSION,

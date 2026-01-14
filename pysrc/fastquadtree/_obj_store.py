@@ -1,8 +1,9 @@
 # _bimap.py
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence
 from operator import itemgetter
-from typing import Any, Generic, Iterable, Iterator, Sequence, TypeVar
+from typing import Any, Generic, TypeVar
 
 from ._item import Item  # base class for PointItem and RectItem
 

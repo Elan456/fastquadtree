@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from operator import itemgetter
-from typing import Any, SupportsFloat, Tuple
+from typing import Any, SupportsFloat
 
 from ._native import RectQuadTree
 
-Point = Tuple[SupportsFloat, SupportsFloat]  # only for type hints in docstrings
+Point = tuple[SupportsFloat, SupportsFloat]  # only for type hints in docstrings
 
 # Default parameters from pyqtree
 MAX_ITEMS = 10

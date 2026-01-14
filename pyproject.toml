@@ -23,7 +23,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Information Analysis",
   "Topic :: Software Development :: Libraries",
   "Typing :: Typed",
-  "License :: OSI Approved :: MIT License"
+  "License :: OSI Approved :: MIT License",
 ]
 
 [project.urls]
@@ -32,16 +32,41 @@ Repository = "https://github.com/Elan456/fastquadtree"
 Documentation = "https://elan456.github.io/fastquadtree/"
 Issues = "https://github.com/Elan456/fastquadtree/issues"
 
+# --- uv (optional but recommended) ---
+[tool.uv]
+managed = true
+
+# --- maturin ---
 [tool.maturin]
-# Use PyO3 bindings
 bindings = "pyo3"
 strip = true
 python-source = "pysrc"
 module-name = "fastquadtree._native"
-# Choose a wide wheel tag for Linux. Adjust if your build images are newer.
-# Options include: manylinux2014, manylinux_2_28, musllinux_1_2, or "off".
 compatibility = "manylinux_2_28"
 
+# --- dependency groups (uv-friendly) ---
+# uv sync will install the "dev" group by default.
+[dependency-groups]
+dev = [
+  "ruff>=0.6.0",
+  "pytest>=8.4.2",
+  "pytest-cov>=7.0.0",
+  "coverage>=7.5",
+  "mypy>=1.10",
+  "build>=1.2.1",
+  "mkdocs>=1.6",
+  "mkdocs-material",
+  "mkdocstrings[python]",
+  "mkdocs-autorefs",
+  "mkdocs-git-revision-date-localized-plugin",
+  "mkdocs-minify-plugin",
+  "maturin>=1.5",
+  "pyqtree==1.0.0",
+  "numpy",
+  "pre-commit",
+]
+
+# --- pytest / coverage ---
 [tool.pytest.ini_options]
 addopts = [
   "--cov=fastquadtree",
@@ -54,39 +79,15 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["fastquadtree"]
-omit = [
-  "tests/*",
-]
+omit = ["tests/*"]
 
 [tool.coverage.report]
-omit = [
-  "tests/*",
-]
+omit = ["tests/*"]
 
-[project.optional-dependencies]
-dev = [
-  "ruff>=0.6.0",
-  "pytest>=8.4.2",
-  "pytest-cov>=7.0.0",
-  "coverage>=7.5",
-  "mypy>=1.10",        # optional static checks
-  "build>=1.2.1",      # python -m build
-  "mkdocs>=1.6",
-  "mkdocs-material",
-  "mkdocstrings[python]",
-  "mkdocs-autorefs",
-  "mkdocs-git-revision-date-localized-plugin",
-  "mkdocs-minify-plugin",
-  "maturin>=1.5",  # build Rust wheels
-  "pyqtree==1.0.0", # for comparison in tests
-  "numpy",
-  "pre-commit",
-]
-
+# --- ruff ---
 [tool.ruff]
-# Keep line length consistent with your prior Black setting
 line-length = 88
-target-version = "py38"
+target-version = "py39"
 src = ["pysrc", "fastquadtree", "tests"]
 extend-exclude = [
   "**/.venv/**",
@@ -95,35 +96,32 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# A solid ruleset that catches correctness, modernizations, style, and performance,
-# while avoiding very opinionated docstring or annotation rules by default.
 select = [
-  "E",   # pycodestyle errors
-  "F",   # pyflakes
-  "W",   # pycodestyle warnings
-  "I",   # isort
-  "N",   # pep8-naming
-  "UP",  # pyupgrade
-  "B",   # bugbear
-  "BLE", # blind except
-  "A",   # builtins
-  "C4",  # comprehensions
-  "PIE", # flake8-pie
-  "PT",  # flake8-pytest-style
-  "RET", # returns
-  "SIM", # simplify
-  "PTH", # pathlib
-  "PERF",# performance
-  "PL",  # pylint (subset implemented by Ruff)
-  "RUF", # Ruff-specific rules
+  "E",
+  "F",
+  "W",
+  "I",
+  "N",
+  "UP",
+  "B",
+  "BLE",
+  "A",
+  "C4",
+  "PIE",
+  "PT",
+  "RET",
+  "SIM",
+  "PTH",
+  "PERF",
+  "PL",
+  "RUF",
 ]
-# Common ignores to keep noise low in mixed Py/Rust projects.
 ignore = [
-  "E203",  # whitespace before ':' (Black compatibility)
-  "E266",  # too many leading '#' for block comment
-  "E501",  # line length is handled by formatter
-  "PLR2004", # magic value comparisons (allows simple test literals)
-  "PT011", # allow use of 'pytest.raises' context manager
+  "E203",
+  "E266",
+  "E501",
+  "PLR2004",
+  "PT011",
   "PLW0603",
   "PLR0915",
   "PLR0913",
@@ -131,11 +129,10 @@ ignore = [
   "PLC0415",
 ]
 
-# Make pytest files less strict where asserts and fixtures are common.
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-  "S101",     # use of assert
-  "PLR2004",  # magic numbers in tests
+  "S101",
+  "PLR2004",
 ]
 
 [tool.ruff.lint.isort]
@@ -143,7 +140,6 @@ known-first-party = ["fastquadtree"]
 combine-as-imports = true
 
 [tool.ruff.format]
-# Mirror Black-like formatting
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false

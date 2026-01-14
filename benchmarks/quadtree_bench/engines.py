@@ -5,7 +5,7 @@ This module provides a unified interface for different quadtree libraries,
 allowing fair comparison of their performance characteristics.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import numpy as np
 from pyqtree import Index as PyQTree  # Pyqtree
@@ -30,8 +30,8 @@ class Engine:
         self,
         name: str,
         color: str,
-        build_fn: Callable[[List[Tuple[int, int]]], Any],
-        query_fn: Callable[[Any, List[Tuple[int, int, int, int]]], None],
+        build_fn: Callable[[list[tuple[int, int]]], Any],
+        query_fn: Callable[[Any, list[tuple[int, int, int, int]]], None],
     ):
         """
         Initialize an engine adapter.
@@ -47,17 +47,17 @@ class Engine:
         self._build = build_fn
         self._query = query_fn
 
-    def build(self, points: List[Tuple[int, int]]) -> Any:
+    def build(self, points: list[tuple[int, int]]) -> Any:
         """Build a tree from the given points."""
         return self._build(points)
 
-    def query(self, tree: Any, queries: List[Tuple[int, int, int, int]]) -> None:
+    def query(self, tree: Any, queries: list[tuple[int, int, int, int]]) -> None:
         """Execute queries on the tree."""
         return self._query(tree, queries)
 
 
 def _create_e_pyquadtree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for e-pyquadtree."""
 
@@ -80,7 +80,7 @@ def _create_e_pyquadtree_engine(
 
 
 def _create_pyqtree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for PyQtree."""
 
@@ -98,7 +98,7 @@ def _create_pyqtree_engine(
 
 
 def _create_fastquadtree_np_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for fastquadtree but queries are returned as numpy arrays instead of Python lists."""
 
@@ -120,7 +120,7 @@ def _create_fastquadtree_np_engine(
 
 
 def _create_fastquadtree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for fastquadtree."""
 
@@ -142,7 +142,7 @@ def _create_fastquadtree_engine(
 
 
 def _create_fastquadtree_items_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for fastquadtree."""
 
@@ -164,7 +164,7 @@ def _create_fastquadtree_items_engine(
 
 
 def _create_quads_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Optional[Engine]:
     """Create engine adapter for quads library (optional)."""
     try:
@@ -194,7 +194,7 @@ def _create_quads_engine(
 
 
 def _create_nontree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Optional[Engine]:
     """Create engine adapter for nontree library (optional)."""
     try:
@@ -227,7 +227,7 @@ def _create_nontree_engine(
 
 
 def _create_brute_force_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Engine:
     """Create engine adapter for brute force search (always available)."""
 
@@ -252,7 +252,7 @@ def _create_brute_force_engine(
 
 
 def _create_rtree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Optional[Engine]:
     """Create engine adapter for rtree library (optional)."""
     try:
@@ -286,11 +286,11 @@ def _create_rtree_engine(
 
 
 def _create_strtree_engine(
-    bounds: Tuple[int, int, int, int], max_points: int, max_depth: int
+    bounds: tuple[int, int, int, int], max_points: int, max_depth: int
 ) -> Optional[Engine]:
     """Create engine adapter for Shapely STRtree (optional)."""
 
-    def build(points_list: List[Tuple[int, int]]):
+    def build(points_list: list[tuple[int, int]]):
         # Build geometries efficiently
 
         xs = np.fromiter(
@@ -305,7 +305,7 @@ def _create_strtree_engine(
         # Keep geoms alive next to the tree
         return (tree, geoms)
 
-    def query(built, queries: List[Tuple[int, int, int, int]]):
+    def query(built, queries: list[tuple[int, int, int, int]]):
         tree, _geoms = built
         for xmin, ymin, xmax, ymax in queries:
             window = shp_box(xmin, ymin, xmax, ymax)
@@ -319,10 +319,10 @@ def _create_strtree_engine(
 
 
 def get_engines(
-    bounds: Tuple[int, int, int, int] = (0, 0, 1000, 1000),
+    bounds: tuple[int, int, int, int] = (0, 0, 1000, 1000),
     max_points: int = 20,
     max_depth: int = 10,
-) -> Dict[str, Engine]:
+) -> dict[str, Engine]:
     """
     Get all available engine adapters.
 

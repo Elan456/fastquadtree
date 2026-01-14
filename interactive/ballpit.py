@@ -1,7 +1,7 @@
 import math
 import random
 import time
-from typing import Iterable, List, Set, Tuple
+from collections.abc import Iterable
 
 import pygame
 from pyqtree import Index as PyQIndex
@@ -20,7 +20,7 @@ class Ball:
         x: float,
         y: float,
         r: int = 10,
-        color: Tuple[int, int, int] = (255, 0, 0),
+        color: tuple[int, int, int] = (255, 0, 0),
         vx: float = 0.0,
         vy: float = 0.0,
         mass: float = 1.0,
@@ -35,7 +35,7 @@ class Ball:
         self.mass = float(mass)
         self.restitution = float(restitution)
 
-    def aabb(self) -> Tuple[float, float, float, float]:
+    def aabb(self) -> tuple[float, float, float, float]:
         return (self.x - self.r, self.y - self.r, self.x + self.r, self.y + self.r)
 
     def integrate(self, ax: float, ay: float, dt: float):
@@ -117,7 +117,7 @@ def resolve_ball_ball(a: Ball, b: Ball):
 class SpatialBase:
     name = "base"
 
-    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+    def rebuild(self, balls: list[Ball], width: int, height: int) -> None:
         raise NotImplementedError
 
     def neighbors(self, b: Ball) -> Iterable[Ball]:
@@ -133,7 +133,7 @@ class FastQTIndex(SpatialBase):
         self.capacity = capacity
         self.qt = Quadtree((0, 0, width, height), capacity)
 
-    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+    def rebuild(self, balls: list[Ball], width: int, height: int) -> None:
         if width != self.width or height != self.height:
             self.width, self.height = width, height
             self.qt.clear()
@@ -142,7 +142,7 @@ class FastQTIndex(SpatialBase):
 
         self.qt.insert_many([(b.x, b.y) for b in balls])
 
-    def neighbors(self, b: Ball, balls: List[Ball]) -> Iterable[Ball]:
+    def neighbors(self, b: Ball, balls: list[Ball]) -> Iterable[Ball]:
         r2 = 2 * b.r
         min_x, min_y, max_x, max_y = b.x - r2, b.y - r2, b.x + r2, b.y + r2
         neighbors = self.qt.query((min_x, min_y, max_x, max_y))
@@ -166,7 +166,7 @@ class PyQTreeIndex(SpatialBase):
             bbox=(0, 0, width, height), max_items=max_items, max_depth=max_depth
         )
 
-    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+    def rebuild(self, balls: list[Ball], width: int, height: int) -> None:
         if width != self.width or height != self.height:
             self.width, self.height = width, height
             self.idx = PyQIndex(
@@ -196,10 +196,10 @@ class PyQTreeIndex(SpatialBase):
 class BruteIndex(SpatialBase):
     name = "bruteforce"
 
-    def __init__(self, balls_ref: List[Ball]):
+    def __init__(self, balls_ref: list[Ball]):
         self._balls = balls_ref
 
-    def rebuild(self, balls: List[Ball], width: int, height: int) -> None:
+    def rebuild(self, balls: list[Ball], width: int, height: int) -> None:
         # Nothing to build
         pass
 
@@ -218,7 +218,7 @@ class BallPit:
         self.width = width
         self.height = height
 
-        self.balls: List[Ball] = []
+        self.balls: list[Ball] = []
         self.pair_checks = 0  # updated each frame
 
         # Spatial backends
@@ -279,7 +279,7 @@ class BallPit:
 
         # 3) Neighborhood checks with dedup on object id pairs
         self.pair_checks = 0
-        processed: Set[Tuple[int, int]] = set()
+        processed: set[tuple[int, int]] = set()
         for a in self.balls:
             start = time.perf_counter()
             if self.mode == "fastquadtree":

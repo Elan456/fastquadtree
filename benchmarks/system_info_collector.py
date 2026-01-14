@@ -3,7 +3,7 @@ import json
 import platform
 import shutil
 import subprocess
-from typing import Any, Dict
+from typing import Any
 
 import cpuinfo
 import distro
@@ -67,7 +67,7 @@ def _collect_gpus() -> list[dict]:
     return gpus
 
 
-def collect_system_info() -> Dict[str, Any]:
+def collect_system_info() -> dict[str, Any]:
     info = {
         "os": {
             "system": platform.system(),

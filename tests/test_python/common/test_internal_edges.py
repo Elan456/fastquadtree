@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pytest

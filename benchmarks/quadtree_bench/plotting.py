@@ -5,7 +5,7 @@ This module handles creation of performance charts, graphs, and visualizations
 for benchmark results analysis.
 """
 
-from typing import Any, Dict, Tuple
+from typing import Any
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 class PlotManager:
     """Manages creation and export of benchmark visualization plots."""
 
-    def __init__(self, results: Dict[str, Any]):
+    def __init__(self, results: dict[str, Any]):
         """Initialize with benchmark results."""
         self.results = results
         self.config = results["config"]
@@ -29,7 +29,7 @@ class PlotManager:
             horizontal_spacing=0.08,
         )
 
-        def add_time_traces(y_data: Dict[str, list], col: int):
+        def add_time_traces(y_data: dict[str, list], col: int):
             """Add traces for a specific time metric."""
             show_legend = col == 1  # Only show legend for first column
             for name in list(y_data.keys()):
@@ -160,7 +160,7 @@ class PlotManager:
 
         return fig
 
-    def create_all_plots(self) -> Tuple[go.Figure, go.Figure]:
+    def create_all_plots(self) -> tuple[go.Figure, go.Figure]:
         """Create all benchmark plots."""
         time_fig = self.create_time_plots()
         throughput_fig = self.create_throughput_plots()

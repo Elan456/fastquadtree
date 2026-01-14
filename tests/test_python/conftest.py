@@ -1,5 +1,6 @@
 import struct
-from typing import Any, Iterable, Sequence, Tuple
+from collections.abc import Iterable, Sequence
+from typing import Any
 
 import numpy as np
 import pytest
@@ -25,7 +26,7 @@ def get_bounds_for_dtype(bounds: Bounds, dtype: QuadTreeDType) -> Bounds:
 
 
 @pytest.fixture
-def bounds() -> Tuple[float, float, float, float]:
+def bounds() -> tuple[float, float, float, float]:
     return DEFAULT_BOUNDS
 
 
