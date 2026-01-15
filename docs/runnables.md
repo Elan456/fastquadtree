@@ -12,12 +12,11 @@ cd fastquadtree
 ```
 
 ### Create and activate a virtual environment, install dependencies (uv)
-This step can be skipped if you already have a suitable environment. The `uv sync --group dev --group interactive` command installs fastquadtree in editable mode along with the dev and interactive dependency groups from `pyproject.toml`.
+
+[uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+
 ```bash
-uv venv .venv
-source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-uv sync --group interactive
-uv run maturin develop --release
+uv sync --group interactive # This will automatically create a virtual environment
 ```
 
 ## 1. Interactive demo  

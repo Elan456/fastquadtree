@@ -151,7 +151,9 @@ If your data is already in a NumPy array, using the `insert_many_np` method dire
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks
-To run the benchmarks yourself, first install the dependencies with uv (create a venv if you do not already have one):
+To run the benchmarks yourself, first install the dependencies with uv:
+
+[uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
 
 ```bash
 git clone https://github.com/Elan456/fastquadtree.git
@@ -159,10 +161,7 @@ cd fastquadtree
 ```
 
 ```bash
-uv venv .venv
-source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-uv sync --group benchmark
-```
+uv sync --group benchmark  # This will automatically create a virtual environment
 
 Then run:
 
