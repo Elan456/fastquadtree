@@ -63,10 +63,10 @@ jobs:
             manylinux: "2_28"
 
           - os: macos-latest
-            maturin_args: "--release --sdist --out dist --target universal2-apple-darwin"
+            maturin_args: "--release --out dist --target universal2-apple-darwin"
 
           - os: windows-latest
-            maturin_args: "--release --sdist --out dist"
+            maturin_args: "--release --out dist"
 
           # Linux cross-arch wheels
           - os: ubuntu-latest
