@@ -15,8 +15,10 @@ cd fastquadtree
 
 [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
 
+uv will manage a virtual environment for you. To set it up, run:
+
 ```bash
-uv sync --group interactive # This will automatically create a virtual environment
+uv sync --group interactive 
 ```
 
 ## 1. Interactive demo  
@@ -54,7 +56,7 @@ The ball pit demo shows how quadtrees offer massive performance improvements for
 Rectangular queries are used to find potential collisions, and then precise circle-circle collision checks are performed.
 
 ```bash
-uv run python interactive/ball_pit.py
+uv run python interactive/ballpit.py
 ```
 
 ![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)

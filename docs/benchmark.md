@@ -160,10 +160,13 @@ git clone https://github.com/Elan456/fastquadtree.git
 cd fastquadtree
 ```
 
-```bash
-uv sync --group benchmark  # This will automatically create a virtual environment
+uv will manage a virtual environment for you. To set it up, run:
 
-Then run:
+```bash
+uv sync --group benchmark 
+```
+
+Then run whichever benchmark scripts you want:
 
 ```bash
 uv run python benchmarks/cross_library_bench.py
