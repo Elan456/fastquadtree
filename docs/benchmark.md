@@ -151,20 +151,26 @@ If your data is already in a NumPy array, using the `insert_many_np` method dire
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks
-To run the benchmarks yourself, first install the dependencies:
+To run the benchmarks yourself, first install the dependencies with uv (create a venv if you do not already have one):
 
 ```bash
-pip install -r benchmarks/requirements.txt
+git clone https://github.com/Elan456/fastquadtree.git
+cd fastquadtree
+```
+
+```bash
+uv venv .venv
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+uv sync --group benchmark
 ```
 
 Then run:
 
 ```bash
-python benchmarks/cross_library_bench.py
-python benchmarks/benchmark_native_vs_shim.py 
-python benchmarks/benchmark_np_vs_list.py 
-python benchmarks/benchmark_serialization_vs_rebuild.py
+uv run python benchmarks/cross_library_bench.py
+uv run python benchmarks/benchmark_native_vs_shim.py 
+uv run python benchmarks/benchmark_np_vs_list.py 
+uv run python benchmarks/benchmark_serialization_vs_rebuild.py
 ```
 
 Check the CLI arguments for the cross-library benchmark in `benchmarks/quadtree_bench/main.py`.
-

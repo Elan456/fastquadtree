@@ -215,3 +215,4 @@ __marimo__/
 *.exe 
 *.pdb
 *.bin
+*.lock

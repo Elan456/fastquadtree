@@ -11,14 +11,13 @@ git clone https://github.com/Elan456/fastquadtree.git
 cd fastquadtree
 ```
 
-### Create and activate a virtual environment, install dependencies
-This step can be skipped if you already have a suitable environment.
+### Create and activate a virtual environment, install dependencies (uv)
+This step can be skipped if you already have a suitable environment. The `uv sync --group dev --group interactive` command installs fastquadtree in editable mode along with the dev and interactive dependency groups from `pyproject.toml`.
 ```bash
-python -m venv .venv
+uv venv .venv
 source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
-pip install -e .
-maturin develop --release
-pip install -r interactive/requirements.txt
+uv sync --group interactive
+uv run maturin develop --release
 ```
 
 ## 1. Interactive demo  
@@ -30,7 +29,7 @@ You can see how the quadtree subdivides as you add points, and validate the accu
 By pressing 1, you can visualize the KNN query for each boid. 
 
 ```bash
-python interactive/interactive_v2.py
+uv run python interactive/interactive_v2.py
 ```
 
 ![Interactive_V2_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_screenshot.png)
@@ -43,7 +42,7 @@ If you are creating a game or simulation environment where entities have boundin
 rectangular quadtree to quickly check which entities are intersecting with another. 
 
 ```bash
-python interactive/interactive_v2_rect.py
+uv run python interactive/interactive_v2_rect.py
 ```
 
 ![Interactive_V2_Rect_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/interactive_v2_rect_screenshot.png)
@@ -56,7 +55,7 @@ The ball pit demo shows how quadtrees offer massive performance improvements for
 Rectangular queries are used to find potential collisions, and then precise circle-circle collision checks are performed.
 
 ```bash
-python interactive/ball_pit.py
+uv run python interactive/ball_pit.py
 ```
 
 ![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)
