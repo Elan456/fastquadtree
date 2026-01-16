@@ -8,7 +8,6 @@ significantly improved performance through a Rust-backed implementation.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from operator import itemgetter
 from typing import Any, SupportsFloat
 
 from ._native import RectQuadTree
@@ -18,21 +17,6 @@ Point = tuple[SupportsFloat, SupportsFloat]  # only for type hints in docstrings
 # Default parameters from pyqtree
 MAX_ITEMS = 10
 MAX_DEPTH = 20
-
-
-# Helper to gather objects by ids in chunks
-# Performance improvement over list comprehension for large result sets
-# 2.945 median query time --> 2.030 median query time (500k items, 500 queries)
-def gather_objs(objs, ids, chunk=2048):
-    out = []
-    for i in range(0, len(ids), chunk):
-        getter = itemgetter(*ids[i : i + chunk])
-        vals = getter(objs)  # tuple or single object
-        if isinstance(vals, tuple):
-            out.extend(vals)
-        else:
-            out.append(vals)
-    return out
 
 
 class Index:
@@ -176,6 +160,5 @@ class Index:
         """
         if type(bbox) is not tuple:  # Handle non-tuple input
             bbox = tuple(bbox)
-        result = self._qt.query_ids(bbox)
-        # result = [id1, id2, ...]
-        return gather_objs(self._objects, result)
+
+        return self._qt.query_items(bbox, self._objects)

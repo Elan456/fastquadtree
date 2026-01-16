@@ -399,7 +399,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Returns:
             List of Item objects.
         """
-        return self._store.get_many_by_ids(self._native.query_ids(rect))
+        return self._native.query_items(rect, self._store._arr)
+
+        # return self._store.get_many_by_ids(self._native.query_ids(rect))
 
     def query_ids(self, rect: Bounds) -> list[int]:
         """

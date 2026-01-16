@@ -19,7 +19,7 @@ repos:
       # 1) Build native module for the current virtualenv
       - id: maturin-develop
         name: maturin develop
-        entry: bash -c "maturin develop --release"
+        entry: bash -c "uv run maturin develop --release"
         language: system
         pass_filenames: false
         always_run: true
@@ -27,7 +27,7 @@ repos:
       # 2) Rust tests
       - id: cargo-test
         name: cargo test
-        entry: bash -c "cargo test --all --quiet"
+        entry: bash -c "uv run cargo test --all --quiet"
         language: system
         pass_filenames: false
         always_run: true
@@ -35,7 +35,7 @@ repos:
       # 3) Python tests under coverage
       - id: pytest
         name: pytest (under coverage)
-        entry: pytest
+        entry: uv run pytest
         language: system
         pass_filenames: false
         always_run: true

@@ -262,6 +262,74 @@ macro_rules! define_point_quadtree_pyclass {
                 // Materialize as a NumPy array
                 Ok(PyArray1::<u64>::from_vec(py, ids))
             }
+            
+            /// Returns list[Item, ...] by indexing into ObjStore._arr
+            #[pyo3(signature = (rect, arr_list))]
+            pub fn query_items<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+                arr_list: &Bound<'py, PyList>,
+            ) -> PyResult<Bound<'py, PyList>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // 1) Run the quadtree query without the GIL and collect ids
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|it| it.0) // (id, x, y) -> id
+                        .collect()
+                });
+                
+                // 3) Build output list by indexing arr_list in C (no ids.tolist(), no itemgetter)
+                unsafe {
+                    let n = ids.len();
+                    let out_ptr = ffi::PyList_New(n as isize);
+                    if out_ptr.is_null() {
+                        ffi::PyErr_NoMemory();
+                        return Err(PyErr::fetch(py));
+                    }
+
+                    let storage_len = ffi::PyList_Size(arr_list.as_ptr()) as usize;
+
+                    for (i, &id_u64) in ids.iter().enumerate() {
+                        if id_u64 > (usize::MAX as u64) {
+                            return Err(PyValueError::new_err("id does not fit usize"));
+                        }
+                        let id = id_u64 as usize;
+                        if id >= storage_len {
+                            return Err(PyValueError::new_err(format!(
+                                "id {id} out of bounds for ObjStore._arr len {storage_len}"
+                            )));
+                        }
+
+                        // Borrowed ref from _arr[id]
+                        let item_ptr = ffi::PyList_GetItem(arr_list.as_ptr(), id as isize);
+                        if item_ptr.is_null() {
+                            return Err(PyErr::fetch(py));
+                        }
+
+                        // Optional: reject holes early (keeps behavior strict and avoids returning None)
+                        // If you *want* to allow None results, delete this block.
+                        if item_ptr == ffi::Py_None() {
+                            return Err(PyValueError::new_err(format!(
+                                "ObjStore has no item at id {id} (hole/None)"
+                            )));
+                        }
+
+                        // PyList_SetItem steals a reference, so INCREF first
+                        ffi::Py_INCREF(item_ptr);
+                        let rc = ffi::PyList_SetItem(out_ptr, i as isize, item_ptr);
+                        if rc != 0 {
+                            return Err(PyErr::fetch(py));
+                        }
+                    }
+
+                    Ok(Bound::from_owned_ptr(py, out_ptr).downcast_into_unchecked::<PyList>())
+                }
+            }
+
 
             pub fn nearest_neighbor(&self, xy: ($t, $t)) -> Option<(u64, $t, $t)> {
                 let (x, y) = xy;
@@ -559,6 +627,74 @@ macro_rules! define_rect_quadtree_pyclass {
                 Ok(PyArray1::<u64>::from_vec(py, ids))
             }
             
+            /// RectQuadTree version: query and return ObjStore Items (from ObjStore._arr) in hit order.
+            /// Usage from Python:
+            ///   items = rect_tree.query_items(rect, objstore)
+            #[pyo3(signature = (rect, arr_list))]
+            pub fn query_items<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+                arr_list: &Bound<'py, PyList>,
+            ) -> PyResult<Bound<'py, PyList>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // 1) Run the rect quadtree query without the GIL and collect ids
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|(id, _r)| id)
+                        .collect()
+                });
+
+                // 3) Build output list by indexing arr_list in C
+                unsafe {
+                    let n = ids.len();
+                    let out_ptr = ffi::PyList_New(n as isize);
+                    if out_ptr.is_null() {
+                        ffi::PyErr_NoMemory();
+                        return Err(PyErr::fetch(py));
+                    }
+
+                    let storage_len = ffi::PyList_Size(arr_list.as_ptr()) as usize;
+
+                    for (i, &id_u64) in ids.iter().enumerate() {
+                        if id_u64 > (usize::MAX as u64) {
+                            return Err(PyValueError::new_err("id does not fit usize"));
+                        }
+                        let id = id_u64 as usize;
+                        if id >= storage_len {
+                            return Err(PyValueError::new_err(format!(
+                                "id {id} out of bounds for ObjStore._arr len {storage_len}"
+                            )));
+                        }
+
+                        // Borrowed ref from _arr[id]
+                        let item_ptr = ffi::PyList_GetItem(arr_list.as_ptr(), id as isize);
+                        if item_ptr.is_null() {
+                            return Err(PyErr::fetch(py));
+                        }
+
+                        // Optional strictness: reject holes (None). Delete this block to allow None results.
+                        if item_ptr == ffi::Py_None() {
+                            return Err(PyValueError::new_err(format!(
+                                "ObjStore has no item at id {id} (hole/None)"
+                            )));
+                        }
+
+                        // PyList_SetItem steals a reference, so INCREF first
+                        ffi::Py_INCREF(item_ptr);
+                        let rc = ffi::PyList_SetItem(out_ptr, i as isize, item_ptr);
+                        if rc != 0 {
+                            return Err(PyErr::fetch(py));
+                        }
+                    }
+
+                    Ok(Bound::from_owned_ptr(py, out_ptr).downcast_into_unchecked::<PyList>())
+                }
+            }
+
             /// Returns a single nearest neighbor (id, min_x, min_y, max_x, max_y)
             pub fn nearest_neighbor(&self, xy: ($t, $t)) -> Option<(u64, $t, $t, $t, $t)> {
                 let (x, y) = xy;

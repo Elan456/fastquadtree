@@ -51,6 +51,20 @@ def bench_native(points, queries):
     return t_build, t_query
 
 
+def bench_native_id_only_query(points, queries):
+    t0 = now()
+    qt = NativeQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    for i, p in enumerate(points):
+        qt.insert(i, p)
+    t_build = now() - t0
+
+    t0 = now()
+    for q in queries:
+        _ = qt.query_ids(q)
+    t_query = now() - t0
+    return t_build, t_query
+
+
 def bench_np_shim(points, queries):
     # Convert points to numpy arrays
     np_points = np.array(points, dtype=np.float32)
@@ -87,6 +101,20 @@ def bench_shim_with_objects(points, queries):
     qt = QuadTreeObjects(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
     for p, obj in zip(points, objs):
         qt.insert(p, obj=obj)
+    t_build = now() - t0
+
+    t0 = now()
+    for q in queries:
+        _ = qt.query(q)
+    t_query = now() - t0
+    return t_build, t_query
+
+
+def bench_insert_many_no_objects(points, queries):
+    # QuadTree without object tracking using insert_many
+    t0 = now()
+    qt = QuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
+    qt.insert_many(points)
     t_build = now() - t0
 
     t0 = now()
@@ -165,6 +193,14 @@ def main():
         args.repeats,
         desc="Native",
     )
+    n_query_ids_build, n_query_ids_query = median_times(
+        lambda pts, qs: bench_native_id_only_query(pts, qs),
+        points,
+        queries,
+        args.repeats,
+        desc="Native (ID-only query)",
+    )
+
     s_build_no_objs, s_query_no_objs = median_times(
         lambda pts, qs: bench_shim_no_objects(pts, qs),
         points,
@@ -186,6 +222,14 @@ def main():
         args.repeats,
         desc="QuadTree (numpy, no objects)",
     )
+    insert_many_no_objects, insert_many_query = median_times(
+        lambda pts, qs: bench_insert_many_no_objects(pts, qs),
+        points,
+        queries,
+        args.repeats,
+        desc="QuadTree insert_many (no objects)",
+    )
+
     p_build, p_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=False),
         points,
@@ -218,7 +262,9 @@ def main():
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
 | Native | {fmt(n_build)} | {fmt(n_query)} | {fmt(n_build + n_query)} |
+| Native (ID-only query) | {fmt(n_query_ids_build)} | {fmt(n_query_ids_query)} | {fmt(n_query_ids_build + n_query_ids_query)} |
 | QuadTree (no objects) | {fmt(s_build_no_objs)} | {fmt(s_query_no_objs)} | {fmt(s_build_no_objs + s_query_no_objs)} |
+| QuadTree insert_many (no objects) | {fmt(insert_many_no_objects)} | {fmt(insert_many_query)} | {fmt(insert_many_no_objects + insert_many_query)} |
 | QuadTreeObjects | {fmt(s_build_objs)} | {fmt(s_query_objs)} | {fmt(s_build_objs + s_query_objs)} |
 | QuadTree (numpy, no objects) | {fmt(np_build)} | {fmt(np_query)} | {fmt(np_build + np_query)} |
 

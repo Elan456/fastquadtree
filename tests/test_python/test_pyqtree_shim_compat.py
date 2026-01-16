@@ -54,9 +54,9 @@ def results_match_exact(fqt, pyq, query):
     """Compare lists exactly, not just as sets."""
     got_fqt = sorted(fqt.intersect(query))
     got_pyq = sorted(pyq.intersect(query))
-    assert got_fqt == got_pyq, (
-        f"\nquery={query}\nfastquadtree={got_fqt}\npyqtree={got_pyq}"
-    )
+    assert (
+        got_fqt == got_pyq
+    ), f"\nquery={query}\nfastquadtree={got_fqt}\npyqtree={got_pyq}"
 
 
 def test_ctor_error_branch():
