@@ -61,5 +61,5 @@ from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
 from fastquadtree import QuadTreeObjects  # Point handling with object tracking
 from fastquadtree import RectQuadTreeObjects  # Bounding box handling with object tracking
-from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree (~6.5x faster while keeping the same API)
+from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree (~10x faster while keeping the same API)
 ```

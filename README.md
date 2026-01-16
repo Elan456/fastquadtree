@@ -35,7 +35,7 @@ Rust-optimized quadtree with a clean Python API
 - Fast [serialization](https://elan456.github.io/fastquadtree/benchmark/#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
-- Offers a drop-in [pyqtree shim](https://elan456.github.io/fastquadtree/benchmark/#pyqtree-drop-in-shim-performance-gains) that is ~6.5x faster while keeping the same API
+- Offers a drop-in [pyqtree shim](https://elan456.github.io/fastquadtree/benchmark/#pyqtree-drop-in-shim-performance-gains) that is ~10x faster while keeping the same API
 
 ----
 
@@ -49,7 +49,7 @@ from fastquadtree import QuadTree  # Point handling
 from fastquadtree import RectQuadTree  # Bounding box handling
 from fastquadtree import QuadTreeObjects  # Point handling with object tracking
 from fastquadtree import RectQuadTreeObjects  # Bounding box handling with object tracking
-from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~6.5x faster while keeping the same API)
+from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~10x faster while keeping the same API)
 ```
 
 
@@ -77,15 +77,15 @@ fastquadtree **outperforms** all other quadtree Python packages, including the R
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree (np)[^fqtnp] | 0.057 | 0.021 | 0.078 | 54.45× |
-| fastquadtree[^fqt] | 0.060 | 0.189 | 0.249 | 17.04× |
-| Shapely STRtree[^npreturn] | 0.321 | 0.196 | 0.517 | 8.21× |
-| fastquadtree (obj tracking)[^fqto] | 0.437 | 0.239 | 0.675 | 6.28× |
-| Rtree        | 1.796 | 0.561 | 2.357 | 1.80× |
-| nontree-QuadTree | 1.275 | 1.272 | 2.547 | 1.67× |
-| e-pyquadtree | 2.144 | 1.507 | 3.650 | 1.16× |
-| quads        | 3.001 | 1.171 | 4.172 | 1.02× |
-| PyQtree      | 3.677 | 0.565 | 4.242 | 1.00× |
+| fastquadtree (np)[^fqtnp] | 0.052 | 0.017 | 0.068 | 42.52× |
+| fastquadtree[^fqt] | 0.054 | 0.231 | 0.285 | 10.20× |
+| Shapely STRtree[^npreturn] | 0.200 | 0.110 | 0.309 | 9.40× |
+| fastquadtree (obj tracking)[^fqto] | 0.263 | 0.093 | 0.356 | 8.17× |
+| nontree-QuadTree | 0.826 | 0.844 | 1.670 | 1.74× |
+| Rtree        | 1.805 | 0.546 | 2.351 | 1.24× |
+| e-pyquadtree | 1.530 | 0.941 | 2.471 | 1.18× |
+| quads        | 1.907 | 0.759 | 2.667 | 1.09× |
+| PyQtree      | 2.495 | 0.414 | 2.909 | 1.00× |
 
 [^fqtnp]: Uses `query_np` for Numpy array return values rather than Python lists.  
 [^fqt]: Uses standard `query` method returning Python lists.  

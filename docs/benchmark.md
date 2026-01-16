@@ -12,19 +12,19 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 ### Summary (largest dataset, PyQtree baseline)
 - Points: **500,000**, Queries: **500**
-- Fastest total: **fastquadtree** at **0.078 s**
+- Fastest total: **fastquadtree** at **0.068 s**
 
 | Library | Build (s) | Query (s) | Total (s) | Speed vs PyQtree |
 |---|---:|---:|---:|---:|
-| fastquadtree (np)[^fqtnp] | 0.057 | 0.021 | 0.078 | 54.45× |
-| fastquadtree[^fqt] | 0.060 | 0.189 | 0.249 | 17.04× |
-| Shapely STRtree[^npreturn] | 0.321 | 0.196 | 0.517 | 8.21× |
-| fastquadtree (obj tracking)[^fqto] | 0.437 | 0.239 | 0.675 | 6.28× |
-| Rtree        | 1.796 | 0.561 | 2.357 | 1.80× |
-| nontree-QuadTree | 1.275 | 1.272 | 2.547 | 1.67× |
-| e-pyquadtree | 2.144 | 1.507 | 3.650 | 1.16× |
-| quads        | 3.001 | 1.171 | 4.172 | 1.02× |
-| PyQtree      | 3.677 | 0.565 | 4.242 | 1.00× |
+| fastquadtree (np)[^fqtnp] | 0.052 | 0.017 | 0.068 | 42.52× |
+| fastquadtree[^fqt] | 0.054 | 0.231 | 0.285 | 10.20× |
+| Shapely STRtree[^npreturn] | 0.200 | 0.110 | 0.309 | 9.40× |
+| fastquadtree (obj tracking)[^fqto] | 0.263 | 0.093 | 0.356 | 8.17× |
+| nontree-QuadTree | 0.826 | 0.844 | 1.670 | 1.74× |
+| Rtree        | 1.805 | 0.546 | 2.351 | 1.24× |
+| e-pyquadtree | 1.530 | 0.941 | 2.471 | 1.18× |
+| quads        | 1.907 | 0.759 | 2.667 | 1.09× |
+| PyQtree      | 2.495 | 0.414 | 2.909 | 1.00× |
 
 [^fqtnp]: Uses `query_np` for Numpy array return values rather than Python lists.
 [^fqt]: Uses standard `query` method returning Python lists.
@@ -57,19 +57,21 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| Native | 0.141 | 1.858 | 1.999 |
-| QuadTree (no objects) | 0.235 | 1.920 | 2.155 |
-| QuadTreeObjects | 0.927 | 2.052 | 2.979 |
-| QuadTree (numpy, no objects) | 0.046 | 0.252 | 0.297 |
+| Native | 0.140 | 2.364 | 2.504 |
+| Native (ID-only query) | 0.136 | 0.434 | 0.570 |
+| QuadTree (no objects) | 0.179 | 2.210 | 2.389 |
+| QuadTree insert_many (no objects) | 0.058 | 2.085 | 2.143 |
+| QuadTreeObjects | 0.599 | 0.732 | 1.331 |
+| QuadTree (numpy, no objects) | 0.032 | 0.102 | 0.134 |
 
 ### Summary
 
-- The Python shim (QuadTree) is 1.078x slower than the native engine due to Python overhead.
+- The Python shim (QuadTree) is 0.954x slower than the native engine due to Python overhead.
 
-- NumPy points are the fastest path: build is **5.157x faster** than the list path and queries are **7.627x faster**,
-  for a **7.249x** total speedup vs the list path.
+- NumPy points are the fastest path: build is **5.536x faster** than the list path and queries are **21.733x faster**,
+  for a **17.822x** total speedup vs the list path.
 
-- QuadTreeObjects adds object association overhead. Build time increases significantly, query time is moderately slower.
+- QuadTreeObjects adds object association overhead. Build time increases significantly, query time much faster.
 
 ## pyqtree drop-in shim performance gains
 
@@ -82,13 +84,13 @@ Quadtrees are the focus of the benchmark, but Rtrees are included for reference.
 
 | Variant | Build | Query | Total |
 |---|---:|---:|---:|
-| pyqtree (fastquadtree) | 0.485 | 2.086 | 2.571 |
-| pyqtree (original) | 3.463 | 13.209 | 16.672 |
+| pyqtree (fastquadtree) | 0.326 | 0.801 | 1.127 |
+| pyqtree (original) | 2.111 | 9.536 | 11.647 |
 
 ### Summary
 
-If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.485s and query time of 2.086s.
-This is a **total speedup of 6.486x** compared to the original pyqtree and requires no code changes.
+If you directly replace pyqtree with the drop-in `fastquadtree.pyqtree.Index` shim, you get a build time of 0.326s and query time of 0.801s.
+This is a **total speedup of 10.333x** compared to the original pyqtree and requires no code changes.
 
 ---------
 
@@ -144,10 +146,10 @@ If your data is already in a NumPy array, using the `insert_many_np` method dire
 ----------------
 
 ## System Info
-- **OS**: Windows 11 AMD64
-- **Python**: CPython 3.12.2
+- **OS**: CachyOS 6.18.5-2-cachyos x86_64
+- **Python**: CPython 3.14.2
 - **CPU**: AMD Ryzen 7 3700X 8-Core Processor (16 threads)
-- **Memory**: 31.9 GB
+- **Memory**: 31.3 GB
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)
 
 ## Running Benchmarks

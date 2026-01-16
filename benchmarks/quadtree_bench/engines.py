@@ -73,7 +73,7 @@ def _create_e_pyquadtree_engine(
 
     return Engine(
         "e-pyquadtree",
-        "#1f77b4",
+        "#5c8daf",
         build,
         query,  # display name  # color (blue)
     )
@@ -94,7 +94,7 @@ def _create_pyqtree_engine(
         for q in queries:
             _ = list(qt.intersect(q))
 
-    return Engine("PyQtree", "#2ca02c", build, query)  # display name  # color (green)
+    return Engine("PyQtree", "#759d75", build, query)  # display name  # color (green)
 
 
 def _create_fastquadtree_np_engine(
@@ -113,7 +113,7 @@ def _create_fastquadtree_np_engine(
 
     return Engine(
         "fastquadtree (np)",
-        "#e55100",
+        "#FF3D00",
         build,
         query,  # display name  # color (orange)
     )
@@ -135,7 +135,7 @@ def _create_fastquadtree_engine(
 
     return Engine(
         "fastquadtree",
-        "#ff9500",
+        "#FF9100",
         build,
         query,  # display name  # color (orange)
     )
@@ -157,7 +157,7 @@ def _create_fastquadtree_items_engine(
 
     return Engine(
         "fastquadtree (objs)",
-        "#ffc107",
+        "#FFD166",
         build,
         query,  # display name  # color (orange)
     )
@@ -190,7 +190,7 @@ def _create_quads_engine(
             bb = qd.BoundingBox(min_x=xmin, min_y=ymin, max_x=xmax, max_y=ymax)
             _ = tree.within_bb(bb)
 
-    return Engine("quads", "#8c564b", build, query)  # display name  # color (brown)
+    return Engine("quads", "#8b6c66", build, query)  # display name  # color (brown)
 
 
 def _create_nontree_engine(
@@ -220,7 +220,7 @@ def _create_nontree_engine(
 
     return Engine(
         "nontree-QuadTree",
-        "#17becf",
+        "#55c2ce",
         build,
         query,  # display name  # color (cyan)
     )
@@ -245,7 +245,7 @@ def _create_brute_force_engine(
 
     return Engine(
         "Brute force",
-        "#9467bd",
+        "#a088b6",
         build,
         query,  # display name  # color (purple)
     )
@@ -336,11 +336,11 @@ def get_engines(
     """
     # Always available engines
     engines = {
-        "fastquadtree (np)": _create_fastquadtree_np_engine(
-            bounds, max_points, max_depth
-        ),
         "fastquadtree": _create_fastquadtree_engine(bounds, max_points, max_depth),
         "fastquadtree (obj tracking)": _create_fastquadtree_items_engine(
+            bounds, max_points, max_depth
+        ),
+        "fastquadtree (np)": _create_fastquadtree_np_engine(
             bounds, max_points, max_depth
         ),
         "e-pyquadtree": _create_e_pyquadtree_engine(bounds, max_points, max_depth),

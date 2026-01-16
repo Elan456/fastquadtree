@@ -25,7 +25,7 @@ class Index:
 
     This class provides the same interface as pyqtree.Index but is backed by
     a high-performance Rust implementation. Based on benchmarks, this provides
-    an overall performance boost of approximately 6.5x compared to the original
+    an overall performance boost of approximately 10x compared to the original
     pure-Python implementation.
 
     For new projects not requiring pyqtree compatibility, consider using

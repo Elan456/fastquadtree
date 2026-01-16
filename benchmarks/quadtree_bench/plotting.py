@@ -57,7 +57,14 @@ class PlotManager:
         # Update axes
         for col in (1, 2, 3):
             fig.update_xaxes(title_text="Number of points", row=1, col=col)
-            fig.update_yaxes(title_text="Time (s)", row=1, col=col)
+            fig.update_yaxes(
+                title_text="Time (s)",
+                row=1,
+                col=col,
+                type="log",
+                tickformat=".3g",
+                dtick=0.25,
+            )
 
         # Update layout
         fig.update_layout(
@@ -250,7 +257,6 @@ class PlotManager:
             height=600,
         )
 
-        if "rate" in metric:
-            fig.update_yaxes(type="log")
+        fig.update_yaxes(type="log")
 
         return fig
