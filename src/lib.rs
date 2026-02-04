@@ -1,10 +1,12 @@
 pub mod geom;
 pub mod quadtree;
 pub mod rect_quadtree;
+pub mod obj_store;
 
 pub use crate::geom::{dist_sq_point_to_rect, dist_sq_points, mid, Coord, Point, Rect};
 pub use crate::quadtree::{Item, QuadTree};
 pub use crate::rect_quadtree::{RectItem, RectQuadTree};
+pub use crate::obj_store::{ObjStore};
 
 use numpy::PyReadonlyArray2;
 use numpy::PyArray1;
@@ -50,6 +52,7 @@ macro_rules! define_point_quadtree_pyclass {
         #[pyclass(name = $py_name)]
         pub struct $rs_name {
             inner: QuadTree<$t>,
+            obj_store: ObjStore<Point<$t>>,
         }
 
         #[pymethods]
@@ -67,7 +70,8 @@ macro_rules! define_point_quadtree_pyclass {
                         default_max_depth_for::<$t>(),
                     ),
                 };
-                Self { inner }
+                let obj_store = ObjStore::new();
+                Self { inner, obj_store }
             }
 
             pub fn to_bytes<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyBytes>> {
@@ -82,12 +86,33 @@ macro_rules! define_point_quadtree_pyclass {
                 let inner = QuadTree::from_bytes(bytes.as_bytes()).map_err(|e| {
                     PyErr::new::<PyValueError, _>(format!("deserialize failed: {e}"))
                 })?;
-                Ok(Self { inner })
+                Ok(Self { inner, obj_store: ObjStore::new() })
             }
 
             pub fn insert(&mut self, id: u64, xy: ($t, $t)) -> bool {
                 let (x, y) = xy;
                 self.inner.insert(Item { id, point: Point { x, y } })
+            }
+
+            pub fn insert_object<'py>(
+                &mut self,
+                obj: Bound<'py, PyAny>,
+                point: ($t, $t),
+            ) -> PyResult<u64> {
+                let (x, y) = point;
+                let p = Point { x, y };
+
+                // Insert into store first to get an id
+                let id = self.obj_store.insert(p, Some(obj.unbind()));
+
+                // Insert into quadtree using the same id
+                if self.inner.insert(Item { id, point: p }) {
+                    Ok(id)
+                } else {
+                    // Roll back store so ids stay consistent
+                    self.obj_store.pop_id(id);
+                    Err(PyValueError::new_err("quadtree insert failed"))
+                }
             }
 
             /// Insert many points with auto ids starting at start_id. Returns the last id used.
@@ -327,6 +352,50 @@ macro_rules! define_point_quadtree_pyclass {
                     }
 
                     Ok(Bound::from_owned_ptr(py, out_ptr).downcast_into_unchecked::<PyList>())
+                }
+            }
+
+            pub fn query_items_using_rust_obj_store<'py>(
+                &self,
+                py: Python<'py>,
+                rect: ($t, $t, $t, $t),
+            ) -> PyResult<Bound<'py, PyList>> {
+                let (min_x, min_y, max_x, max_y) = rect;
+
+                // 1) Query ids without the GIL
+                let ids: Vec<u64> = py.detach(|| {
+                    self.inner
+                        .query(Rect { min_x, min_y, max_x, max_y })
+                        .into_iter()
+                        .map(|it| it.0)
+                        .collect()
+                });
+
+                // 2) Bulk lookup borrowed PyObject* pointers from the obj_store (no GIL needed)
+                let ptrs: Vec<*mut pyo3::ffi::PyObject> = self
+                    .obj_store
+                    .bulk_obj_ptrs(&ids, /*strict_no_holes=*/ true)
+                    .map_err(|e| PyValueError::new_err(format!("ObjStore lookup failed: {e:?}")))?;
+
+                // 3) Build Python list in one allocation, fill via SET_ITEM
+                unsafe {
+                    let n = ptrs.len() as pyo3::ffi::Py_ssize_t;
+                    let list_ptr = pyo3::ffi::PyList_New(n);
+                    if list_ptr.is_null() {
+                        return Err(PyErr::fetch(py));
+                    }
+
+                    for (i, obj_ptr) in ptrs.into_iter().enumerate() {
+                        // list steals a reference; give it a new owned ref
+                        pyo3::ffi::Py_INCREF(obj_ptr);
+                        pyo3::ffi::PyList_SetItem(list_ptr, i as pyo3::ffi::Py_ssize_t, obj_ptr);
+                    }
+
+                    // from_owned_ptr yields Bound<PyAny>, so downcast
+                    let any = Bound::from_owned_ptr(py, list_ptr);
+                    any.downcast_into::<PyList>().map_err(|e| {
+                        PyValueError::new_err(format!("Failed to downcast to PyList: {e}"))
+                    })
                 }
             }
 

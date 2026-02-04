@@ -165,6 +165,7 @@ def main():
     ap.add_argument("--points", type=int, default=500_000)
     ap.add_argument("--queries", type=int, default=500)
     ap.add_argument("--repeats", type=int, default=3)
+    ap.add_argument("--skip-pyqtree", action="store_true")
     args = ap.parse_args()
 
     print("Native vs Shim Benchmark")
@@ -236,7 +237,8 @@ def main():
         queries,
         args.repeats,
         desc="pyqtree (original)",
-    )
+    ) if not args.skip_pyqtree else (0, 0)
+    
     fqt_build, fqt_query = median_times(
         lambda pts, qs: bench_pyqtree(pts, qs, fqt=True),
         points,

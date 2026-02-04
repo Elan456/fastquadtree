@@ -261,19 +261,21 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Raises:
             ValueError: If geometry is outside the tree bounds.
         """
-        rid = self._store.alloc_id()
+        # rid = self._store.alloc_id()
 
-        if not self._native.insert(rid, geom):
-            # Return the allocated id to the free-list to avoid id gaps
-            self._store._free.append(rid)
-            min_x, min_y, max_x, max_y = self._bounds
-            raise ValueError(
-                f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
-            )
+        # if not self._native.insert(rid, geom):
+        #     # Return the allocated id to the free-list to avoid id gaps
+        #     self._store._free.append(rid)
+        #     min_x, min_y, max_x, max_y = self._bounds
+        #     raise ValueError(
+        #         f"Geometry {geom!r} is outside bounds ({min_x}, {min_y}, {max_x}, {max_y})"
+        #     )
 
-        self._store.add(self._make_item(rid, geom, obj))
-        self._count += 1
-        return rid
+        # self._store.add(self._make_item(rid, geom, obj))
+        # self._count += 1
+        # return rid
+
+        return self._native.insert_object(self._make_item(0, geom, obj), geom)
 
     def insert_many(
         self, geoms: Sequence[G], objs: list[Any] | None = None
@@ -399,7 +401,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Returns:
             List of Item objects.
         """
-        return self._native.query_items(rect, self._store._arr)
+        return self._native.query_items_using_rust_obj_store(rect)
+
+        # return self._native.query_items(rect, self._store._arr)
 
         # return self._store.get_many_by_ids(self._native.query_ids(rect))
 
