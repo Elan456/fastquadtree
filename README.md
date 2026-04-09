@@ -62,13 +62,45 @@ from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~10x faster whil
 
 ## Quickstart
 
+### 1. Point indexing (`QuadTree`)
+
 ```python
 from fastquadtree import QuadTree
 
-qt = QuadTree((0, 0, 1000, 1000), 16)  # bounds and capacity
-qt.insert((100, 200), id_=1)  # insert point with ID 1
-print(qt.query((0, 0, 500, 500)))  # gets all points in that area: [(1, 100.0, 200.0)]
+qt = QuadTree((0.0, 0.0, 1000.0, 1000.0), capacity=16)
+
+# Insert points with explicit IDs (or omit id_ for auto IDs)
+qt.insert((100.0, 200.0), id_=1)
+qt.insert((120.0, 260.0), id_=2)
+qt.insert((700.0, 800.0), id_=3)
+
+# Range query returns (id, x, y)
+hits = qt.query((0.0, 0.0, 500.0, 500.0))
+print(hits)  # [(1, 100.0, 200.0), (2, 120.0, 260.0)]
 ```
+
+### 2. Object tracking (`QuadTreeObjects`)
+
+```python
+from fastquadtree import QuadTreeObjects
+
+qto = QuadTreeObjects((0.0, 0.0, 1000.0, 1000.0), capacity=16)
+
+player = {"name": "player-1", "team": "blue"}
+enemy = {"name": "enemy-9", "team": "red"}
+
+qto.insert((100.0, 200.0), obj=player)
+qto.insert((130.0, 220.0), obj=enemy)
+
+# Query returns PointItem objects with id_, x, y, geom, and obj
+for item in qto.query((0.0, 0.0, 300.0, 300.0)):
+    print(item.id_, item.x, item.y, item.obj["name"]) # 0 100.0 200.0 player-1
+                                                      # 1 130.0 220.0 enemy-9
+
+# Remove entries by object identity
+qto.delete_by_object(player)  # returns 1 (number of items deleted)
+```
+
 [See the quickstart guide](https://elan456.github.io/fastquadtree/quickstart/) or the [interactive demos](https://elan456.github.io/fastquadtree/runnables/) for more details.
 ## Benchmarks
 
