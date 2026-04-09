@@ -53,11 +53,11 @@ from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~10x faster whil
 
 | Class | Stores | Object tracking | Best when |
 |---|---|---|---|
-| `QuadTree` | Points `(x, y)` | No | You need fast spatial indexing/querying for points and only care about IDs + coordinates. |
-| `RectQuadTree` | Bounding boxes `(min_x, min_y, max_x, max_y)` | No | Your data is naturally rectangular (regions, hitboxes, extents) and you need rectangle overlap queries. |
-| `QuadTreeObjects` | Points `(x, y)` | Yes | You need point queries plus direct Python object association and object-based deletes/lookups. |
-| `RectQuadTreeObjects` | Bounding boxes `(min_x, min_y, max_x, max_y)` | Yes | You need rectangle indexing and also want to attach/manage Python objects per entry. |
-| `fastquadtree.pyqtree.Index` | Bounding boxes (pyqtree-style API) | Yes | You are migrating from `pyqtree` and want drop-in compatibility with significantly better performance. |
+| `QuadTree` | Points | No | Fast point indexing with IDs only. |
+| `RectQuadTree` | Bounding boxes | No | Fast rectangle overlap queries. |
+| `QuadTreeObjects` | Points | Yes | Point indexing with attached Python objects. |
+| `RectQuadTreeObjects` | Bounding boxes | Yes | Rectangle indexing with attached objects. |
+| `fastquadtree.pyqtree.Index` | Bounding boxes | Yes | pyqtree-compatible API, much faster. |
 
 
 ## Quickstart
