@@ -470,6 +470,8 @@ def spritecollide(
     group: Any,
     dokill: bool,
     collided: _Collided | None = None,
+    *,
+    sync: bool = True,
 ) -> list[Any]:
     """
     Find sprites in a group that collide with another sprite.
@@ -489,6 +491,9 @@ def spritecollide(
         group: Target sprite group.
         dokill: If true, kill each collided target sprite.
         collided: Optional custom collision callback.
+        sync: When true, synchronize indexed groups before querying. Set to
+            false only if you have already called ``Group.sync(...)`` after the
+            latest sprite rect changes.
 
     Returns:
         List of collided sprites.
@@ -508,7 +513,7 @@ def spritecollide(
     if collided is None and (not _has_rect(sprite) or not _is_rect_like(sprite.rect)):
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
-    candidates = group.query_rect(query_rect)
+    candidates = group.query_rect(query_rect, sync=sync)
     collided_sprites = [
         candidate for candidate in candidates if _collides(sprite, candidate, collided)
     ]
@@ -524,6 +529,8 @@ def spritecollideany(
     sprite: Any,
     group: Any,
     collided: _Collided | None = None,
+    *,
+    sync: bool = True,
 ) -> Any | None:
     """
     Return one sprite in a group that collides with another sprite.
@@ -537,6 +544,9 @@ def spritecollideany(
         sprite: Sprite to test against ``group``.
         group: Target sprite group.
         collided: Optional custom collision callback.
+        sync: When true, synchronize indexed groups before querying. Set to
+            false only if you have already called ``Group.sync(...)`` after the
+            latest sprite rect changes.
 
     Returns:
         The first collided sprite, or ``None``.
@@ -556,7 +566,7 @@ def spritecollideany(
     if collided is None and (not _has_rect(sprite) or not _is_rect_like(sprite.rect)):
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
-    for candidate in group.query_rect(query_rect):
+    for candidate in group.query_rect(query_rect, sync=sync):
         if _collides(sprite, candidate, collided):
             return candidate
     return None
@@ -568,6 +578,8 @@ def groupcollide(
     dokilla: bool,
     dokillb: bool,
     collided: _Collided | None = None,
+    *,
+    sync: bool = True,
 ) -> dict[Any, list[Any]]:
     """
     Detect collisions between two sprite groups.
@@ -586,6 +598,9 @@ def groupcollide(
         dokilla: If true, kill collided sprites from ``groupa``.
         dokillb: If true, kill collided sprites from ``groupb``.
         collided: Optional custom collision callback.
+        sync: When true, synchronize indexed groups before querying. Set to
+            false only if you have already called ``Group.sync(...)`` after the
+            latest sprite rect changes.
 
     Returns:
         Dictionary mapping each collided sprite from ``groupa`` to a list of
@@ -616,11 +631,14 @@ def groupcollide(
     if groupb._sprites_without_rect:
         return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
 
-    groupb.sync()
+    if sync:
+        groupb.sync()
     collided_sprites: dict[Any, list[Any]] = {}
 
     for group_a_sprite in groupa:
-        collisions = spritecollide(group_a_sprite, groupb, dokillb, collided)
+        collisions = spritecollide(
+            group_a_sprite, groupb, dokillb, collided, sync=False
+        )
         if collisions:
             collided_sprites[group_a_sprite] = collisions
 

@@ -197,6 +197,17 @@ def test_sync_reindexes_moved_and_resized_sprites():
     group.sync(moving)
 
     assert set(fpygame.spritecollide(query, group, False)) == {query, moving}
+    assert set(fpygame.spritecollide(query, group, False, sync=False)) == {
+        query,
+        moving,
+    }
+    assert fpygame.spritecollideany(query, group, sync=False) in {query, moving}
+    assert _same_groupcollide(
+        fpygame.groupcollide(
+            pygame.sprite.Group(query), group, False, False, sync=False
+        ),
+        {query: [query, moving]},
+    )
 
 
 def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
