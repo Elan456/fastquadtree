@@ -338,6 +338,30 @@ def test_unusable_rects_preserve_pygame_fallback_behavior():
         fpygame.spritecollide(query, fq_missing, False)
 
 
+def test_collision_helpers_sync_before_unusable_rect_fallback():
+    query = RectSprite((0, 0, 10, 10))
+    stale = RectSprite((0, 0, 10, 10))
+    pg_group = pygame.sprite.Group(stale)
+    fq_group = fpygame.Group((0, 0, 100, 100), stale)
+    stale.rect = object()
+
+    with pytest.raises(TypeError):
+        pygame.sprite.spritecollide(query, pg_group, False)
+    with pytest.raises(TypeError):
+        fpygame.spritecollide(query, fq_group, False)
+    assert stale in fq_group._sprites_without_rect
+
+    with pytest.raises(TypeError):
+        pygame.sprite.spritecollideany(query, pg_group)
+    with pytest.raises(TypeError):
+        fpygame.spritecollideany(query, fq_group)
+
+    with pytest.raises(TypeError):
+        pygame.sprite.groupcollide(pygame.sprite.Group(query), pg_group, False, False)
+    with pytest.raises(TypeError):
+        fpygame.groupcollide(pygame.sprite.Group(query), fq_group, False, False)
+
+
 def test_opaque_custom_collided_warns_and_matches_pygame_full_scan():
     query = RectSprite((0, 0, 10, 10))
     far = RectSprite((1000, 1000, 10, 10))

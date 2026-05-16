@@ -594,10 +594,13 @@ def spritecollide(
     if query_rect is None:
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
+    if sync:
+        group.sync()
+
     if group._sprites_without_rect:
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
-    candidates = group.query_rect(query_rect, sync=sync)
+    candidates = group.query_rect(query_rect, sync=False)
     collided_sprites = [
         candidate for candidate in candidates if sprite.rect.colliderect(candidate.rect)
     ]
@@ -649,10 +652,13 @@ def spritecollideany(
 
     query_rect = _sprite_rect(sprite)
 
+    if sync:
+        group.sync()
+
     if query_rect is None or group._sprites_without_rect:
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
-    for candidate in group.query_rect(query_rect, sync=sync):
+    for candidate in group.query_rect(query_rect, sync=False):
         if sprite.rect.colliderect(candidate.rect):
             return candidate
     return None
@@ -706,11 +712,11 @@ def groupcollide(
         _warn_custom_collided()
         return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
 
-    if groupb._sprites_without_rect:
-        return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
-
     if sync:
         groupb.sync()
+
+    if groupb._sprites_without_rect:
+        return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
     collided_sprites: dict[Any, list[Any]] = {}
 
     for group_a_sprite in groupa:
