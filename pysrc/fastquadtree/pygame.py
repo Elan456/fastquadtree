@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, cast
 
 try:
     import pygame as _pygame
@@ -86,6 +86,16 @@ def _contains_rect(bounds: Bounds, rect: Bounds) -> bool:
     min_x, min_y, max_x, max_y = bounds
     left, top, right, bottom = rect
     return min_x <= left and min_y <= top and right <= max_x and bottom <= max_y
+
+
+def _intersect_bounds(left: Bounds, right: Bounds) -> Bounds | None:
+    min_x = max(left[0], right[0])
+    min_y = max(left[1], right[1])
+    max_x = min(left[2], right[2])
+    max_y = min(left[3], right[3])
+    if min_x >= max_x or min_y >= max_y:
+        return None
+    return (min_x, min_y, max_x, max_y)
 
 
 def _pad_bounds(bounds: Bounds) -> Bounds:
@@ -346,7 +356,9 @@ class Group(_pygame.sprite.Group):
 
         Returns:
             Sprites whose indexed rects intersect ``rect``. Returns an empty
-            list if the query rectangle cannot be interpreted.
+            list if the query rectangle cannot be interpreted or does not
+            overlap the current world bounds. Queries that partially extend
+            outside the world bounds are clamped before searching.
         """
         if sync:
             self.sync()
@@ -357,10 +369,11 @@ class Group(_pygame.sprite.Group):
 
         if self._tree is None:
             return []
-        if self._bounds is not None and not _contains_rect(self._bounds, rect_bounds):
-            # Queries outside the tree bounds may still intersect indexed sprites
-            # near the edge. Grow/rebuild so the native query can represent it.
-            self._ensure_tree_contains(rect_bounds)
+
+        clipped_bounds = _intersect_bounds(cast(Bounds, self._bounds), rect_bounds)
+        if clipped_bounds is None:
+            return []
+        rect_bounds = clipped_bounds
 
         objects: list[Any] = []
         for id_ in self._tree.query_ids(rect_bounds):

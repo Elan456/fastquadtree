@@ -255,6 +255,12 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert set(group.query_rect(pygame.Rect(-1, -1, 20, 20))) == {near}
     assert group.query_rect((0, 0, 0, 10)) == []
 
+    fixed_bounds = group.bounds
+    assert group.query_rect((5000, 5000, 5010, 5010)) == []
+    assert group.bounds == fixed_bounds
+    assert set(group.query_rect((-2000, -2000, 5, 5))) == {near}
+    assert group.bounds == fixed_bounds
+
 
 def test_unusable_rects_preserve_pygame_fallback_behavior():
     query = RectSprite((0, 0, 10, 10))
