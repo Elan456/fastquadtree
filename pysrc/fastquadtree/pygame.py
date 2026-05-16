@@ -215,6 +215,7 @@ class Group(_pygame.sprite.Group):
         self._tree: RectQuadTreeObjects | None = None
         self._indexed_rects: dict[Any, Bounds] = {}
         self._sprites_without_rect: set[Any] = set()
+        self._defer_index_sync = False
 
         if self._bounds is not None:
             self._tree = self._new_tree(self._bounds)
@@ -228,7 +229,7 @@ class Group(_pygame.sprite.Group):
                 self._bounds = _bounds_from_rects(initial_rects)
                 self._tree = self._new_tree(self._bounds)
 
-        self.add(*initial_sprites)
+        self.add(initial_sprites)
 
     @property
     def bounds(self) -> Bounds | None:
@@ -259,8 +260,23 @@ class Group(_pygame.sprite.Group):
             dtype=self._dtype,
         )
 
+    def add(self, *sprites: Any) -> None:
+        """Add sprites and synchronize the quadtree index once for the batch."""
+        flattened = _flatten_sprites(sprites)
+        self._defer_index_sync = True
+        try:
+            for sprite in flattened:
+                if not self.has_internal(sprite):
+                    self.add_internal(sprite)
+                    sprite.add_internal(self)
+        finally:
+            self._defer_index_sync = False
+        self._sync_many(flattened)
+
     def add_internal(self, sprite: _pygame.sprite.Sprite, layer: Any = None) -> None:
         super().add_internal(sprite, layer)
+        if self._defer_index_sync:
+            return
         self.sync(sprite)
 
     def remove_internal(self, sprite: _pygame.sprite.Sprite) -> None:
@@ -360,6 +376,54 @@ class Group(_pygame.sprite.Group):
                 return
             self._tree.update(id_, *new_bounds)
             self._indexed_rects[sprite] = new_bounds
+
+    def _sync_many(self, sprites: Iterable[_pygame.sprite.Sprite]) -> None:
+        pending: list[tuple[_pygame.sprite.Sprite, Bounds | None, Bounds]] = []
+
+        for sprite in sprites:
+            rect_bounds = _sprite_bounds(sprite)
+            if rect_bounds is None:
+                self._unindex_sprite(sprite)
+                self._sprites_without_rect.add(sprite)
+                continue
+
+            self._sprites_without_rect.discard(sprite)
+            old_bounds = self._indexed_rects.get(sprite)
+            if old_bounds != rect_bounds:
+                pending.append((sprite, old_bounds, rect_bounds))
+
+        if not pending:
+            return
+
+        if self._bounds is None or self._tree is None:
+            self._bounds = _bounds_from_rects(
+                rect_bounds for _, _, rect_bounds in pending
+            )
+            self.rebuild()
+            return
+
+        new_bounds = self._bounds
+        for _, _, rect_bounds in pending:
+            if not _contains_rect(new_bounds, rect_bounds):
+                new_bounds = _expanded_bounds(new_bounds, rect_bounds)
+
+        if new_bounds != self._bounds:
+            self._bounds = new_bounds
+            self.rebuild()
+            return
+
+        for sprite, old_bounds, rect_bounds in pending:
+            if old_bounds is None:
+                self._index_sprite(sprite, rect_bounds=rect_bounds)
+            else:
+                id_ = self._find_sprite_id(sprite, old_bounds)
+                if id_ is None:
+                    self._indexed_rects.pop(sprite, None)
+                    self._index_sprite(sprite, rect_bounds=rect_bounds)
+                else:
+                    assert self._tree is not None
+                    self._tree.update(id_, *rect_bounds)
+                    self._indexed_rects[sprite] = rect_bounds
 
     def query_rect(
         self, rect: _pygame.Rect | Bounds, *, sync: bool = True

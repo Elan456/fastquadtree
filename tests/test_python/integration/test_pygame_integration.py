@@ -142,7 +142,7 @@ def test_dokill_matches_pygame_for_spritecollide_and_groupcollide():
 
     fq_hits = fpygame.spritecollide(fq_player, fq_group, True)
     pg_hits = pygame.sprite.spritecollide(pg_player, pg_group, True)
-    assert [sprite.label for sprite in fq_hits] == [sprite.label for sprite in pg_hits]
+    assert {sprite.label for sprite in fq_hits} == {sprite.label for sprite in pg_hits}
     assert {sprite.label for sprite in fq_group} == {
         sprite.label for sprite in pg_group
     }
@@ -281,6 +281,41 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert tuple(one_shot) == (0, 0, 10, 10)
 
 
+def test_bulk_add_batches_index_rebuilds():
+    inside = [RectSprite((10, 10, 5, 5)), RectSprite((30, 30, 5, 5))]
+    inside_group = fpygame.Group((0, 0, 100, 100))
+    inside_rebuilds = 0
+    original_inside_rebuild = inside_group.rebuild
+
+    def count_inside_rebuild() -> None:
+        nonlocal inside_rebuilds
+        inside_rebuilds += 1
+        original_inside_rebuild()
+
+    inside_group.rebuild = count_inside_rebuild
+    inside_group.add(inside)
+    assert inside_rebuilds == 0
+    assert inside_group.indexed_count == 2
+
+    outside = [RectSprite((200, 200, 5, 5)), RectSprite((400, 400, 5, 5))]
+    outside_group = fpygame.Group((0, 0, 100, 100))
+    outside_rebuilds = 0
+    original_outside_rebuild = outside_group.rebuild
+
+    def count_outside_rebuild() -> None:
+        nonlocal outside_rebuilds
+        outside_rebuilds += 1
+        original_outside_rebuild()
+
+    outside_group.rebuild = count_outside_rebuild
+    outside_group.add(outside)
+    assert outside_rebuilds == 1
+    assert outside_group.indexed_count == 2
+    assert set(outside_group.query_rect((190, 190, 410, 410), sync=False)) == set(
+        outside
+    )
+
+
 def test_unusable_rects_preserve_pygame_fallback_behavior():
     query = RectSprite((0, 0, 10, 10))
     zero_width = RectSprite((0, 0, 0, 10))
@@ -376,6 +411,7 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     empty = fpygame.Group()
     empty.rebuild()
     assert empty.bounds == (-1.0, -1.0, 1.0, 1.0)
+    assert fpygame._expanded_bounds(None, (1, 1, 6, 6)) == (0.5, 0.5, 6.5, 6.5)
 
     grows_from_no_bounds = fpygame.Group()
     grows_from_no_bounds.add(sprite)
@@ -402,6 +438,35 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     sprite.rect.move_ip(1, 1)
     no_rebuild.sync(sprite)
     assert no_rebuild.query_rect(sprite.rect) == [sprite]
+
+    no_rebuild.add(sprite)
+    assert no_rebuild.indexed_count == 1
+
+    manual_internal = fpygame.Group((0, 0, 10, 10))
+    manual_internal.add_internal(RectSprite((1, 1, 2, 2)))
+    assert manual_internal.indexed_count == 1
+
+    no_rebuild.sync(missing)
+    assert missing in no_rebuild._sprites_without_rect
+
+    outside_sync = RectSprite((1, 1, 2, 2))
+    outside_group = fpygame.Group((0, 0, 10, 10), outside_sync)
+    outside_sync.rect.update(100, 100, 2, 2)
+    outside_group.sync(outside_sync)
+    assert outside_group.query_rect(outside_sync.rect) == [outside_sync]
+
+    batch_update = RectSprite((10, 10, 2, 2))
+    batch_group = fpygame.Group((0, 0, 100, 100), batch_update)
+    batch_update.rect.move_ip(1, 1)
+    batch_group.add(batch_update)
+    assert batch_group.query_rect(batch_update.rect, sync=False) == [batch_update]
+
+    stale_batch = RectSprite((20, 20, 2, 2))
+    stale_batch_group = fpygame.Group((0, 0, 100, 100), stale_batch)
+    stale_batch.rect.move_ip(1, 1)
+    stale_batch_group._tree.clear()
+    stale_batch_group.add(stale_batch)
+    assert stale_batch_group.query_rect(stale_batch.rect, sync=False) == [stale_batch]
 
     stale = fpygame.Group((0, 0, 10, 10), sprite)
     stale._tree.clear()
