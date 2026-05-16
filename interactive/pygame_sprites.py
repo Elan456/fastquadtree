@@ -140,8 +140,11 @@ def draw_group_backend_overlay(
 
 def create_group(backend: GROUP_BACKEND, sprites: Iterable[pygame.sprite.Sprite]):
     if backend == "fastquadtree":
-        return fpygame.Group(*sprites, bounds=FQT_GROUP_BOUNDS)
-    return pygame.sprite.Group(*sprites)
+        group = fpygame.Group(bounds=FQT_GROUP_BOUNDS)
+    else:
+        group = pygame.sprite.Group()
+    group.add(sprites)
+    return group
 
 
 def viewport_rect(camera: Camera) -> pygame.Rect:
