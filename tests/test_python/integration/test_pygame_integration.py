@@ -210,6 +210,30 @@ def test_sync_reindexes_moved_and_resized_sprites():
     )
 
 
+def test_rebuild_on_update_reindexes_all_moved_sprites():
+    query = RectSprite((0, 0, 10, 10))
+    moving = RectSprite((50, 50, 5, 5))
+    group = fpygame.Group(
+        (0, 0, 100, 100),
+        query,
+        moving,
+        rebuild_on_update=True,
+    )
+
+    moving.update = lambda dx=0, dy=0: moving.rect.update(5, 5, 20, 20)
+
+    assert fpygame.spritecollide(query, group, False) == [query]
+
+    group.update()
+
+    assert set(fpygame.spritecollide(query, group, False, sync=False)) == {
+        query,
+        moving,
+    }
+    assert group.indexed_count == 2
+    assert group.copy()._rebuild_on_update is True
+
+
 def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     near = RectSprite((0, 0, 10, 10))
     far = RectSprite((500, 500, 10, 10))

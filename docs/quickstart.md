@@ -105,9 +105,17 @@ Tip: Use `QuadTree` instead of `QuadTreeObjects` for max speed when you do not n
 
 ## Pygame sprite groups
 
-The optional `fastquadtree.pygame` module provides a `pygame.sprite.Group`
-replacement that indexes sprite `rect` bounds. Use it for collision broadphase
-queries or viewport culling in pygame projects.
+The optional `fastquadtree.pygame` module provides a mostly drop-in
+`pygame.sprite.Group` replacement plus collision helpers shaped like pygame's
+own `spritecollide(...)` APIs. It indexes sprite `rect` bounds to give you
+automatic broadphase culling for collision queries and viewport culling.
+
+This is most useful when you have many static or mostly stable sprites and each
+query touches only a small part of the world. The tradeoff is tree maintenance:
+moving indexed sprites need `Group.update(...)` or `Group.sync(...)` so the
+index reflects their current rects. If most sprites move every frame, create the
+group with `rebuild_on_update=True` to rebuild the index after each
+`Group.update(...)` instead of incrementally syncing every sprite.
 
 ```python
 import pygame
@@ -120,8 +128,10 @@ blocks.add(block_sprites)
 # Collision helper with the same shape as pygame.sprite.spritecollide.
 hits = fpygame.spritecollide(player, blocks, dokill=False)
 
-# Viewport culling: draw only sprites near the camera.
-visible = blocks.query_rect(camera_rect, sync=False)
+# Viewport culling: use a lightweight sprite whose rect is the camera.
+camera_query = pygame.sprite.Sprite()
+camera_query.rect = camera_rect
+visible = fpygame.spritecollide(camera_query, blocks, dokill=False, sync=False)
 for sprite in visible:
     screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
 ```

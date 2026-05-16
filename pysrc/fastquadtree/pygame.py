@@ -152,9 +152,13 @@ class Group(_pygame.sprite.Group):
         max_depth: Optional maximum quadtree depth.
         dtype: Coordinate data type (``"f32"``, ``"f64"``, ``"i32"``,
             ``"i64"``). Default: ``"f32"``.
+        rebuild_on_update: When true, ``Group.update(...)`` rebuilds the whole
+            index after updating sprites instead of incrementally syncing each
+            sprite. This is useful when most indexed sprites move every frame.
 
     Example:
         ```python
+        import fastquadtree.pygame as fpygame
         group = fpygame.Group(bounds=(0, 0, 1000, 1000))
         group.add(enemies)
         hits = fpygame.spritecollide(player, group, dokill=False)
@@ -168,6 +172,7 @@ class Group(_pygame.sprite.Group):
         capacity: int = 16,
         max_depth: int | None = None,
         dtype: QuadTreeDType = "f32",
+        rebuild_on_update: bool = False,
     ):
         if bounds is None and sprites and _looks_like_bounds(sprites[0]):
             bounds = validate_bounds(sprites[0])
@@ -177,6 +182,7 @@ class Group(_pygame.sprite.Group):
         self._capacity = capacity
         self._max_depth = max_depth
         self._dtype: QuadTreeDType = dtype
+        self._rebuild_on_update = rebuild_on_update
         self._bounds: Bounds | None = validate_bounds(bounds) if bounds else None
         self._tree: RectQuadTreeObjects | None = None
         self._indexed_rects: dict[Any, Bounds] = {}
@@ -214,6 +220,7 @@ class Group(_pygame.sprite.Group):
             capacity=self._capacity,
             max_depth=self._max_depth,
             dtype=self._dtype,
+            rebuild_on_update=self._rebuild_on_update,
         )
 
     def _new_tree(self, bounds: Bounds) -> RectQuadTreeObjects:
@@ -238,7 +245,10 @@ class Group(_pygame.sprite.Group):
 
     def update(self, *args: Any, **kwargs: Any) -> None:
         super().update(*args, **kwargs)
-        self.sync()
+        if self._rebuild_on_update:
+            self.rebuild()
+        else:
+            self.sync()
 
     def set_bounds(self, bounds: Bounds, rebuild: bool = True) -> None:
         """
