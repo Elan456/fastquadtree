@@ -63,6 +63,7 @@ dev = [  # Testing and build dependencies
   "pyqtree==1.0.0",
   "numpy",
   "pre-commit",
+  "pygame-ce",  # For the pygame sprite collison integration
 ]
 docs = [  # Documentation dependencies
   "mkdocs>=1.6",
