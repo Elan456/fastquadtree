@@ -23,6 +23,11 @@ def test_core_modules_import_without_pygame_installed(monkeypatch):
         for name, module in list(sys.modules.items())
         if name == "pygame" or name.startswith("pygame.")
     }
+    previous_fastquadtree_modules = {
+        name: module
+        for name, module in list(sys.modules.items())
+        if name == "fastquadtree" or name.startswith("fastquadtree.")
+    }
 
     def block_pygame_import(name, *args, **kwargs):
         if name == "pygame" or name.startswith("pygame."):
@@ -31,6 +36,8 @@ def test_core_modules_import_without_pygame_installed(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", block_pygame_import)
     for module_name in previous_pygame_modules:
+        sys.modules.pop(module_name, None)
+    for module_name in previous_fastquadtree_modules:
         sys.modules.pop(module_name, None)
 
     import fastquadtree
@@ -58,10 +65,13 @@ def test_core_modules_import_without_pygame_installed(monkeypatch):
         assert isinstance(exc_info.value.__cause__, ImportError)
         assert "blocked pygame import" in str(exc_info.value.__cause__)
     finally:
-        sys.modules.pop("fastquadtree.pygame", None)
+        for module_name in list(sys.modules):
+            if module_name == "fastquadtree" or module_name.startswith("fastquadtree."):
+                sys.modules.pop(module_name, None)
         for module_name in list(sys.modules):
             if module_name == "pygame" or module_name.startswith("pygame."):
                 sys.modules.pop(module_name, None)
+        sys.modules.update(previous_fastquadtree_modules)
         sys.modules.update(previous_pygame_modules)
         if previous_pygame_module is not None:
             sys.modules["fastquadtree.pygame"] = previous_pygame_module
