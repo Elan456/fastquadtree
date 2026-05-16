@@ -140,7 +140,12 @@ import warnings
 from collections.abc import Callable, Iterable
 from typing import Any
 
-import pygame as _pygame
+try:
+    import pygame as _pygame
+except ImportError as exc:
+    raise ImportError(
+        "Pygame is not installed. Install pygame to use the fastquadtree.pygame integration features."
+    ) from exc
 
 from ._common import Bounds, QuadTreeDType, validate_bounds
 from .rect_quadtree_objects import RectQuadTreeObjects
@@ -258,7 +263,7 @@ class Group(_pygame.sprite.Group):
         _pygame.sprite.AbstractGroup.__init__(self)
         self._capacity = capacity
         self._max_depth = max_depth
-        self._dtype = dtype
+        self._dtype: QuadTreeDType = dtype
         self._bounds: Bounds | None = validate_bounds(bounds) if bounds else None
         self._tree: RectQuadTreeObjects | None = None
         self._indexed_rects: dict[Any, Bounds] = {}
