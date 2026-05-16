@@ -41,6 +41,7 @@
 - Support for [inserting bounding boxes](api/rect_quadtree.md) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
+- Optional [pygame sprite-group integration](api/pygame.md) for collision broadphase and viewport culling
 - Fast [serialization](benchmark.md#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions

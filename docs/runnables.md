@@ -60,3 +60,22 @@ uv run python interactive/ballpit.py
 ```
 
 ![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)
+
+## 3. Pygame sprite group comparison
+- Compare `pygame.sprite.Group` with `fastquadtree.pygame.Group`
+- Press `G` to switch group backends while the demo is running
+- Uses the fastquadtree-backed group for collision broadphase and viewport culling
+
+This demo creates many static block sprites and a moving player. Player
+collision uses the normal `spritecollide(...)` flow for both backends. Viewport
+culling asks the same question in both modes: "which blocks intersect the
+camera rect?" by using a lightweight sprite whose `rect` is the camera
+viewport. The pygame backend answers by scanning every block, while the
+fastquadtree backend uses the same `spritecollide(...)` call against its
+indexed group.
+
+```bash
+uv run python interactive/pygame_sprites.py --group fastquadtree
+```
+
+![Pygame_Sprite_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/pygame_sprites_demo.png)

@@ -103,6 +103,35 @@ Tip: Use `QuadTree` instead of `QuadTreeObjects` for max speed when you do not n
 
 ---
 
+## Pygame sprite groups
+
+The optional `fastquadtree.pygame` module provides a `pygame.sprite.Group`
+replacement that indexes sprite `rect` bounds. Use it for collision broadphase
+queries or viewport culling in pygame projects.
+
+```python
+import pygame
+import fastquadtree.pygame as fpygame
+
+world_bounds = (0, 0, 2000, 2000)
+blocks = fpygame.Group(bounds=world_bounds)
+blocks.add(block_sprites)
+
+# Collision helper with the same shape as pygame.sprite.spritecollide.
+hits = fpygame.spritecollide(player, blocks, dokill=False)
+
+# Viewport culling: draw only sprites near the camera.
+visible = blocks.query_rect(camera_rect, sync=False)
+for sprite in visible:
+    screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
+```
+
+pygame is not a required dependency for core `fastquadtree`; install a
+pygame-compatible package such as `pygame-ce` only if you use this integration.
+See the [pygame API docs](api/pygame.md) for details.
+
+---
+
 ## Reset between runs without breaking references
 
 Keep the same `QuadTree` instance alive for UIs or game loops. Wipe contents and optionally reset ids.

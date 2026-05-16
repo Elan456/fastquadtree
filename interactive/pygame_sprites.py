@@ -87,6 +87,12 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = self.y
 
 
+class RectQuerySprite(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.rect = pygame.Rect(0, 0, 0, 0)
+
+
 def draw_world_border(screen: pygame.Surface, camera: Camera):
     border_rect = pygame.Rect(
         WORLD_MIN_X - camera.x,
@@ -146,25 +152,15 @@ def viewport_rect(camera: Camera) -> pygame.Rect:
     return pygame.Rect(left, top, max(0, right - left), max(0, bottom - top))
 
 
-def visible_blocks(
+def spritecollide(
     backend: GROUP_BACKEND,
+    sprite: pygame.sprite.Sprite,
     group: pygame.sprite.Group,
-    viewport: pygame.Rect,
+    dokill: bool = False,
 ) -> list[pygame.sprite.Sprite]:
     if backend == "fastquadtree":
-        assert isinstance(group, fpygame.Group)
-        return group.query_rect(viewport, sync=False)
-    return [sprite for sprite in group if sprite.rect.colliderect(viewport)]
-
-
-def collide_blocks(
-    backend: GROUP_BACKEND,
-    player: Player,
-    group: pygame.sprite.Group,
-):
-    if backend == "fastquadtree":
-        return fpygame.spritecollide(player, group, False, sync=False)
-    return pygame.sprite.spritecollide(player, group, False)
+        return fpygame.spritecollide(sprite, group, dokill, sync=False)
+    return pygame.sprite.spritecollide(sprite, group, dokill)
 
 
 def next_backend(backend: GROUP_BACKEND) -> GROUP_BACKEND:
@@ -193,6 +189,7 @@ def main(group_backend: GROUP_BACKEND = "fastquadtree"):
 
     camera = Camera()  # camera follows the player
     player = Player()
+    viewport_sprite = RectQuerySprite()
     blocks: list[pygame.sprite.Sprite] = []
 
     for _ in range(BLOCK_COUNT):
@@ -220,8 +217,9 @@ def main(group_backend: GROUP_BACKEND = "fastquadtree"):
         camera.y = player.y - screen.get_height() // 2
 
         viewport = viewport_rect(camera)
-        visible = visible_blocks(group_backend, block_group, viewport)
-        touched_blocks = collide_blocks(group_backend, player, block_group)
+        viewport_sprite.rect = viewport
+        visible = spritecollide(group_backend, viewport_sprite, block_group)
+        touched_blocks = spritecollide(group_backend, player, block_group)
 
         screen.fill((255, 255, 255))
         draw_world_border(screen, camera)
