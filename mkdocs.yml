@@ -91,6 +91,7 @@ nav:
       - RectQuadTree: api/rect_quadtree.md
       - QuadTreeObjects: api/quadtree_objects.md
       - RectQuadTreeObjects: api/rect_quadtree_objects.md
+      - pygame integration: api/pygame.md
       - pyqtree: api/pyqtree.md
       - Item: api/item.md
       - PointItem: api/point_item.md

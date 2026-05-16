@@ -1,137 +1,24 @@
 """
-pygame integration plan.
+pygame sprite-group integration backed by a rectangle quadtree.
 
-Goal
-----
-Provide ``fastquadtree.pygame.Group`` as a drop-in replacement for
-``pygame.sprite.Group``. Normal sprite-group behavior should stay compatible
-with pygame, while collision helpers can use a quadtree broadphase to avoid
-checking every sprite against every other sprite.
+This module provides ``fastquadtree.pygame.Group``, a replacement for
+``pygame.sprite.Group`` that keeps a ``RectQuadTreeObjects`` index of each
+sprite's ``rect``. The collision helpers mirror pygame's sprite collision APIs
+and use the index as a broadphase when it is safe to do so.
 
-Primary user path
------------------
-Existing pygame code should be able to switch from:
+Core ``fastquadtree`` APIs do not require pygame. Importing this integration
+module does require pygame or a compatible package such as ``pygame-ce``.
 
-    group = pygame.sprite.Group()
-    hits = pygame.sprite.spritecollide(player, group, dokill=False)
+Example:
+    ```python
+    import fastquadtree.pygame as fpygame
 
-to:
+    enemies = fpygame.Group(bounds=(0, 0, 2000, 2000))
+    enemies.add(enemy_sprites)
 
-    group = fastquadtree.pygame.Group(bounds)
-    hits = fastquadtree.pygame.spritecollide(player, group, dokill=False)
-
-The replacement group should still support the usual ``add``, ``remove``,
-``empty``, ``sprites``, iteration, membership, ``update``, and ``draw`` flows.
-When callers pass a plain ``pygame.sprite.Group`` to the module-level
-collision functions, fall back to pygame's implementation.
-
-Public API to provide
----------------------
-- ``Group(*sprites, bounds=None, capacity=16, max_depth=None, dtype="f32")``
-  subclasses ``pygame.sprite.Group`` and owns a parallel
-  ``RectQuadTreeObjects`` index keyed by each sprite's ``rect``.
-- ``spritecollide(sprite, group, dokill, collided=None)`` mirrors
-  ``pygame.sprite.spritecollide``. With ``collided=None`` it queries only
-  sprites whose rects overlap the query sprite's rect before running the final
-  rect check. With arbitrary custom ``collided`` callbacks, preserve pygame
-  semantics by default instead of silently applying an unsafe broadphase.
-- ``spritecollideany(sprite, group, collided=None)`` mirrors
-  ``pygame.sprite.spritecollideany`` and returns after the first confirmed hit.
-- ``groupcollide(groupa, groupb, dokilla, dokillb, collided=None)`` mirrors
-  ``pygame.sprite.groupcollide`` and uses the indexed side as the broadphase.
-- Optional methods on ``Group``:
-  ``rebuild()``, ``sync(sprite=None)``, ``query_rect(rect)``,
-  ``set_bounds(bounds, rebuild=True)``, and read-only diagnostics such as
-  ``indexed_count`` or ``bounds``.
-
-Indexing model
---------------
-- Store each indexed sprite by object identity in ``RectQuadTreeObjects`` using
-  ``(rect.left, rect.top, rect.right, rect.bottom)``.
-- Maintain ``_indexed_rects[sprite]`` with each sprite's last indexed rect.
-  When deleting or updating, query that exact rect, find the item whose object
-  is the same sprite by identity, and then call ID-based ``delete`` or
-  ``update``. Do not use ``delete_by_object`` so a duplicate-object bug cannot
-  remove multiple entries accidentally.
-- Override group mutation hooks used by pygame's ``Group`` implementation
-  (``add_internal`` and ``remove_internal``) so membership and quadtree state
-  stay aligned for all standard add/remove paths.
-- ``update(*args, **kwargs)`` should call the pygame implementation, then sync
-  all indexed rects because pygame sprites commonly mutate ``rect`` during
-  their own update methods.
-- Sprites without a usable ``rect`` should remain in the pygame group but be
-  skipped by the quadtree. Collision helpers must still handle them through a
-  compatibility fallback when exact pygame semantics require it.
-
-Bounds strategy
----------------
-- Prefer explicit world bounds from the user. They make the quadtree stable and
-  avoid surprise rebuilds during gameplay.
-- If ``bounds`` is omitted, infer bounds from the initial sprites and grow the
-  index when a later sprite falls outside the current bounds.
-- Growing should rebuild the tree with padded bounds instead of failing during
-  insertion. Keep this path correct first; later benchmarks can tune the growth
-  factor.
-
-Collision semantics
--------------------
-- Default ``collided=None`` must preserve pygame behavior, meaning rect
-  collision is the final narrowphase.
-- Custom ``collided(sprite, candidate)`` callbacks need special handling.
-  Pygame calls custom callbacks against every sprite in the target group. A
-  quadtree broadphase based on rect overlap, distance, or any other envelope can
-  produce false negatives for an arbitrary callback that reports collisions
-  outside that envelope. Therefore the default behavior for custom callbacks
-  should be:
-  1. fall back to pygame-compatible full scans, and
-  2. emit a ``RuntimeWarning`` when the caller is using ``Group`` and expected
-     acceleration but supplied an opaque custom callback.
-- Provide an opt-in fast path for custom callbacks only when the broadphase is
-  explicit. Options to evaluate:
-  ``collided.fastquadtree_bounds(sprite) -> rect``, a separate
-  ``query_rect=``/``broadphase_rect=`` argument on our helpers, or documented
-  helper constructors for common pygame callbacks such as circle and mask
-  collision. In those cases the quadtree limits the candidate set, then the
-  custom callback still decides the final hit result.
-- Include ``sprite`` itself in ``spritecollide`` results when the query sprite
-  is also present in the target group and its rect collides, matching pygame's
-  behavior.
-- Apply ``dokill``/``dokilla``/``dokillb`` by calling ``kill`` or removing from
-  the relevant groups in a way that also updates the quadtree.
-- Preserve result shapes exactly:
-  ``spritecollide`` returns a list, ``spritecollideany`` returns one sprite or
-  ``None``, and ``groupcollide`` returns ``{sprite: [colliding_sprites]}``.
-
-Implementation phases
----------------------
-1. Add a thin ``Group`` subclass that behaves exactly like
-   ``pygame.sprite.Group`` and keeps an empty/private quadtree in sync with
-   add/remove/update.
-2. Implement rect conversion, bounds validation/growth, full rebuild, and
-   per-sprite sync using ID-based delete/update after resolving the ID from the
-   last indexed rect. Add focused tests that compare membership and query
-   results against brute-force rect checks, including a guard that removing one
-   sprite only deletes that sprite's indexed entry.
-3. Implement ``spritecollide`` and ``spritecollideany`` with pygame fallbacks
-   for non-indexed groups and for opaque custom ``collided`` callbacks. Test
-   against pygame for default and custom callbacks, including self-collision,
-   warning behavior, and ``dokill``.
-4. Implement ``groupcollide`` using the smaller or indexed side as the query
-   driver where possible. Preserve dictionary shape and kill behavior.
-5. Add benchmarks and the interactive sprite demo path showing pygame's native
-   collision helper versus the fastquadtree-backed helper at high sprite counts.
-6. Document limits: rect-based broadphase only, users should provide stable
-   world bounds for best performance, and moving sprites require ``update`` or
-   explicit ``sync`` before collision queries.
-
-Testing checklist
------------------
-- Compare all public collision helpers with pygame's outputs for small random
-  scenes.
-- Verify add/remove/empty/kill keep the quadtree and group membership aligned.
-- Verify moved and resized rects are reindexed after ``update`` or ``sync``.
-- Verify out-of-bounds sprites trigger growth/rebuild or documented fallback.
-- Verify plain pygame groups passed to these helpers still behave correctly.
+    hits = fpygame.spritecollide(player, enemies, dokill=False)
+    first_hit = fpygame.spritecollideany(player, enemies)
+    ```
 """
 
 from __future__ import annotations
@@ -246,7 +133,33 @@ def _expanded_bounds(current: Bounds | None, rect: Bounds) -> Bounds:
 
 
 class Group(_pygame.sprite.Group):
-    """A pygame sprite group with a RectQuadTreeObjects broadphase index."""
+    """
+    pygame sprite group with a ``RectQuadTreeObjects`` broadphase index.
+
+    ``Group`` behaves like ``pygame.sprite.Group`` for normal operations such as
+    ``add``, ``remove``, ``empty``, iteration, membership checks, ``update``,
+    and ``draw``. In parallel, it indexes sprites with usable ``rect`` bounds so
+    the module-level collision helpers can avoid scanning every sprite.
+
+    For stable runtime behavior, pass explicit world bounds. If ``bounds`` is
+    omitted, the group infers bounds from initial sprites and expands/rebuilds
+    when later sprites fall outside the current index.
+
+    Args:
+        *sprites: Initial sprites, pygame groups, or sprite iterables to add.
+        bounds: Optional world bounds as ``(min_x, min_y, max_x, max_y)``.
+        capacity: Maximum indexed rectangles per quadtree node before splitting.
+        max_depth: Optional maximum quadtree depth.
+        dtype: Coordinate data type (``"f32"``, ``"f64"``, ``"i32"``,
+            ``"i64"``). Default: ``"f32"``.
+
+    Example:
+        ```python
+        group = fpygame.Group(bounds=(0, 0, 1000, 1000))
+        group.add(enemies)
+        hits = fpygame.spritecollide(player, group, dokill=False)
+        ```
+    """
 
     def __init__(
         self,
@@ -285,13 +198,16 @@ class Group(_pygame.sprite.Group):
 
     @property
     def bounds(self) -> Bounds | None:
+        """Current quadtree bounds, or ``None`` before an index is built."""
         return self._bounds
 
     @property
     def indexed_count(self) -> int:
+        """Number of sprites currently indexed by usable rect bounds."""
         return len(self._indexed_rects)
 
     def copy(self) -> Group:
+        """Return a new indexed group with the same sprites and index settings."""
         return self.__class__(
             self.sprites(),
             bounds=self._bounds,
@@ -325,6 +241,14 @@ class Group(_pygame.sprite.Group):
         self.sync()
 
     def set_bounds(self, bounds: Bounds, rebuild: bool = True) -> None:
+        """
+        Replace the group's world bounds.
+
+        Args:
+            bounds: New world bounds as ``(min_x, min_y, max_x, max_y)``.
+            rebuild: When true, rebuild the index immediately from current
+                group membership.
+        """
         self._bounds = validate_bounds(bounds)
         self._tree = self._new_tree(self._bounds)
         self._clear_index(preserve_tree=True)
@@ -332,6 +256,7 @@ class Group(_pygame.sprite.Group):
             self.rebuild()
 
     def rebuild(self) -> None:
+        """Rebuild the quadtree from current group membership and sprite rects."""
         if self._bounds is None:
             rects = [
                 _rect_to_bounds(sprite.rect)
@@ -346,6 +271,21 @@ class Group(_pygame.sprite.Group):
             self._index_sprite(sprite)
 
     def sync(self, sprite: Any | None = None) -> None:
+        """
+        Synchronize the quadtree with sprite rect changes.
+
+        Pass one sprite to sync only that sprite, or omit ``sprite`` to sync the
+        full group. ``Group.update(...)`` automatically calls ``sync()`` after
+        pygame updates the sprites.
+
+        Sprites without a usable ``rect`` remain in the pygame group but are not
+        indexed. Collision helpers fall back to pygame-compatible behavior when
+        needed to preserve pygame semantics.
+
+        Args:
+            sprite: Optional sprite to sync. If omitted, all group sprites are
+                synced.
+        """
         if sprite is None:
             for group_sprite in self.sprites():
                 self.sync(group_sprite)
@@ -386,6 +326,18 @@ class Group(_pygame.sprite.Group):
             self._indexed_rects[sprite] = new_bounds
 
     def query_rect(self, rect: Any, *, sync: bool = True) -> list[Any]:
+        """
+        Return indexed sprites whose rects intersect ``rect``.
+
+        Args:
+            rect: Query rectangle. Accepts a pygame rect-like object or a bounds
+                tuple ``(min_x, min_y, max_x, max_y)``.
+            sync: When true, synchronize the group before querying.
+
+        Returns:
+            Sprites whose indexed rects intersect ``rect``. Returns an empty
+            list if the query rectangle cannot be interpreted.
+        """
         if sync:
             self.sync()
 
@@ -519,7 +471,28 @@ def spritecollide(
     dokill: bool,
     collided: _Collided | None = None,
 ) -> list[Any]:
-    """Find sprites in a group that collide with another sprite."""
+    """
+    Find sprites in a group that collide with another sprite.
+
+    This mirrors ``pygame.sprite.spritecollide``. When ``group`` is a
+    ``fastquadtree.pygame.Group`` and ``collided`` is ``None``, the helper
+    queries the quadtree for rect-overlap candidates before applying the final
+    pygame rect collision check.
+
+    Plain ``pygame.sprite.Group`` instances fall back to pygame's native
+    implementation. Opaque custom ``collided`` callbacks also fall back to full
+    pygame-compatible scans unless the callback provides
+    ``fastquadtree_bounds(sprite)`` query bounds.
+
+    Args:
+        sprite: Sprite to test against ``group``.
+        group: Target sprite group.
+        dokill: If true, kill each collided target sprite.
+        collided: Optional custom collision callback.
+
+    Returns:
+        List of collided sprites.
+    """
     if not isinstance(group, Group):
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
@@ -552,7 +525,22 @@ def spritecollideany(
     group: Any,
     collided: _Collided | None = None,
 ) -> Any | None:
-    """Return one sprite in a group that collides with another sprite."""
+    """
+    Return one sprite in a group that collides with another sprite.
+
+    This mirrors ``pygame.sprite.spritecollideany``. When possible, indexed
+    groups use the quadtree to narrow candidates before checking collisions.
+    Plain pygame groups and unsafe custom callbacks fall back to pygame's native
+    behavior.
+
+    Args:
+        sprite: Sprite to test against ``group``.
+        group: Target sprite group.
+        collided: Optional custom collision callback.
+
+    Returns:
+        The first collided sprite, or ``None``.
+    """
     if not isinstance(group, Group):
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
@@ -581,7 +569,43 @@ def groupcollide(
     dokillb: bool,
     collided: _Collided | None = None,
 ) -> dict[Any, list[Any]]:
-    """Detect collisions between two sprite groups."""
+    """
+    Detect collisions between two sprite groups.
+
+    This mirrors ``pygame.sprite.groupcollide``. The indexed broadphase is used
+    when ``groupb`` is a ``fastquadtree.pygame.Group`` and the collision
+    predicate can be bounded safely.
+
+    Plain pygame groups fall back to pygame's native implementation. Opaque
+    custom callbacks fall back to full pygame-compatible scans unless the
+    callback provides ``fastquadtree_bounds(sprite)`` query bounds.
+
+    Args:
+        groupa: Source sprite group.
+        groupb: Target sprite group.
+        dokilla: If true, kill collided sprites from ``groupa``.
+        dokillb: If true, kill collided sprites from ``groupb``.
+        collided: Optional custom collision callback.
+
+    Returns:
+        Dictionary mapping each collided sprite from ``groupa`` to a list of
+        collided sprites from ``groupb``.
+
+    Example:
+        ```python
+        def near_center(left, right):
+            return abs(left.rect.centerx - right.rect.centerx) < 50
+
+        near_center.fastquadtree_bounds = lambda sprite: (
+            sprite.rect.left - 50,
+            sprite.rect.top - 50,
+            sprite.rect.right + 50,
+            sprite.rect.bottom + 50,
+        )
+
+        hits = fpygame.groupcollide(players, enemies, False, False, near_center)
+        ```
+    """
     if not isinstance(groupb, Group):
         return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
 
