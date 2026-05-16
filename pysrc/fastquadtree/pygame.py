@@ -444,35 +444,13 @@ def _flatten_sprites(values: Iterable[Any]) -> list[Any]:
 
 def _warn_custom_collided() -> None:
     warnings.warn(
-        "fastquadtree.pygame cannot safely accelerate an opaque custom "
-        "collided callback; falling back to pygame-compatible full scans. "
-        "Attach a fastquadtree_bounds(sprite) callable to the callback to opt "
-        "into quadtree broadphase filtering.",
+        "fastquadtree.pygame does not accelerate custom collided callbacks; "
+        "falling back to pygame-compatible full scans. The quadtree broadphase "
+        "is used only when collided is None and the query sprite has a usable "
+        "rect attribute.",
         RuntimeWarning,
         stacklevel=3,
     )
-
-
-def _custom_query_bounds(collided: _Collided | None, sprite: Any) -> Any | None:
-    if collided is None:
-        return getattr(sprite, "rect", None)
-
-    bounds_getter = getattr(collided, "fastquadtree_bounds", None)
-    if not callable(bounds_getter):
-        return None
-    return bounds_getter(sprite)
-
-
-def _has_custom_query_bounds(collided: _Collided | None) -> bool:
-    return collided is not None and callable(
-        getattr(collided, "fastquadtree_bounds", None)
-    )
-
-
-def _collides(sprite: Any, candidate: Any, collided: _Collided | None) -> bool:
-    if collided is None:
-        return sprite.rect.colliderect(candidate.rect)
-    return bool(collided(sprite, candidate))
 
 
 def spritecollide(
@@ -487,14 +465,14 @@ def spritecollide(
     Find sprites in a group that collide with another sprite.
 
     This mirrors ``pygame.sprite.spritecollide``. When ``group`` is a
-    ``fastquadtree.pygame.Group`` and ``collided`` is ``None``, the helper
-    queries the quadtree for rect-overlap candidates before applying the final
-    pygame rect collision check.
+    ``fastquadtree.pygame.Group``, ``collided`` is ``None``, and ``sprite`` has
+    a usable ``rect`` attribute, the helper queries the quadtree for
+    rect-overlap candidates before applying the final pygame rect collision
+    check.
 
-    Plain ``pygame.sprite.Group`` instances fall back to pygame's native
-    implementation. Opaque custom ``collided`` callbacks also fall back to full
-    pygame-compatible scans unless the callback provides
-    ``fastquadtree_bounds(sprite)`` query bounds.
+    Plain ``pygame.sprite.Group`` instances, custom ``collided`` callbacks, and
+    sprites without usable ``rect`` attributes fall back to pygame's native
+    implementation.
 
     Args:
         sprite: Sprite to test against ``group``.
@@ -511,21 +489,23 @@ def spritecollide(
     if not isinstance(group, Group):
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
-    query_rect = _custom_query_bounds(collided, sprite)
+    if collided is not None:
+        _warn_custom_collided()
+        return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
+
+    query_rect = getattr(sprite, "rect", None)
     if query_rect is None:
-        if collided is not None:
-            _warn_custom_collided()
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
     if group._sprites_without_rect:
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
-    if collided is None and (not _has_rect(sprite) or not _is_rect_like(sprite.rect)):
+    if not _is_rect_like(query_rect):
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
     candidates = group.query_rect(query_rect, sync=sync)
     collided_sprites = [
-        candidate for candidate in candidates if _collides(sprite, candidate, collided)
+        candidate for candidate in candidates if sprite.rect.colliderect(candidate.rect)
     ]
 
     if dokill:
@@ -545,10 +525,12 @@ def spritecollideany(
     """
     Return one sprite in a group that collides with another sprite.
 
-    This mirrors ``pygame.sprite.spritecollideany``. When possible, indexed
-    groups use the quadtree to narrow candidates before checking collisions.
-    Plain pygame groups and unsafe custom callbacks fall back to pygame's native
-    behavior.
+    This mirrors ``pygame.sprite.spritecollideany``. When ``group`` is a
+    ``fastquadtree.pygame.Group``, ``collided`` is ``None``, and ``sprite`` has
+    a usable ``rect`` attribute, indexed groups use the quadtree to narrow
+    candidates before checking collisions. Plain pygame groups, custom
+    ``collided`` callbacks, and sprites without usable ``rect`` attributes fall
+    back to pygame's native behavior.
 
     Args:
         sprite: Sprite to test against ``group``.
@@ -561,23 +543,25 @@ def spritecollideany(
     Returns:
         The first collided sprite, or ``None``.
     """
-    if not isinstance(group, Group):
+
+    query_rect = getattr(sprite, "rect", None)
+
+    if (
+        not isinstance(group, Group)
+        or query_rect is None
+        or not _is_rect_like(query_rect)
+    ):
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
-    query_rect = _custom_query_bounds(collided, sprite)
-    if query_rect is None:
-        if collided is not None:
-            _warn_custom_collided()
+    if collided is not None:
+        _warn_custom_collided()
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
     if group._sprites_without_rect:
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
-    if collided is None and (not _has_rect(sprite) or not _is_rect_like(sprite.rect)):
-        return _pygame.sprite.spritecollideany(sprite, group, collided)
-
     for candidate in group.query_rect(query_rect, sync=sync):
-        if _collides(sprite, candidate, collided):
+        if sprite.rect.colliderect(candidate.rect):
             return candidate
     return None
 
@@ -595,12 +579,12 @@ def groupcollide(
     Detect collisions between two sprite groups.
 
     This mirrors ``pygame.sprite.groupcollide``. The indexed broadphase is used
-    when ``groupb`` is a ``fastquadtree.pygame.Group`` and the collision
-    predicate can be bounded safely.
+    when ``groupb`` is a ``fastquadtree.pygame.Group``, ``collided`` is
+    ``None``, and each queried sprite has a usable ``rect`` attribute.
 
-    Plain pygame groups fall back to pygame's native implementation. Opaque
-    custom callbacks fall back to full pygame-compatible scans unless the
-    callback provides ``fastquadtree_bounds(sprite)`` query bounds.
+    Plain pygame groups, custom ``collided`` callbacks, sprites without usable
+    ``rect`` attributes, and target groups containing unindexed sprites fall
+    back to pygame's native implementation.
 
     Args:
         groupa: Source sprite group.
@@ -618,23 +602,13 @@ def groupcollide(
 
     Example:
         ```python
-        def near_center(left, right):
-            return abs(left.rect.centerx - right.rect.centerx) < 50
-
-        near_center.fastquadtree_bounds = lambda sprite: (
-            sprite.rect.left - 50,
-            sprite.rect.top - 50,
-            sprite.rect.right + 50,
-            sprite.rect.bottom + 50,
-        )
-
-        hits = fpygame.groupcollide(players, enemies, False, False, near_center)
+        hits = fpygame.groupcollide(players, enemies, False, False)
         ```
     """
     if not isinstance(groupb, Group):
         return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
 
-    if collided is not None and not _has_custom_query_bounds(collided):
+    if collided is not None:
         _warn_custom_collided()
         return _pygame.sprite.groupcollide(groupa, groupb, dokilla, dokillb, collided)
 

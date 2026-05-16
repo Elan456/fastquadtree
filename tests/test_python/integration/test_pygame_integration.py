@@ -287,15 +287,15 @@ def test_opaque_custom_collided_warns_and_matches_pygame_full_scan():
     def always_collide(left: Any, right: Any) -> bool:
         return True
 
-    with pytest.warns(RuntimeWarning, match="cannot safely accelerate"):
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
         assert fpygame.spritecollide(query, group, False, always_collide) == (
             pygame.sprite.spritecollide(query, pg_group, False, always_collide)
         )
 
-    with pytest.warns(RuntimeWarning, match="cannot safely accelerate"):
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
         assert fpygame.spritecollideany(query, group, always_collide) is far
 
-    with pytest.warns(RuntimeWarning, match="cannot safely accelerate"):
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
         assert fpygame.groupcollide(
             pygame.sprite.Group(query), group, False, False, always_collide
         ) == pygame.sprite.groupcollide(
@@ -303,27 +303,32 @@ def test_opaque_custom_collided_warns_and_matches_pygame_full_scan():
         )
 
 
-def test_custom_collided_with_explicit_broadphase_bounds_is_accelerated():
+def test_custom_collided_falls_back_even_with_legacy_broadphase_bounds():
     query = RectSprite((0, 0, 10, 10))
     near = RectSprite((30, 0, 10, 10))
     far = RectSprite((1000, 0, 10, 10))
     group = fpygame.Group((0, 0, 2000, 2000), near, far)
+    pg_group = pygame.sprite.Group(near, far)
 
-    def near_center(left: Any, right: Any) -> bool:
-        return abs(left.rect.centerx - right.rect.centerx) < 50
+    def always_collide(left: Any, right: Any) -> bool:
+        return True
 
-    near_center.fastquadtree_bounds = lambda sprite: (
-        sprite.rect.left - 50,
-        sprite.rect.top - 50,
-        sprite.rect.right + 50,
-        sprite.rect.bottom + 50,
-    )
+    always_collide.fastquadtree_bounds = lambda sprite: sprite.rect
 
-    assert fpygame.spritecollide(query, group, False, near_center) == [near]
-    assert fpygame.spritecollideany(query, group, near_center) is near
-    assert fpygame.groupcollide(
-        pygame.sprite.Group(query), group, False, False, near_center
-    ) == {query: [near]}
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
+        assert fpygame.spritecollide(query, group, False, always_collide) == (
+            pygame.sprite.spritecollide(query, pg_group, False, always_collide)
+        )
+
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
+        assert fpygame.spritecollideany(query, group, always_collide) is near
+
+    with pytest.warns(RuntimeWarning, match="does not accelerate custom collided"):
+        assert fpygame.groupcollide(
+            pygame.sprite.Group(query), group, False, False, always_collide
+        ) == pygame.sprite.groupcollide(
+            pygame.sprite.Group(query), pg_group, False, False, always_collide
+        )
 
 
 def test_invalid_constructor_and_query_inputs_are_handled():
