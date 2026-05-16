@@ -261,6 +261,25 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert set(group.query_rect((-2000, -2000, 5, 5))) == {near}
     assert group.bounds == fixed_bounds
 
+    generator_sprites = [RectSprite((1, 1, 4, 4)), RectSprite((20, 20, 4, 4))]
+    from_generator = fpygame.Group(sprite for sprite in generator_sprites)
+    assert set(from_generator) == set(generator_sprites)
+    assert from_generator.indexed_count == 2
+
+    positional_rect_bounds = fpygame.Group(
+        pygame.Rect(10, 10, 100, 100), RectSprite((15, 15, 5, 5))
+    )
+    assert positional_rect_bounds.bounds == (10, 10, 110, 110)
+
+    keyword_rect_bounds = fpygame.Group(
+        RectSprite((15, 15, 5, 5)), bounds=pygame.Rect(10, 10, 100, 100)
+    )
+    assert keyword_rect_bounds.bounds == (10, 10, 110, 110)
+
+    one_shot = (value for value in (0, 0, 10, 10))
+    assert not fpygame._looks_like_bounds(one_shot)
+    assert tuple(one_shot) == (0, 0, 10, 10)
+
 
 def test_unusable_rects_preserve_pygame_fallback_behavior():
     query = RectSprite((0, 0, 10, 10))
@@ -351,6 +370,8 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     sprite = RectSprite((1, 1, 5, 5))
     missing = RectSprite()
     zero = RectSprite((1, 1, 0, 5))
+    bad_rect = RectSprite()
+    bad_rect.rect = object()
 
     empty = fpygame.Group()
     empty.rebuild()
@@ -366,6 +387,10 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     assert no_rebuild.indexed_count == 0
     no_rebuild.rebuild()
     assert no_rebuild.indexed_count == 1
+
+    rect_bounds_group = fpygame.Group((0, 0, 10, 10))
+    rect_bounds_group.set_bounds(pygame.Rect(-10, -10, 20, 20), rebuild=False)
+    assert rect_bounds_group.bounds == (-10, -10, 10, 10)
 
     assert fpygame.Group().query_rect(pygame.Rect(0, 0, 1, 1)) == []
     assert no_rebuild.query_rect(sprite.rect, sync=False) == [sprite]
@@ -383,9 +408,11 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     stale.remove(sprite)
     assert stale.indexed_count == 0
 
-    rebuild_with_unusable = fpygame.Group((0, 0, 10, 10), missing, zero)
+    rebuild_with_unusable = fpygame.Group((0, 0, 10, 10), missing, zero, bad_rect)
     rebuild_with_unusable.rebuild()
     assert rebuild_with_unusable.indexed_count == 0
+    assert fpygame._sprite_rect(missing) is None
+    assert fpygame._sprite_bounds(zero) is None
 
     group = fpygame.Group((0, 0, 10, 10), sprite)
     group._index_sprite(sprite)
