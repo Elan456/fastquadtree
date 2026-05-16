@@ -45,6 +45,7 @@ __all__ = ["Group", "groupcollide", "spritecollide", "spritecollideany"]
 
 
 _Collided = Callable[[Any, Any], bool]
+_ATOMIC_ITERABLES = (str, bytes, bytearray, memoryview)
 
 
 def _looks_like_bounds(value: Any) -> bool:
@@ -530,10 +531,17 @@ def _flatten_sprites(values: Iterable[Any]) -> list[Any]:
             flattened.extend(value.sprites())
             continue
 
+        if isinstance(value, _ATOMIC_ITERABLES):
+            flattened.append(value)
+            continue
+
         try:
             flattened.extend(_flatten_sprites(value))
-        except TypeError:
-            flattened.append(value)
+        except (TypeError, AttributeError):
+            if hasattr(value, "_spritegroup"):
+                flattened.extend(value.sprites())
+            else:
+                flattened.append(value)
     return flattened
 
 

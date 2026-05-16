@@ -551,5 +551,32 @@ def test_internal_edge_paths_keep_public_behavior_stable():
 
 
 def test_private_helpers_cover_degenerate_inputs():
+    sprite = RectSprite((1, 1, 2, 2))
+    nested = RectSprite((3, 3, 2, 2))
+    grouped = RectSprite((5, 5, 2, 2))
+
     assert fpygame._bounds_from_rects([(2, 3, 2, 3)]) == (0.8, 1.8, 3.2, 4.2)
     assert fpygame._flatten_sprites([object()])
+    assert fpygame._flatten_sprites([[sprite], (item for item in [nested])]) == [
+        sprite,
+        nested,
+    ]
+    assert fpygame._flatten_sprites([pygame.sprite.Group(grouped)]) == [grouped]
+
+    class LegacyGroup:
+        _spritegroup = True
+
+        def sprites(self) -> list[Any]:
+            return [sprite]
+
+    assert fpygame._flatten_sprites([LegacyGroup()]) == [sprite]
+    assert fpygame._flatten_sprites(["abc", b"abc", bytearray(b"abc")]) == [
+        "abc",
+        b"abc",
+        bytearray(b"abc"),
+    ]
+
+    group = fpygame.Group((0, 0, 10, 10))
+    for value in ("abc", b"abc", bytearray(b"abc")):
+        with pytest.raises((AttributeError, TypeError)):
+            group.add(value)
