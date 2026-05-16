@@ -170,14 +170,7 @@ def _has_rect(sprite: Any) -> bool:
 
 
 def _is_rect_like(rect: Any) -> bool:
-    try:
-        rect.left
-        rect.top
-        rect.right
-        rect.bottom
-    except AttributeError:
-        return False
-    return True
+    return all(hasattr(rect, attr) for attr in ("left", "top", "right", "bottom"))
 
 
 def _is_indexable_rect(rect: Any) -> bool:
@@ -381,6 +374,7 @@ class Group(_pygame.sprite.Group):
             assert self._tree is not None
             id_ = self._find_sprite_id(sprite, old_bounds)
             if id_ is None:
+                self._indexed_rects.pop(sprite, None)
                 self._index_sprite(sprite, rect_bounds=new_bounds)
                 return
             self._tree.update(id_, *new_bounds)
@@ -526,7 +520,8 @@ def spritecollide(
 
     query_rect = _custom_query_bounds(collided, sprite)
     if query_rect is None:
-        _warn_custom_collided()
+        if collided is not None:
+            _warn_custom_collided()
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
     if group._sprites_without_rect:
@@ -558,7 +553,8 @@ def spritecollideany(
 
     query_rect = _custom_query_bounds(collided, sprite)
     if query_rect is None:
-        _warn_custom_collided()
+        if collided is not None:
+            _warn_custom_collided()
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
     if group._sprites_without_rect:

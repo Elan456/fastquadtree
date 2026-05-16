@@ -187,14 +187,14 @@ def main():
 
     print("Running benchmarks...")
     n_build, n_query = median_times(
-        lambda pts, qs: bench_native(pts, qs),
+        bench_native,
         points,
         queries,
         args.repeats,
         desc="Native",
     )
     n_query_ids_build, n_query_ids_query = median_times(
-        lambda pts, qs: bench_native_id_only_query(pts, qs),
+        bench_native_id_only_query,
         points,
         queries,
         args.repeats,
@@ -202,28 +202,28 @@ def main():
     )
 
     s_build_no_objs, s_query_no_objs = median_times(
-        lambda pts, qs: bench_shim_no_objects(pts, qs),
+        bench_shim_no_objects,
         points,
         queries,
         args.repeats,
         desc="QuadTree (no objects)",
     )
     s_build_objs, s_query_objs = median_times(
-        lambda pts, qs: bench_shim_with_objects(pts, qs),
+        bench_shim_with_objects,
         points,
         queries,
         args.repeats,
         desc="QuadTreeObjects",
     )
     np_build, np_query = median_times(
-        lambda pts, qs: bench_np_shim(pts, qs),
+        bench_np_shim,
         points,
         queries,
         args.repeats,
         desc="QuadTree (numpy, no objects)",
     )
     insert_many_no_objects, insert_many_query = median_times(
-        lambda pts, qs: bench_insert_many_no_objects(pts, qs),
+        bench_insert_many_no_objects,
         points,
         queries,
         args.repeats,

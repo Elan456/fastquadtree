@@ -1,7 +1,7 @@
 """
-Interactive example of fastquadtree's integration with pygame's spirtes. 
+Interactive example of fastquadtree's integration with pygame's spirtes.
 
-Includes simple rectangle sprites that move around the screen and collide with each other. 
+Includes simple rectangle sprites that move around the screen and collide with each other.
 (fastquadtree integration is WIP and upcoming, so this is just a placeholder for now)
 """
 
@@ -20,18 +20,18 @@ BLOCK_COUNT = 250
 BORDER_COLOR = (25, 25, 25)
 BORDER_WIDTH = 4
 
+
 class Camera:
     def __init__(self):
         self.x = 0.0
         self.y = 0.0
 
+
 class Block(pygame.sprite.Sprite):
     def __init__(self, camera: Camera):
         super().__init__()
 
-        color = (
-            random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
-        )
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         width = random.randint(10, 30)
         height = random.randint(10, 30)
 
@@ -50,6 +50,7 @@ class Block(pygame.sprite.Sprite):
     def sync_to_camera(self):
         self.rect.x = self.x - self.camera.x
         self.rect.y = self.y - self.camera.y
+
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, camera: Camera):
@@ -83,6 +84,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = self.x - self.camera.x
         self.rect.y = self.y - self.camera.y
 
+
 def draw_world_border(screen: pygame.Surface, camera: Camera):
     border_rect = pygame.Rect(
         WORLD_MIN_X - camera.x,
@@ -92,12 +94,13 @@ def draw_world_border(screen: pygame.Surface, camera: Camera):
     )
     pygame.draw.rect(screen, BORDER_COLOR, border_rect, BORDER_WIDTH)
 
+
 def main():
     screen = pygame.display.set_mode(SCREEN_SIZE)
     pygame.display.set_caption("Pygame Sprites with FastQuadtree")
 
     default_group = pygame.sprite.Group()
-    camera = Camera()    # camera follows the player
+    camera = Camera()  # camera follows the player
     player = Player(camera)
     default_group.add(player)
 
@@ -125,7 +128,7 @@ def main():
         draw_world_border(screen, camera)
         default_group.draw(screen)
 
-        if (len(touched_blocks) > 1):
+        if len(touched_blocks) > 1:
             # highlight the touched blocks (excluding the player itself)
             for block in touched_blocks:
                 if block is not player:
@@ -134,14 +137,8 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
+
 if __name__ == "__main__":
     pygame.init()
     main()
     pygame.quit()
-
-
-
-
-
-my_group = fastquadtree.pygame.sprite.Group()
-my_group.add(Block(camera))
