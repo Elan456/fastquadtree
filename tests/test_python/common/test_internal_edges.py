@@ -623,7 +623,7 @@ def test_obj_store_edges_and_reverse_mapping_cleanup():
     assert store._free == [1]
 
     payload = store.to_dict()
-    rebuilt = ObjStore.from_dict(payload, lambda i, g, o: PointItem(i, g, o))
+    rebuilt = ObjStore.from_dict(payload, PointItem)
     assert len(rebuilt) == len(store)
 
     with pytest.raises(AssertionError):

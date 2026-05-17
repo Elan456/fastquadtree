@@ -55,7 +55,7 @@ def main():
     assert base_count == N
 
     # serialize timing
-    ser_times = timeit(lambda: original_qt.to_bytes())
+    ser_times = timeit(original_qt.to_bytes)
     qt_bytes = original_qt.to_bytes()
     print(f"Serialized size: {len(qt_bytes):,} bytes")
 

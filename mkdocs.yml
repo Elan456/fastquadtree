@@ -47,7 +47,8 @@ plugins:
             line_length: 100
             heading_level: 3
             members_order: source
-            filters:  # Exclude __slots__ and __len__ and anything with a single underscore prefix (don't filter insert_many even though it has a single underscore)
+            filters:  # Exclude internal dunder exports and anything with a single underscore prefix (don't filter insert_many even though it has a single underscore)
+              - "!__all__"
               - "!__slots__"
               - "!__len__"
               - "!^_[^_]"
@@ -91,6 +92,7 @@ nav:
       - RectQuadTree: api/rect_quadtree.md
       - QuadTreeObjects: api/quadtree_objects.md
       - RectQuadTreeObjects: api/rect_quadtree_objects.md
+      - pygame integration: api/pygame.md
       - pyqtree: api/pyqtree.md
       - Item: api/item.md
       - PointItem: api/point_item.md

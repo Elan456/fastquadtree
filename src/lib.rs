@@ -181,8 +181,8 @@ macro_rules! define_point_quadtree_pyclass {
                         ffi::PyList_SetItem(list_ptr, i as isize, tup_ptr);
                     }
 
-                    // Create Bound<PyAny> then downcast to Bound<PyList>
-                    Bound::from_owned_ptr(py, list_ptr).downcast_into_unchecked::<PyList>()
+                    // Create Bound<PyAny> then cast to Bound<PyList>
+                    Bound::from_owned_ptr(py, list_ptr).cast_into_unchecked::<PyList>()
                 }
             }
 
@@ -326,7 +326,7 @@ macro_rules! define_point_quadtree_pyclass {
                         }
                     }
 
-                    Ok(Bound::from_owned_ptr(py, out_ptr).downcast_into_unchecked::<PyList>())
+                    Ok(Bound::from_owned_ptr(py, out_ptr).cast_into_unchecked::<PyList>())
                 }
             }
 
@@ -691,7 +691,7 @@ macro_rules! define_rect_quadtree_pyclass {
                         }
                     }
 
-                    Ok(Bound::from_owned_ptr(py, out_ptr).downcast_into_unchecked::<PyList>())
+                    Ok(Bound::from_owned_ptr(py, out_ptr).cast_into_unchecked::<PyList>())
                 }
             }
 
