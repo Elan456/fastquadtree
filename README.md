@@ -32,6 +32,7 @@ Rust-optimized quadtree with a clean Python API
 - Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
+- Mostly drop-in [pygame sprite-group integration](https://elan456.github.io/fastquadtree/api/pygame/) that adds automatic broadphase culling for faster collision detection (depending on workload)
 - Fast [serialization](https://elan456.github.io/fastquadtree/benchmark/#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
@@ -58,6 +59,7 @@ from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~10x faster whil
 | `QuadTreeObjects` | Points | Yes | Point indexing with attached Python objects. |
 | `RectQuadTreeObjects` | Bounding boxes | Yes | Rectangle indexing with attached objects. |
 | `fastquadtree.pyqtree.Index` | Bounding boxes | Yes | pyqtree-compatible API, much faster. |
+| `fastquadtree.pygame.Group` | pygame sprites | Yes | Mostly drop-in replacement for `pygame.sprite.Group` with quadtree indexing for faster collision detection. |
 
 
 ## Quickstart
