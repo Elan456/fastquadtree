@@ -7,7 +7,7 @@ Optional pygame sprite collision integration backed by `RectQuadTreeObjects`.
     optional `fastquadtree.pygame` integration, which requires pygame or a
     compatible package such as `pygame-ce` when imported at runtime.
 
-Use `Group.query_rect(...)` to index sprites intersecting a
+Use `Group.query_rect(...)` to return indexed sprites that intersect a
 rectangle. This is useful for broadphase collision culling and viewport culling.
 
 ```python
