@@ -288,20 +288,24 @@ class Group(_pygame.sprite.Group):
         self._sync_many(flattened)
 
     def add_internal(self, sprite: _pygame.sprite.Sprite, layer: Any = None) -> None:
+        """Add one sprite through pygame's internal group hook and sync the index."""
         super().add_internal(sprite, layer)
         if self._defer_index_sync:
             return
         self.sync(sprite)
 
     def remove_internal(self, sprite: _pygame.sprite.Sprite) -> None:
+        """Remove one sprite through pygame's internal group hook and unindex it."""
         self._unindex_sprite(sprite)
         super().remove_internal(sprite)
 
     def empty(self) -> None:
+        """Remove all sprites and clear the quadtree index."""
         super().empty()
         self._clear_index()
 
     def update(self, *args: Any, **kwargs: Any) -> None:
+        """Run sprite updates, then synchronize or rebuild the quadtree index."""
         super().update(*args, **kwargs)
         if self._rebuild_on_update:
             self.rebuild()
