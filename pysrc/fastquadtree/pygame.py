@@ -27,6 +27,7 @@ Example:
 
 from __future__ import annotations
 
+import math
 import warnings
 from collections.abc import Callable, Iterable
 from typing import Any, cast
@@ -111,17 +112,26 @@ def _intersect_bounds(left: Bounds, right: Bounds) -> Bounds | None:
     return (min_x, min_y, max_x, max_y)
 
 
-def _pad_bounds(bounds: Bounds) -> Bounds:
+def _is_integer_dtype(dtype: QuadTreeDType) -> bool:
+    return dtype.startswith("i")
+
+
+def _pad_bounds(bounds: Bounds, dtype: QuadTreeDType = "f32") -> Bounds:
     min_x, min_y, max_x, max_y = bounds
     width = max_x - min_x
     height = max_y - min_y
-    pad = max(width, height, 1) * 0.1
+    if _is_integer_dtype(dtype):
+        pad = max(1, math.ceil(max(width, height, 1) * 0.1))
+    else:
+        pad = max(width, height, 1) * 0.1
     return (min_x - pad, min_y - pad, max_x + pad, max_y + pad)
 
 
-def _bounds_from_rects(rects: Iterable[Bounds]) -> Bounds:
+def _bounds_from_rects(rects: Iterable[Bounds], dtype: QuadTreeDType = "f32") -> Bounds:
     rect_list = list(rects)
     if not rect_list:
+        if _is_integer_dtype(dtype):
+            return (-1, -1, 1, 1)
         return (-1.0, -1.0, 1.0, 1.0)
 
     min_x = min(rect[0] for rect in rect_list)
@@ -136,12 +146,14 @@ def _bounds_from_rects(rects: Iterable[Bounds]) -> Bounds:
         min_y -= 1
         max_y += 1
 
-    return _pad_bounds((min_x, min_y, max_x, max_y))
+    return _pad_bounds((min_x, min_y, max_x, max_y), dtype=dtype)
 
 
-def _expanded_bounds(current: Bounds | None, rect: Bounds) -> Bounds:
+def _expanded_bounds(
+    current: Bounds | None, rect: Bounds, dtype: QuadTreeDType = "f32"
+) -> Bounds:
     if current is None:
-        return _bounds_from_rects([rect])
+        return _bounds_from_rects([rect], dtype=dtype)
 
     min_x, min_y, max_x, max_y = current
     left, top, right, bottom = rect
@@ -151,7 +163,8 @@ def _expanded_bounds(current: Bounds | None, rect: Bounds) -> Bounds:
             min(min_y, top),
             max(max_x, right),
             max(max_y, bottom),
-        )
+        ),
+        dtype=dtype,
     )
 
 
@@ -227,7 +240,7 @@ class Group(_pygame.sprite.Group):
                 if (rect_bounds := _sprite_bounds(sprite)) is not None
             ]
             if initial_rects:
-                self._bounds = _bounds_from_rects(initial_rects)
+                self._bounds = _bounds_from_rects(initial_rects, dtype=self._dtype)
                 self._tree = self._new_tree(self._bounds)
 
         self.add(initial_sprites)
@@ -321,7 +334,7 @@ class Group(_pygame.sprite.Group):
                 for sprite in self.sprites()
                 if (rect_bounds := _sprite_bounds(sprite)) is not None
             ]
-            self._bounds = _bounds_from_rects(rects)
+            self._bounds = _bounds_from_rects(rects, dtype=self._dtype)
 
         self._tree = self._new_tree(self._bounds)
         self._clear_index(preserve_tree=True)
@@ -398,7 +411,7 @@ class Group(_pygame.sprite.Group):
 
         if self._bounds is None or self._tree is None:
             self._bounds = _bounds_from_rects(
-                rect_bounds for _, _, rect_bounds in pending
+                (rect_bounds for _, _, rect_bounds in pending), dtype=self._dtype
             )
             self.rebuild()
             return
@@ -406,7 +419,9 @@ class Group(_pygame.sprite.Group):
         new_bounds = self._bounds
         for _, _, rect_bounds in pending:
             if not _contains_rect(new_bounds, rect_bounds):
-                new_bounds = _expanded_bounds(new_bounds, rect_bounds)
+                new_bounds = _expanded_bounds(
+                    new_bounds, rect_bounds, dtype=self._dtype
+                )
 
         if new_bounds != self._bounds:
             self._bounds = new_bounds
@@ -516,7 +531,7 @@ class Group(_pygame.sprite.Group):
                 self._tree = self._new_tree(self._bounds)
             return
 
-        self._bounds = _expanded_bounds(self._bounds, rect)
+        self._bounds = _expanded_bounds(self._bounds, rect, dtype=self._dtype)
         self.rebuild()
 
 

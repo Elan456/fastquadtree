@@ -281,6 +281,27 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert tuple(one_shot) == (0, 0, 10, 10)
 
 
+def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
+    for dtype in ("i32", "i64"):
+        near = RectSprite((1, 1, 2, 2))
+        far = RectSprite((20, 20, 2, 2))
+
+        inferred = fpygame.Group([near], dtype=dtype)
+        assert inferred.bounds is not None
+        assert all(isinstance(value, int) for value in inferred.bounds)
+        assert inferred.query_rect(near.rect) == [near]
+
+        empty = fpygame.Group(dtype=dtype)
+        empty.rebuild()
+        assert empty.bounds == (-1, -1, 1, 1)
+
+        expanded = fpygame.Group((0, 0, 10, 10), near, dtype=dtype)
+        expanded.add(far)
+        assert expanded.bounds is not None
+        assert all(isinstance(value, int) for value in expanded.bounds)
+        assert expanded.query_rect(far.rect) == [far]
+
+
 def test_bulk_add_batches_index_rebuilds():
     inside = [RectSprite((10, 10, 5, 5)), RectSprite((30, 30, 5, 5))]
     inside_group = fpygame.Group((0, 0, 100, 100))
