@@ -210,6 +210,20 @@ def test_sync_reindexes_moved_and_resized_sprites():
     )
 
 
+def test_sync_ignores_sprites_that_are_not_group_members():
+    member = RectSprite((0, 0, 10, 10), "member")
+    external = RectSprite((0, 0, 10, 10), "external")
+    query = RectSprite((0, 0, 10, 10), "query")
+    group = fpygame.Group((0, 0, 100, 100), member)
+
+    group.sync(external)
+
+    assert external not in group
+    assert group.indexed_count == 1
+    assert group.query_rect(query.rect, sync=False) == [member]
+    assert fpygame.spritecollide(query, group, False, sync=False) == [member]
+
+
 def test_rebuild_on_update_reindexes_all_moved_sprites():
     query = RectSprite((0, 0, 10, 10))
     moving = RectSprite((50, 50, 5, 5))
@@ -492,7 +506,7 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     assert manual_internal.indexed_count == 1
 
     no_rebuild.sync(missing)
-    assert missing in no_rebuild._sprites_without_rect
+    assert missing not in no_rebuild._sprites_without_rect
 
     outside_sync = RectSprite((1, 1, 2, 2))
     outside_group = fpygame.Group((0, 0, 10, 10), outside_sync)

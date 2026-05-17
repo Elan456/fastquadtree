@@ -359,9 +359,15 @@ class Group(_pygame.sprite.Group):
         """
         if sprite is None:
             for group_sprite in self.sprites():
-                self.sync(group_sprite)
+                self._sync_sprite(group_sprite)
             return
 
+        if not self.has_internal(sprite):
+            return
+
+        self._sync_sprite(sprite)
+
+    def _sync_sprite(self, sprite: _pygame.sprite.Sprite) -> None:
         rect = _sprite_rect(sprite)
         if rect is None or not _is_indexable_rect(rect):
             self._unindex_sprite(sprite)
