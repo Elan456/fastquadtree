@@ -63,5 +63,5 @@ from fastquadtree import RectQuadTree  # Bounding box handling
 from fastquadtree import QuadTreeObjects  # Point handling with object tracking
 from fastquadtree import RectQuadTreeObjects  # Bounding box handling with object tracking
 from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree (~10x faster while keeping the same API)
-from fastquadtree.pygame import Group # Drop-in replacement for pygame.sprite.Group with quadtree indexing
+from fastquadtree.pygame import Group # Drop-in replacement for pygame.sprite.Group with quadtree indexing (pygame install required)
 ```

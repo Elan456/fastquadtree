@@ -128,16 +128,19 @@ blocks.add(block_sprites)
 # Collision helper with the same shape as pygame.sprite.spritecollide.
 hits = fpygame.spritecollide(player, blocks, dokill=False)
 
-# Viewport culling: use a lightweight sprite whose rect is the camera.
-camera_query = pygame.sprite.Sprite()
-camera_query.rect = camera_rect
-visible = fpygame.spritecollide(camera_query, blocks, dokill=False, sync=False)
+# Rectangle queries can use pygame.Rect or (min_x, min_y, max_x, max_y) bounds.
+visible = blocks.query_rect(camera_rect, sync=False)
 for sprite in visible:
     screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
 ```
 
 pygame is not a required dependency for core `fastquadtree`; install a
 pygame-compatible package such as `pygame-ce` only if you use this integration.
+
+```bash
+pip install pygame-ce
+```
+
 See the [pygame API docs](api/pygame.md) for details.
 
 ---

@@ -68,11 +68,9 @@ uv run python interactive/ballpit.py
 
 This demo creates many static block sprites and a moving player. Player
 collision uses the normal `spritecollide(...)` flow for both backends. Viewport
-culling asks the same question in both modes: "which blocks intersect the
-camera rect?" by using a lightweight sprite whose `rect` is the camera
-viewport. The pygame backend answers by scanning every block, while the
-fastquadtree backend uses the same `spritecollide(...)` call against its
-indexed group.
+culling asks "which blocks intersect the camera rect?" The pygame backend
+answers by scanning every block, while the fastquadtree backend can answer the
+same rectangle query through `Group.query_rect(...)`.
 
 The performance tradeoff is tree maintenance. The demo uses static blocks, so
 the fastquadtree group can reuse its index frame after frame. If most indexed

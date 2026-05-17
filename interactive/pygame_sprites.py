@@ -166,6 +166,18 @@ def spritecollide(
     return pygame.sprite.spritecollide(sprite, group, dokill)
 
 
+def query_viewport(
+    backend: GROUP_BACKEND,
+    rect: pygame.Rect,
+    group: pygame.sprite.Group,
+) -> list[pygame.sprite.Sprite]:
+    if backend == "fastquadtree":
+        return group.query_rect(rect, sync=False)
+    viewport_sprite = RectQuerySprite()
+    viewport_sprite.rect = rect
+    return pygame.sprite.spritecollide(viewport_sprite, group, False)
+
+
 def next_backend(backend: GROUP_BACKEND) -> GROUP_BACKEND:
     return "pygame" if backend == "fastquadtree" else "fastquadtree"
 
@@ -192,7 +204,6 @@ def main(group_backend: GROUP_BACKEND = "fastquadtree"):
 
     camera = Camera()  # camera follows the player
     player = Player()
-    viewport_sprite = RectQuerySprite()
     blocks: list[pygame.sprite.Sprite] = []
 
     for _ in range(BLOCK_COUNT):
@@ -220,8 +231,7 @@ def main(group_backend: GROUP_BACKEND = "fastquadtree"):
         camera.y = player.y - screen.get_height() // 2
 
         viewport = viewport_rect(camera)
-        viewport_sprite.rect = viewport
-        visible = spritecollide(group_backend, viewport_sprite, block_group)
+        visible = query_viewport(group_backend, viewport, block_group)
         touched_blocks = spritecollide(group_backend, player, block_group)
 
         screen.fill((255, 255, 255))
