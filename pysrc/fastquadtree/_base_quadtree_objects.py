@@ -24,6 +24,7 @@ from ._common import (
     parse_container,
     validate_bounds,
     validate_np_dtype,
+    validate_preallocation_limit_bucket,
 )
 from ._insert_result import InsertResult
 from ._item import Item
@@ -754,7 +755,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             allow_objects: If True, load pickled Python objects (unsafe).
                           If False (default), object payloads are silently ignored.
             preallocation_limit_bytes: Optional native decode preallocation limit.
-                If omitted, the native engine uses its conservative default.
+                Must be one of the supported bucket values in bytes:
+                1024, 1048576, 4194304, 16777216, 67108864, 268435456, 1073741824.
+                If omitted, defaults to 67108864 bytes (64 MiB).
             disable_preallocation_limit: Explicitly disable native preallocation
                 limits. Use only for trusted data.
 
@@ -764,7 +767,15 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         Note:
             Object deserialization uses pickle-like semantics. Never load
             serialized data from untrusted sources with allow_objects=True.
+
+        Raises:
+            ValueError: If the requested preallocation bucket is invalid, or if
+                decoding would exceed the configured preallocation limit.
         """
+        validate_preallocation_limit_bucket(
+            preallocation_limit_bytes, disable_preallocation_limit
+        )
+
         parsed = parse_container(data)
 
         fmt_ver = parsed["fmt_ver"]

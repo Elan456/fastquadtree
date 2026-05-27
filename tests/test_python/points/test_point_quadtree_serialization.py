@@ -98,8 +98,11 @@ def test_from_bytes_preallocation_limit_can_be_overridden(bounds, dtype):
 
     data = qt.to_bytes()
 
-    with pytest.raises(ValueError, match="preallocation"):
+    with pytest.raises(ValueError, match="supported buckets"):
         QuadTree.from_bytes(data, preallocation_limit_bytes=1)
 
+    assert len(QuadTree.from_bytes(data, preallocation_limit_bytes=1024 * 1024)) == len(
+        qt
+    )
     assert len(QuadTree.from_bytes(data)) == len(qt)
     assert len(QuadTree.from_bytes(data, disable_preallocation_limit=True)) == len(qt)

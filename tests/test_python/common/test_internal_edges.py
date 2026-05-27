@@ -351,6 +351,14 @@ def test_base_quadtree_from_bytes_rejects_future_version():
         StubTree.from_bytes(data)
 
 
+def test_from_bytes_rejects_non_bucket_preallocation_limit():
+    with pytest.raises(ValueError, match="supported buckets"):
+        StubTree.from_bytes(b"not-a-container", preallocation_limit_bytes=123)
+
+    with pytest.raises(ValueError, match="supported buckets"):
+        StubObjTree.from_bytes(b"not-a-container", preallocation_limit_bytes=123)
+
+
 def test_encode_items_section_edge_cases():
     assert _encode_items_section([]) == struct.pack("<BBI", 0, 0, 0)
 

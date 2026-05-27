@@ -7,6 +7,15 @@ pub const NATIVE_MAGIC: &[u8; 4] = b"FQTW";
 pub const NATIVE_FORMAT_VERSION: u16 = 1;
 pub const NATIVE_KIND_POINT: u8 = 1;
 pub const NATIVE_KIND_RECT: u8 = 2;
+pub const RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES: [usize; 7] = [
+    1024,
+    1024 * 1024,
+    4 * 1024 * 1024,
+    16 * 1024 * 1024,
+    64 * 1024 * 1024,
+    256 * 1024 * 1024,
+    1024 * 1024 * 1024,
+];
 
 const NATIVE_HEADER_LEN: usize = 8;
 pub const DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES: usize = 64 * 1024 * 1024;
@@ -32,7 +41,7 @@ pub enum SerializationError {
     UnexpectedKind { expected: u8, found: u8 },
     UnsupportedFlags(u8),
     TruncatedHeader,
-    RuntimePreallocationLimitTooLarge(usize),
+    RuntimePreallocationLimitInvalid(usize),
 }
 
 impl fmt::Display for SerializationError {
@@ -64,10 +73,10 @@ impl fmt::Display for SerializationError {
             SerializationError::TruncatedHeader => {
                 write!(f, "truncated fastquadtree native serialization header")
             }
-            SerializationError::RuntimePreallocationLimitTooLarge(limit) => {
+            SerializationError::RuntimePreallocationLimitInvalid(limit) => {
                 write!(
                     f,
-                    "preallocation limit {limit} is too large for runtime dispatch; use explicit unlimited decoding for trusted data"
+                    "unsupported preallocation limit {limit}; valid buckets (bytes): 1024, 1048576, 4194304, 16777216, 67108864, 268435456, 1073741824"
                 )
             }
         }
@@ -217,24 +226,24 @@ where
     }
 
     let limit = preallocation_limit_bytes.unwrap_or(DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES);
-    if limit <= 1024 {
+    if limit == 1024 {
         decode_native_with_preallocation_limit::<T, 1024>(bytes, expected_kind)
-    } else if limit <= 1024 * 1024 {
+    } else if limit == 1024 * 1024 {
         decode_native_with_preallocation_limit::<T, { 1024 * 1024 }>(bytes, expected_kind)
-    } else if limit <= 4 * 1024 * 1024 {
+    } else if limit == 4 * 1024 * 1024 {
         decode_native_with_preallocation_limit::<T, { 4 * 1024 * 1024 }>(bytes, expected_kind)
-    } else if limit <= 16 * 1024 * 1024 {
+    } else if limit == 16 * 1024 * 1024 {
         decode_native_with_preallocation_limit::<T, { 16 * 1024 * 1024 }>(bytes, expected_kind)
-    } else if limit <= DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES {
+    } else if limit == DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES {
         decode_native_with_preallocation_limit::<T, { DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES }>(
             bytes,
             expected_kind,
         )
-    } else if limit <= 256 * 1024 * 1024 {
+    } else if limit == 256 * 1024 * 1024 {
         decode_native_with_preallocation_limit::<T, { 256 * 1024 * 1024 }>(bytes, expected_kind)
-    } else if limit <= 1024 * 1024 * 1024 {
+    } else if limit == 1024 * 1024 * 1024 {
         decode_native_with_preallocation_limit::<T, { 1024 * 1024 * 1024 }>(bytes, expected_kind)
     } else {
-        Err(SerializationError::RuntimePreallocationLimitTooLarge(limit))
+        Err(SerializationError::RuntimePreallocationLimitInvalid(limit))
     }
 }

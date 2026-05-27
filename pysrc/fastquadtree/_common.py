@@ -17,6 +17,15 @@ UNSUPPORTED_BINCODE_MESSAGE: Final[str] = (
 )
 SECTION_ITEMS: int = 1  # safe: ids + geometry only
 SECTION_OBJECTS: int = 2  # unsafe: pickle payload (opt-in)
+NATIVE_PREALLOCATION_LIMIT_BUCKETS: Final[tuple[int, ...]] = (
+    1024,
+    1024 * 1024,
+    4 * 1024 * 1024,
+    16 * 1024 * 1024,
+    64 * 1024 * 1024,
+    256 * 1024 * 1024,
+    1024 * 1024 * 1024,
+)
 
 # Type aliases
 Bounds = tuple[
@@ -134,6 +143,30 @@ def validate_np_dtype(geoms: Any, expected_dtype: QuadTreeDType) -> None:
     if str(getattr(geoms, "dtype", None)) != expected_np_dtype:
         raise TypeError(
             f"NumPy array dtype {getattr(geoms, 'dtype', None)} does not match quadtree dtype {expected_dtype}"
+        )
+
+
+def validate_preallocation_limit_bucket(
+    preallocation_limit_bytes: int | None, disable_preallocation_limit: bool
+) -> None:
+    """
+    Validate that runtime native decode preallocation limits use a supported bucket.
+
+    Args:
+        preallocation_limit_bytes: Optional requested preallocation limit.
+        disable_preallocation_limit: If True, limit validation is skipped.
+
+    Raises:
+        ValueError: If preallocation_limit_bytes is not a supported bucket value.
+    """
+    if disable_preallocation_limit or preallocation_limit_bytes is None:
+        return
+
+    if preallocation_limit_bytes not in NATIVE_PREALLOCATION_LIMIT_BUCKETS:
+        buckets = ", ".join(str(v) for v in NATIVE_PREALLOCATION_LIMIT_BUCKETS)
+        raise ValueError(
+            "preallocation_limit_bytes must be one of the supported buckets "
+            f"(bytes): {buckets}"
         )
 
 
