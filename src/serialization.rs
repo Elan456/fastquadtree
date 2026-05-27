@@ -32,6 +32,14 @@ const fn native_decode_config<const LIMIT: usize>() -> NativeDecodeConfig<LIMIT>
     Configuration::default().with_preallocation_size_limit::<LIMIT>()
 }
 
+fn runtime_preallocation_limit_buckets_csv() -> String {
+    RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 #[derive(Debug)]
 pub enum SerializationError {
     Encode(WriteError),
@@ -76,7 +84,8 @@ impl fmt::Display for SerializationError {
             SerializationError::RuntimePreallocationLimitInvalid(limit) => {
                 write!(
                     f,
-                    "unsupported preallocation limit {limit}; valid buckets (bytes): 1024, 1048576, 4194304, 16777216, 67108864, 268435456, 1073741824"
+                    "unsupported preallocation limit {limit}; valid buckets (bytes): {}",
+                    runtime_preallocation_limit_buckets_csv()
                 )
             }
         }

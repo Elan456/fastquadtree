@@ -361,7 +361,7 @@ def build_container(
     )
 
     md_bytes = b""
-    if flags & 1:
+    if flags & FLAG_MAX_DEPTH_PRESENT:
         if max_depth is None:
             raise SerializationError("max_depth flag set but max_depth is None")
         if int(max_depth) < 0:
@@ -453,7 +453,7 @@ def parse_container(data: bytes) -> dict[str, Any]:
     dtype = code_to_dtype(int(dtype_code))
 
     max_depth = None
-    if flags & 1:
+    if flags & FLAG_MAX_DEPTH_PRESENT:
         if len(buf) < off + 4:
             raise SerializationError("Data too short while reading max_depth")
         (md,) = struct.unpack_from(f"{SERIALIZATION_ENDIANNESS}i", buf, off)

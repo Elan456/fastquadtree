@@ -1,5 +1,6 @@
 use fastquadtree::serialization::{
     NATIVE_FORMAT_VERSION, NATIVE_KIND_POINT, NATIVE_KIND_RECT, NATIVE_MAGIC,
+    RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES, SerializationError,
 };
 use fastquadtree::{Item, Point, QuadTree, Rect, RectItem, RectQuadTree};
 
@@ -129,4 +130,22 @@ fn quadtree_decode_preallocation_limit_can_be_overridden() {
     assert!(QuadTree::<f64>::from_bytes_with_preallocation_limit::<1024>(&bytes).is_err());
     assert!(QuadTree::<f64>::from_bytes(&bytes).is_ok());
     assert!(QuadTree::<f64>::from_bytes_unlimited(&bytes).is_ok());
+}
+
+#[test]
+fn runtime_preallocation_error_uses_bucket_constant() {
+    let limit = 123usize;
+    let expected_buckets = RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let expected = format!(
+        "unsupported preallocation limit {limit}; valid buckets (bytes): {expected_buckets}"
+    );
+
+    assert_eq!(
+        SerializationError::RuntimePreallocationLimitInvalid(limit).to_string(),
+        expected
+    );
 }
