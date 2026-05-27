@@ -1,8 +1,14 @@
+import re
+
 import pytest
 from tests.test_python.conftest import get_bounds_for_dtype
 
 from fastquadtree._base_quadtree_objects import _encode_items_section
-from fastquadtree._common import SerializationError
+from fastquadtree._common import (
+    UNSUPPORTED_BINCODE_MESSAGE,
+    SerializationError,
+    build_container,
+)
 from fastquadtree.point_quadtree_objects import QuadTreeObjects
 
 
@@ -47,3 +53,23 @@ def test_encode_items_section_rejects_mixed_geometry():
     items = [PointItem(0, (0.0, 0.0)), RectItem(1, (0.0, 0.0, 1.0, 1.0))]
     with pytest.raises(SerializationError):
         _encode_items_section(items)  # type: ignore[arg-type]
+
+
+def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    data = build_container(
+        fmt_ver=1,
+        dtype=dtype,
+        flags=0,
+        capacity=4,
+        max_depth=None,
+        next_id=0,
+        count=0,
+        bounds=bounds_use,
+        core=b"legacy-bincode-core",
+    )
+
+    with pytest.raises(
+        SerializationError, match=re.escape(UNSUPPORTED_BINCODE_MESSAGE)
+    ):
+        QuadTreeObjects.from_bytes(data)

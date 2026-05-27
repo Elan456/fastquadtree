@@ -1,4 +1,8 @@
-use fastquadtree::{RectQuadTree, QuadTree, Item, RectItem, Point, Rect};
+use fastquadtree::serialization::{
+    NATIVE_FORMAT_VERSION, NATIVE_KIND_POINT, NATIVE_KIND_RECT, NATIVE_MAGIC,
+    RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES, SerializationError,
+};
+use fastquadtree::{Item, Point, QuadTree, Rect, RectItem, RectQuadTree};
 
 #[test]
 fn quadtree_roundtrip_bytes() {
@@ -14,6 +18,13 @@ fn quadtree_roundtrip_bytes() {
 
     // Serialize
     let bytes = qt.to_bytes().expect("serialize quadtree");
+    assert_eq!(&bytes[..4], NATIVE_MAGIC);
+    assert_eq!(
+        u16::from_le_bytes([bytes[4], bytes[5]]),
+        NATIVE_FORMAT_VERSION
+    );
+    assert_eq!(bytes[6], NATIVE_KIND_POINT);
+    assert_eq!(bytes[7], 0);
 
     // Deserialize
     let qt2 = QuadTree::from_bytes(&bytes).expect("deserialize quadtree");
@@ -48,6 +59,13 @@ fn rectquadtree_roundtrip_bytes() {
 
     // Serialize
     let bytes = qt.to_bytes().expect("serialize quadtree");
+    assert_eq!(&bytes[..4], NATIVE_MAGIC);
+    assert_eq!(
+        u16::from_le_bytes([bytes[4], bytes[5]]),
+        NATIVE_FORMAT_VERSION
+    );
+    assert_eq!(bytes[6], NATIVE_KIND_RECT);
+    assert_eq!(bytes[7], 0);
 
     // Deserialize
     let qt2 = RectQuadTree::from_bytes(&bytes).expect("deserialize quadtree");
@@ -60,4 +78,74 @@ fn rectquadtree_roundtrip_bytes() {
     let a: Vec<_> = qt.query(rect).into_iter().map(|it| it.0).collect();
     let b: Vec<_> = qt2.query(rect).into_iter().map(|it| it.0).collect();
     assert_eq!(a, b);
+}
+
+#[test]
+fn quadtree_rejects_invalid_serialization_payloads() {
+    let mut qt = QuadTree::new(
+        Rect { min_x: 0.0, min_y: 0.0, max_x: 10.0, max_y: 10.0 },
+        4,
+        8,
+    );
+    qt.insert(Item { id: 1, point: Point { x: 1.0, y: 1.0 } });
+
+    let bytes = qt.to_bytes().expect("serialize quadtree");
+
+    assert!(QuadTree::<f64>::from_bytes(b"not-fqtw").is_err());
+
+    let mut unsupported_version = bytes.clone();
+    unsupported_version[4..6].copy_from_slice(&2u16.to_le_bytes());
+    assert!(QuadTree::<f64>::from_bytes(&unsupported_version).is_err());
+
+    let mut wrong_kind = bytes.clone();
+    wrong_kind[6] = NATIVE_KIND_RECT;
+    assert!(QuadTree::<f64>::from_bytes(&wrong_kind).is_err());
+
+    let mut unsupported_flags = bytes.clone();
+    unsupported_flags[7] = 1;
+    assert!(QuadTree::<f64>::from_bytes(&unsupported_flags).is_err());
+
+    assert!(QuadTree::<f64>::from_bytes(&bytes[..bytes.len() - 1]).is_err());
+
+    let mut trailing = bytes;
+    trailing.push(0);
+    assert!(QuadTree::<f64>::from_bytes(&trailing).is_err());
+}
+
+#[test]
+fn quadtree_decode_preallocation_limit_can_be_overridden() {
+    let mut qt = QuadTree::new(
+        Rect { min_x: 0.0, min_y: 0.0, max_x: 200.0, max_y: 200.0 },
+        1_000,
+        8,
+    );
+    for id in 0..100 {
+        qt.insert(Item {
+            id,
+            point: Point { x: id as f64, y: id as f64 },
+        });
+    }
+
+    let bytes = qt.to_bytes().expect("serialize quadtree");
+    assert!(QuadTree::<f64>::from_bytes_with_preallocation_limit::<1024>(&bytes).is_err());
+    assert!(QuadTree::<f64>::from_bytes(&bytes).is_ok());
+    assert!(QuadTree::<f64>::from_bytes_unlimited(&bytes).is_ok());
+}
+
+#[test]
+fn runtime_preallocation_error_uses_bucket_constant() {
+    let limit = 123usize;
+    let expected_buckets = RUNTIME_PREALLOCATION_LIMIT_BUCKETS_BYTES
+        .iter()
+        .map(usize::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let expected = format!(
+        "unsupported preallocation limit {limit}; valid buckets (bytes): {expected_buckets}"
+    );
+
+    assert_eq!(
+        SerializationError::RuntimePreallocationLimitInvalid(limit).to_string(),
+        expected
+    );
 }

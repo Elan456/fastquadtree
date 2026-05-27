@@ -1,10 +1,12 @@
 pub mod geom;
 pub mod quadtree;
 pub mod rect_quadtree;
+pub mod serialization;
 
 pub use crate::geom::{dist_sq_point_to_rect, dist_sq_points, mid, Coord, Point, Rect};
 pub use crate::quadtree::{Item, QuadTree};
 pub use crate::rect_quadtree::{RectItem, RectQuadTree};
+pub use crate::serialization::SerializationError;
 
 use numpy::PyReadonlyArray2;
 use numpy::PyArray1;
@@ -78,8 +80,18 @@ macro_rules! define_point_quadtree_pyclass {
             }
 
             #[staticmethod]
-            pub fn from_bytes(bytes: &Bound<PyBytes>) -> PyResult<Self> {
-                let inner = QuadTree::from_bytes(bytes.as_bytes()).map_err(|e| {
+            #[pyo3(signature = (bytes, preallocation_limit_bytes=None, disable_preallocation_limit=false))]
+            pub fn from_bytes(
+                bytes: &Bound<PyBytes>,
+                preallocation_limit_bytes: Option<usize>,
+                disable_preallocation_limit: bool,
+            ) -> PyResult<Self> {
+                let inner = crate::serialization::decode_native_with_runtime_preallocation_limit::<QuadTree<$t>>(
+                    bytes.as_bytes(),
+                    crate::serialization::NATIVE_KIND_POINT,
+                    preallocation_limit_bytes,
+                    disable_preallocation_limit,
+                ).map_err(|e| {
                     PyErr::new::<PyValueError, _>(format!("deserialize failed: {e}"))
                 })?;
                 Ok(Self { inner })
@@ -459,8 +471,18 @@ macro_rules! define_rect_quadtree_pyclass {
             }
 
             #[staticmethod]
-            pub fn from_bytes(bytes: &Bound<PyBytes>) -> PyResult<Self> {
-                let inner = RectQuadTree::from_bytes(bytes.as_bytes()).map_err(|e| {
+            #[pyo3(signature = (bytes, preallocation_limit_bytes=None, disable_preallocation_limit=false))]
+            pub fn from_bytes(
+                bytes: &Bound<PyBytes>,
+                preallocation_limit_bytes: Option<usize>,
+                disable_preallocation_limit: bool,
+            ) -> PyResult<Self> {
+                let inner = crate::serialization::decode_native_with_runtime_preallocation_limit::<RectQuadTree<$t>>(
+                    bytes.as_bytes(),
+                    crate::serialization::NATIVE_KIND_RECT,
+                    preallocation_limit_bytes,
+                    disable_preallocation_limit,
+                ).map_err(|e| {
                     PyErr::new::<PyValueError, _>(format!("deserialize failed: {e}"))
                 })?;
                 Ok(Self { inner })

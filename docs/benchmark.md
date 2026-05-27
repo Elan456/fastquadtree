@@ -132,22 +132,22 @@ If your data is already in a NumPy array, using the `insert_many_np` method dire
 
 | Variant | Mean (s) | Stdev (s) |
 |---|---:|---:|
-| Serialize to bytes | 0.021356 | 0.000937 |
-| Rebuild from points | 0.106783 | 0.011430 |
-| Rebuild from bytes | 0.021754 | 0.001687 |
-| Rebuild from file | 0.024887 | 0.001846 |
+| Serialize to bytes | 0.011789 | 0.000617 |
+| Rebuild from points | 0.088791 | 0.001616 |
+| Rebuild from bytes | 0.007105 | 0.000137 |
+| Rebuild from file | 0.012052 | 0.000442 |
 
 ### Summary
 
-- Rebuild from bytes is **4.908747x** faster than reinserting points.
-- Rebuild from file is **4.290712x** faster than reinserting points.
-- Serialized blob size is **13,770,328 bytes**.
+- Rebuild from bytes is **12.497145x** faster than reinserting points.
+- Rebuild from file is **7.367322x** faster than reinserting points.
+- Serialized blob size is **18,104,173 bytes**.
 
 ----------------
 
 ## System Info
-- **OS**: CachyOS 6.18.5-2-cachyos x86_64
-- **Python**: CPython 3.14.2
+- **OS**: CachyOS 7.0.10-1-cachyos x86_64
+- **Python**: CPython 3.14.5
 - **CPU**: AMD Ryzen 7 3700X 8-Core Processor (16 threads)
 - **Memory**: 31.3 GB
 - **GPU**: NVIDIA GeForce RTX 5070 (11.9 GB)

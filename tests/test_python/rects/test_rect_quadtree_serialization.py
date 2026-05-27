@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from tests.test_python.conftest import (
     corrupt_magic,
@@ -6,7 +8,14 @@ from tests.test_python.conftest import (
     truncate_bytes,
 )
 
-from fastquadtree._common import SerializationError
+from fastquadtree._common import (
+    FLAG_CORE_CODEC_WINCODE,
+    SERIALIZATION_FORMAT_VERSION,
+    UNSUPPORTED_BINCODE_MESSAGE,
+    SerializationError,
+    build_container,
+    parse_container,
+)
 from fastquadtree.rect_quadtree import RectQuadTree
 
 
@@ -22,6 +31,10 @@ def test_serialization_round_trip(bounds, dtype):
     rqt.insert(r3, id_=99)
 
     data = rqt.to_bytes()
+    parsed = parse_container(data)
+    assert parsed["fmt_ver"] == SERIALIZATION_FORMAT_VERSION
+    assert parsed["flags"] & FLAG_CORE_CODEC_WINCODE
+
     clone = RectQuadTree.from_bytes(data)
 
     assert clone._dtype == dtype
@@ -52,3 +65,23 @@ def test_serialization_errors(bounds, dtype):
     ):
         with pytest.raises(SerializationError):
             RectQuadTree.from_bytes(bad)
+
+
+def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    data = build_container(
+        fmt_ver=1,
+        dtype=dtype,
+        flags=0,
+        capacity=2,
+        max_depth=None,
+        next_id=0,
+        count=0,
+        bounds=bounds_use,
+        core=b"legacy-bincode-core",
+    )
+
+    with pytest.raises(
+        SerializationError, match=re.escape(UNSUPPORTED_BINCODE_MESSAGE)
+    ):
+        RectQuadTree.from_bytes(data)

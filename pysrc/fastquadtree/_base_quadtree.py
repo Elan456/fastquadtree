@@ -8,7 +8,10 @@ from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
 
 from ._common import (
+    FLAG_CORE_CODEC_WINCODE,
+    FLAG_MAX_DEPTH_PRESENT,
     SERIALIZATION_FORMAT_VERSION,
+    UNSUPPORTED_BINCODE_MESSAGE,
     Bounds,
     QuadTreeDType,
     SerializationError,
@@ -17,6 +20,7 @@ from ._common import (
     parse_container,
     validate_bounds,
     validate_np_dtype,
+    validate_preallocation_limit_bucket,
 )
 from ._insert_result import InsertResult
 
@@ -54,7 +58,13 @@ class _BaseQuadTree(Generic[G], ABC):
 
     @classmethod
     @abstractmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     # ---- Initialization ----
@@ -301,9 +311,9 @@ class _BaseQuadTree(Generic[G], ABC):
         """
         core_bytes = self._native.to_bytes()
 
-        flags = 0
+        flags = FLAG_CORE_CODEC_WINCODE
         if self._max_depth is not None:
-            flags |= 1  # max_depth_present
+            flags |= FLAG_MAX_DEPTH_PRESENT
 
         return build_container(
             fmt_ver=SERIALIZATION_FORMAT_VERSION,
@@ -319,16 +329,37 @@ class _BaseQuadTree(Generic[G], ABC):
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> _BaseQuadTree[G]:
+    def from_bytes(
+        cls,
+        data: bytes,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> _BaseQuadTree[G]:
         """
         Deserialize a quadtree from bytes.
 
         Args:
             data: Bytes from to_bytes().
+            preallocation_limit_bytes: Optional native decode preallocation limit.
+                Must be one of the supported bucket values in bytes:
+                1024, 1048576, 4194304, 16777216, 67108864, 268435456, 1073741824.
+                If omitted, defaults to 67108864 bytes (64 MiB).
+            disable_preallocation_limit: Explicitly disable native preallocation
+                limits. Use only for trusted data.
 
         Returns:
             A new instance.
+
+        Raises:
+            SerializationError: If the container is malformed, the format version
+                is unsupported, or the payload uses legacy bincode encoding.
+            ValueError: If the requested preallocation bucket is invalid, or if
+                decoding would exceed the configured preallocation limit.
         """
+        validate_preallocation_limit_bucket(
+            preallocation_limit_bytes, disable_preallocation_limit
+        )
+
         parsed = parse_container(data)
 
         fmt_ver = parsed["fmt_ver"]
@@ -337,6 +368,8 @@ class _BaseQuadTree(Generic[G], ABC):
                 f"Unsupported serialization format version {fmt_ver}; "
                 f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
             )
+        if fmt_ver < 2 or not (parsed["flags"] & FLAG_CORE_CODEC_WINCODE):
+            raise SerializationError(UNSUPPORTED_BINCODE_MESSAGE)
 
         dtype = parsed["dtype"]
         core = parsed["core"]
@@ -348,6 +381,8 @@ class _BaseQuadTree(Generic[G], ABC):
         qt._max_depth = parsed["max_depth"]
         qt._next_id = parsed["next_id"]
         qt._count = parsed["count"]
-        qt._native = cls._new_native_from_bytes(core, dtype)
+        qt._native = cls._new_native_from_bytes(
+            core, dtype, preallocation_limit_bytes, disable_preallocation_limit
+        )
 
         return qt

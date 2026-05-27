@@ -5,13 +5,27 @@ from __future__ import annotations
 import math
 from typing import Any, Final, Literal, Union, overload
 
-SERIALIZATION_FORMAT_VERSION: Final[int] = 1
+SERIALIZATION_FORMAT_VERSION: Final[int] = 2
 
 # Serialization container constants (shared by Objects and non-Objects trees)
 SERIALIZATION_MAGIC: Final[bytes] = b"FQT0"  # fastquadtree container v0
 SERIALIZATION_ENDIANNESS: Final[str] = "<"  # little-endian
+FLAG_MAX_DEPTH_PRESENT: Final[int] = 1
+FLAG_CORE_CODEC_WINCODE: Final[int] = 1 << 1
+UNSUPPORTED_BINCODE_MESSAGE: Final[str] = (
+    "bincode serialization from fastquadtree v2.2 and earlier is no longer supported"
+)
 SECTION_ITEMS: int = 1  # safe: ids + geometry only
 SECTION_OBJECTS: int = 2  # unsafe: pickle payload (opt-in)
+NATIVE_PREALLOCATION_LIMIT_BUCKETS: Final[tuple[int, ...]] = (
+    1024,
+    1024 * 1024,
+    4 * 1024 * 1024,
+    16 * 1024 * 1024,
+    64 * 1024 * 1024,
+    256 * 1024 * 1024,
+    1024 * 1024 * 1024,
+)
 
 # Type aliases
 Bounds = tuple[
@@ -129,6 +143,30 @@ def validate_np_dtype(geoms: Any, expected_dtype: QuadTreeDType) -> None:
     if str(getattr(geoms, "dtype", None)) != expected_np_dtype:
         raise TypeError(
             f"NumPy array dtype {getattr(geoms, 'dtype', None)} does not match quadtree dtype {expected_dtype}"
+        )
+
+
+def validate_preallocation_limit_bucket(
+    preallocation_limit_bytes: int | None, disable_preallocation_limit: bool
+) -> None:
+    """
+    Validate that runtime native decode preallocation limits use a supported bucket.
+
+    Args:
+        preallocation_limit_bytes: Optional requested preallocation limit.
+        disable_preallocation_limit: If True, limit validation is skipped.
+
+    Raises:
+        ValueError: If preallocation_limit_bytes is not a supported bucket value.
+    """
+    if disable_preallocation_limit or preallocation_limit_bytes is None:
+        return
+
+    if preallocation_limit_bytes not in NATIVE_PREALLOCATION_LIMIT_BUCKETS:
+        buckets = ", ".join(str(v) for v in NATIVE_PREALLOCATION_LIMIT_BUCKETS)
+        raise ValueError(
+            "preallocation_limit_bytes must be one of the supported buckets "
+            f"(bytes): {buckets}"
         )
 
 
@@ -323,7 +361,7 @@ def build_container(
     )
 
     md_bytes = b""
-    if flags & 1:
+    if flags & FLAG_MAX_DEPTH_PRESENT:
         if max_depth is None:
             raise SerializationError("max_depth flag set but max_depth is None")
         if int(max_depth) < 0:
@@ -415,7 +453,7 @@ def parse_container(data: bytes) -> dict[str, Any]:
     dtype = code_to_dtype(int(dtype_code))
 
     max_depth = None
-    if flags & 1:
+    if flags & FLAG_MAX_DEPTH_PRESENT:
         if len(buf) < off + 4:
             raise SerializationError("Data too short while reading max_depth")
         (md,) = struct.unpack_from(f"{SERIALIZATION_ENDIANNESS}i", buf, off)

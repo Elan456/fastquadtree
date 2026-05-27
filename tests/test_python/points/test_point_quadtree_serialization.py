@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from tests.test_python.conftest import (
     corrupt_magic,
@@ -6,7 +8,14 @@ from tests.test_python.conftest import (
     truncate_bytes,
 )
 
-from fastquadtree._common import SerializationError
+from fastquadtree._common import (
+    FLAG_CORE_CODEC_WINCODE,
+    SERIALIZATION_FORMAT_VERSION,
+    UNSUPPORTED_BINCODE_MESSAGE,
+    SerializationError,
+    build_container,
+    parse_container,
+)
 from fastquadtree.point_quadtree import QuadTree
 
 
@@ -24,6 +33,10 @@ def test_to_bytes_from_bytes_round_trip_preserves_state(bounds, dtype):
     qt.insert(pt3)
 
     data = qt.to_bytes()
+    parsed = parse_container(data)
+    assert parsed["fmt_ver"] == SERIALIZATION_FORMAT_VERSION
+    assert parsed["flags"] & FLAG_CORE_CODEC_WINCODE
+
     clone = QuadTree.from_bytes(data)
 
     assert clone._dtype == dtype
@@ -54,3 +67,42 @@ def test_from_bytes_rejects_corrupted_payload(bounds, dtype):
     ):
         with pytest.raises(SerializationError):
             QuadTree.from_bytes(bad)
+
+
+def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    data = build_container(
+        fmt_ver=1,
+        dtype=dtype,
+        flags=0,
+        capacity=2,
+        max_depth=None,
+        next_id=0,
+        count=0,
+        bounds=bounds_use,
+        core=b"legacy-bincode-core",
+    )
+
+    with pytest.raises(
+        SerializationError, match=re.escape(UNSUPPORTED_BINCODE_MESSAGE)
+    ):
+        QuadTree.from_bytes(data)
+
+
+def test_from_bytes_preallocation_limit_can_be_overridden(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    qt = QuadTree(bounds_use, capacity=1_000, dtype=dtype)
+    for i in range(100):
+        point = (i, i) if dtype.startswith("i") else (float(i), float(i))
+        qt.insert(point)
+
+    data = qt.to_bytes()
+
+    with pytest.raises(ValueError, match="supported buckets"):
+        QuadTree.from_bytes(data, preallocation_limit_bytes=1)
+
+    assert len(QuadTree.from_bytes(data, preallocation_limit_bytes=1024 * 1024)) == len(
+        qt
+    )
+    assert len(QuadTree.from_bytes(data)) == len(qt)
+    assert len(QuadTree.from_bytes(data, disable_preallocation_limit=True)) == len(qt)

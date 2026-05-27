@@ -16,6 +16,7 @@ from fastquadtree._base_quadtree_objects import (
     _encode_items_section,
 )
 from fastquadtree._common import (
+    FLAG_CORE_CODEC_WINCODE,
     SECTION_ITEMS,
     SECTION_OBJECTS,
     SERIALIZATION_FORMAT_VERSION,
@@ -109,7 +110,13 @@ class StubTree(_BaseQuadTree[tuple]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ):
         native = StubNative()
         native.from_bytes_payload = data
         return native
@@ -134,7 +141,13 @@ class StubObjTree(_BaseQuadTreeObjects[tuple, Item]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ):
         native = StubNative()
         native.from_bytes_payload = data
         return native
@@ -336,6 +349,14 @@ def test_base_quadtree_from_bytes_rejects_future_version():
     )
     with pytest.raises(SerializationError):
         StubTree.from_bytes(data)
+
+
+def test_from_bytes_rejects_non_bucket_preallocation_limit():
+    with pytest.raises(ValueError, match="supported buckets"):
+        StubTree.from_bytes(b"not-a-container", preallocation_limit_bytes=123)
+
+    with pytest.raises(ValueError, match="supported buckets"):
+        StubObjTree.from_bytes(b"not-a-container", preallocation_limit_bytes=123)
 
 
 def test_encode_items_section_edge_cases():
@@ -553,7 +574,7 @@ def test_object_tree_serialization_sections_and_missing_items_section():
     missing_items = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,
@@ -582,7 +603,7 @@ def test_object_tree_from_bytes_with_only_objects_section_triggers_missing_items
     data = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,
@@ -601,7 +622,7 @@ def test_object_tree_from_bytes_sections_loop_hits_objects_branch():
     data = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,

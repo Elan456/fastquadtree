@@ -1,18 +1,19 @@
 use crate::geom::{Point, Rect, dist_sq_point_to_rect, dist_sq_points, Coord, mid};
+use crate::serialization::{
+    decode_native, decode_native_unlimited, decode_native_with_preallocation_limit, encode_native,
+    NativeDecodeConfig, NativeEncodingConfig, SerializationError,
+    DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES, NATIVE_KIND_POINT,
+};
 use smallvec::SmallVec;
-use serde::{Serialize, Deserialize};
-use bincode::config::standard;
-use bincode::serde::{encode_to_vec, decode_from_slice};
+use wincode::{SchemaRead, SchemaWrite};
 
-#[derive(Copy, Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
+#[derive(Copy, Clone, Debug, PartialEq, Default, SchemaWrite, SchemaRead)]
 pub struct Item<T: Coord> {
     pub id: u64,
     pub point: Point<T>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
+#[derive(SchemaWrite, SchemaRead)]
 pub struct QuadTree<T: Coord> {
     pub boundary: Rect<T>,
     pub items: Vec<Item<T>>,
@@ -48,12 +49,39 @@ impl<T: Coord> QuadTree<T> {
         }
     }
 
-    pub fn to_bytes(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
-        encode_to_vec(self, standard())
+    pub fn to_bytes(&self) -> Result<Vec<u8>, SerializationError>
+    where
+        Self: SchemaWrite<NativeEncodingConfig, Src = Self>,
+    {
+        encode_native(self, NATIVE_KIND_POINT)
     }
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, bincode::error::DecodeError> {
-        let (qt, _len): (Self, usize) = decode_from_slice(bytes, standard())?;
-        Ok(qt)
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, SerializationError>
+    where
+        Self: for<'de> SchemaRead<
+            'de,
+            NativeDecodeConfig<{ DEFAULT_NATIVE_PREALLOCATION_LIMIT_BYTES }>,
+            Dst = Self,
+        >,
+    {
+        decode_native(bytes, NATIVE_KIND_POINT)
+    }
+    pub fn from_bytes_with_preallocation_limit<const LIMIT: usize>(
+        bytes: &[u8],
+    ) -> Result<Self, SerializationError>
+    where
+        Self: for<'de> SchemaRead<'de, NativeDecodeConfig<LIMIT>, Dst = Self>,
+    {
+        decode_native_with_preallocation_limit::<Self, LIMIT>(bytes, NATIVE_KIND_POINT)
+    }
+    pub fn from_bytes_unlimited(bytes: &[u8]) -> Result<Self, SerializationError>
+    where
+        Self: for<'de> SchemaRead<
+            'de,
+            NativeDecodeConfig<{ wincode::config::PREALLOCATION_SIZE_LIMIT_DISABLED }>,
+            Dst = Self,
+        >,
+    {
+        decode_native_unlimited(bytes, NATIVE_KIND_POINT)
     }
 
     pub fn new_child(boundary: Rect<T>, capacity: usize, depth: usize, max_depth: usize) -> Self {
