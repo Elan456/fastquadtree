@@ -351,6 +351,8 @@ class _BaseQuadTree(Generic[G], ABC):
             A new instance.
 
         Raises:
+            SerializationError: If the container is malformed, the format version
+                is unsupported, or the payload uses legacy bincode encoding.
             ValueError: If the requested preallocation bucket is invalid, or if
                 decoding would exceed the configured preallocation limit.
         """

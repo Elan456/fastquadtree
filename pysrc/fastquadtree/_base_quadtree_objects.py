@@ -769,6 +769,8 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             serialized data from untrusted sources with allow_objects=True.
 
         Raises:
+            SerializationError: If the container is malformed, the format version
+                is unsupported, or the payload uses legacy bincode encoding.
             ValueError: If the requested preallocation bucket is invalid, or if
                 decoding would exceed the configured preallocation limit.
         """
