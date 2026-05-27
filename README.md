@@ -207,6 +207,8 @@ qt.insert_many_np(points)  # Use insert_many_np for NumPy arrays
 **Does fastquadtree support multiprocessing?**
 Yes, fastquadtree objects can be serialized to bytes using the `to_bytes()` method and deserialized back using `from_bytes()`. This allows you to share quadtree data across processes and even cache prebuilt trees to disk. When using `QuadTreeObjects` or `RectQuadTreeObjects`, you must pass `include_objects=True` to `to_bytes()` to serialize Python objects, and `allow_objects=True` to `from_bytes()` when loading. By default, objects are skipped for safety, as deserializing untrusted Python objects can be unsafe. See the [interactive v2 demo](https://github.com/Elan456/fastquadtree/blob/main/interactive/interactive_v2.py) for an example of saving and loading a quadtree, and the [QuadTreeObjects API docs](https://elan456.github.io/fastquadtree/api/quadtree_objects/#fastquadtree.QuadTreeObjects.to_bytes) for full details on the serialization methods.
 
+Serialization uses the current fastquadtree binary format. Data serialized by bincode-backed fastquadtree releases, including v2.2 and earlier, is not loadable by newer wincode-backed releases.
+
 ## License
 
 MIT. See `LICENSE`.

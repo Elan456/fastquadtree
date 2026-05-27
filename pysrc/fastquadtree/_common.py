@@ -5,11 +5,16 @@ from __future__ import annotations
 import math
 from typing import Any, Final, Literal, Union, overload
 
-SERIALIZATION_FORMAT_VERSION: Final[int] = 1
+SERIALIZATION_FORMAT_VERSION: Final[int] = 2
 
 # Serialization container constants (shared by Objects and non-Objects trees)
 SERIALIZATION_MAGIC: Final[bytes] = b"FQT0"  # fastquadtree container v0
 SERIALIZATION_ENDIANNESS: Final[str] = "<"  # little-endian
+FLAG_MAX_DEPTH_PRESENT: Final[int] = 1
+FLAG_CORE_CODEC_WINCODE: Final[int] = 1 << 1
+UNSUPPORTED_BINCODE_MESSAGE: Final[str] = (
+    "bincode serialization from fastquadtree v2.2 and earlier is no longer supported"
+)
 SECTION_ITEMS: int = 1  # safe: ids + geometry only
 SECTION_OBJECTS: int = 2  # unsafe: pickle payload (opt-in)
 

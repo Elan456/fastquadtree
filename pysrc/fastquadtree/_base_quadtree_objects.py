@@ -9,9 +9,12 @@ from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
 
 from ._common import (
+    FLAG_CORE_CODEC_WINCODE,
+    FLAG_MAX_DEPTH_PRESENT,
     SECTION_ITEMS,
     SECTION_OBJECTS,
     SERIALIZATION_FORMAT_VERSION,
+    UNSUPPORTED_BINCODE_MESSAGE,
     Bounds,
     Point,
     QuadTreeDType,
@@ -704,9 +707,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         """
         core_bytes = self._native.to_bytes()
 
-        flags = 0
+        flags = FLAG_CORE_CODEC_WINCODE
         if self._max_depth is not None:
-            flags |= 1  # max_depth_present
+            flags |= FLAG_MAX_DEPTH_PRESENT
 
         # Always store items (id + geom) safely.
         items_payload = _encode_items_section(list(self._store.items()))
@@ -756,6 +759,8 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
                 f"Unsupported serialization format version {fmt_ver}; "
                 f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
             )
+        if fmt_ver < 2 or not (parsed["flags"] & FLAG_CORE_CODEC_WINCODE):
+            raise SerializationError(UNSUPPORTED_BINCODE_MESSAGE)
 
         dtype = parsed["dtype"]
         core = parsed["core"]

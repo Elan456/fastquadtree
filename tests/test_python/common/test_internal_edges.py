@@ -16,6 +16,7 @@ from fastquadtree._base_quadtree_objects import (
     _encode_items_section,
 )
 from fastquadtree._common import (
+    FLAG_CORE_CODEC_WINCODE,
     SECTION_ITEMS,
     SECTION_OBJECTS,
     SERIALIZATION_FORMAT_VERSION,
@@ -553,7 +554,7 @@ def test_object_tree_serialization_sections_and_missing_items_section():
     missing_items = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,
@@ -582,7 +583,7 @@ def test_object_tree_from_bytes_with_only_objects_section_triggers_missing_items
     data = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,
@@ -601,7 +602,7 @@ def test_object_tree_from_bytes_sections_loop_hits_objects_branch():
     data = build_container(
         fmt_ver=SERIALIZATION_FORMAT_VERSION,
         dtype="f32",
-        flags=0,
+        flags=FLAG_CORE_CODEC_WINCODE,
         capacity=1,
         max_depth=None,
         next_id=0,

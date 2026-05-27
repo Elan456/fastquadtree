@@ -8,7 +8,10 @@ from collections.abc import Sequence
 from typing import Any, Generic, TypeVar
 
 from ._common import (
+    FLAG_CORE_CODEC_WINCODE,
+    FLAG_MAX_DEPTH_PRESENT,
     SERIALIZATION_FORMAT_VERSION,
+    UNSUPPORTED_BINCODE_MESSAGE,
     Bounds,
     QuadTreeDType,
     SerializationError,
@@ -301,9 +304,9 @@ class _BaseQuadTree(Generic[G], ABC):
         """
         core_bytes = self._native.to_bytes()
 
-        flags = 0
+        flags = FLAG_CORE_CODEC_WINCODE
         if self._max_depth is not None:
-            flags |= 1  # max_depth_present
+            flags |= FLAG_MAX_DEPTH_PRESENT
 
         return build_container(
             fmt_ver=SERIALIZATION_FORMAT_VERSION,
@@ -337,6 +340,8 @@ class _BaseQuadTree(Generic[G], ABC):
                 f"Unsupported serialization format version {fmt_ver}; "
                 f"this package supports up to {SERIALIZATION_FORMAT_VERSION}"
             )
+        if fmt_ver < 2 or not (parsed["flags"] & FLAG_CORE_CODEC_WINCODE):
+            raise SerializationError(UNSUPPORTED_BINCODE_MESSAGE)
 
         dtype = parsed["dtype"]
         core = parsed["core"]

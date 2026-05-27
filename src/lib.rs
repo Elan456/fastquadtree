@@ -1,10 +1,12 @@
 pub mod geom;
 pub mod quadtree;
 pub mod rect_quadtree;
+pub mod serialization;
 
 pub use crate::geom::{dist_sq_point_to_rect, dist_sq_points, mid, Coord, Point, Rect};
 pub use crate::quadtree::{Item, QuadTree};
 pub use crate::rect_quadtree::{RectItem, RectQuadTree};
+pub use crate::serialization::SerializationError;
 
 use numpy::PyReadonlyArray2;
 use numpy::PyArray1;
