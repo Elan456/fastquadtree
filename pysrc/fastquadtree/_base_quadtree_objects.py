@@ -213,7 +213,13 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
     @classmethod
     @abstractmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     @staticmethod
@@ -734,7 +740,11 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
 
     @classmethod
     def from_bytes(
-        cls, data: bytes, allow_objects: bool = False
+        cls,
+        data: bytes,
+        allow_objects: bool = False,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
     ) -> _BaseQuadTreeObjects[G, ItemType]:
         """
         Deserialize a quadtree from bytes.
@@ -743,6 +753,10 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
             data: Bytes from to_bytes().
             allow_objects: If True, load pickled Python objects (unsafe).
                           If False (default), object payloads are silently ignored.
+            preallocation_limit_bytes: Optional native decode preallocation limit.
+                If omitted, the native engine uses its conservative default.
+            disable_preallocation_limit: Explicitly disable native preallocation
+                limits. Use only for trusted data.
 
         Returns:
             A new instance.
@@ -795,7 +809,9 @@ class _BaseQuadTreeObjects(Generic[G, ItemType], ABC):
         qt._capacity = parsed["capacity"]
         qt._max_depth = parsed["max_depth"]
         qt._count = parsed["count"]
-        qt._native = cls._new_native_from_bytes(core, dtype)
+        qt._native = cls._new_native_from_bytes(
+            core, dtype, preallocation_limit_bytes, disable_preallocation_limit
+        )
 
         # Rebuild store from decoded ids/geoms (+ optional objects)
         store: ObjStore[ItemType] = ObjStore()

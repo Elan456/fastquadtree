@@ -70,12 +70,20 @@ class RectQuadTree(_BaseQuadTree[Bounds]):
         return rust_cls(bounds, capacity, max_depth)
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: str) -> Any:
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: str,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> Any:
         """Create the native engine instance from serialized bytes."""
         rust_cls = DTYPE_MAP.get(dtype)
         if rust_cls is None:
             raise TypeError(f"Unsupported dtype: {dtype}")
-        return rust_cls.from_bytes(data)
+        return rust_cls.from_bytes(
+            data, preallocation_limit_bytes, disable_preallocation_limit
+        )
 
     # ---- Queries ----
 

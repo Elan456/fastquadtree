@@ -83,3 +83,19 @@ def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
 
     with pytest.raises(SerializationError, match=UNSUPPORTED_BINCODE_MESSAGE):
         QuadTree.from_bytes(data)
+
+
+def test_from_bytes_preallocation_limit_can_be_overridden(bounds, dtype):
+    bounds_use = get_bounds_for_dtype(bounds, dtype)
+    qt = QuadTree(bounds_use, capacity=1_000, dtype=dtype)
+    for i in range(100):
+        point = (i, i) if dtype.startswith("i") else (float(i), float(i))
+        qt.insert(point)
+
+    data = qt.to_bytes()
+
+    with pytest.raises(ValueError, match="preallocation"):
+        QuadTree.from_bytes(data, preallocation_limit_bytes=1)
+
+    assert len(QuadTree.from_bytes(data)) == len(qt)
+    assert len(QuadTree.from_bytes(data, disable_preallocation_limit=True)) == len(qt)

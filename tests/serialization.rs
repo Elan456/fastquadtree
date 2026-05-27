@@ -102,3 +102,23 @@ fn quadtree_rejects_invalid_serialization_payloads() {
     trailing.push(0);
     assert!(QuadTree::<f64>::from_bytes(&trailing).is_err());
 }
+
+#[test]
+fn quadtree_decode_preallocation_limit_can_be_overridden() {
+    let mut qt = QuadTree::new(
+        Rect { min_x: 0.0, min_y: 0.0, max_x: 200.0, max_y: 200.0 },
+        1_000,
+        8,
+    );
+    for id in 0..100 {
+        qt.insert(Item {
+            id,
+            point: Point { x: id as f64, y: id as f64 },
+        });
+    }
+
+    let bytes = qt.to_bytes().expect("serialize quadtree");
+    assert!(QuadTree::<f64>::from_bytes_with_preallocation_limit::<1024>(&bytes).is_err());
+    assert!(QuadTree::<f64>::from_bytes(&bytes).is_ok());
+    assert!(QuadTree::<f64>::from_bytes_unlimited(&bytes).is_ok());
+}

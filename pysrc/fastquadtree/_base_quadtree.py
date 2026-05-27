@@ -57,7 +57,13 @@ class _BaseQuadTree(Generic[G], ABC):
 
     @classmethod
     @abstractmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType) -> Any:
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> Any:
         """Create the native engine instance from serialized bytes."""
 
     # ---- Initialization ----
@@ -322,12 +328,21 @@ class _BaseQuadTree(Generic[G], ABC):
         )
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> _BaseQuadTree[G]:
+    def from_bytes(
+        cls,
+        data: bytes,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ) -> _BaseQuadTree[G]:
         """
         Deserialize a quadtree from bytes.
 
         Args:
             data: Bytes from to_bytes().
+            preallocation_limit_bytes: Optional native decode preallocation limit.
+                If omitted, the native engine uses its conservative default.
+            disable_preallocation_limit: Explicitly disable native preallocation
+                limits. Use only for trusted data.
 
         Returns:
             A new instance.
@@ -353,6 +368,8 @@ class _BaseQuadTree(Generic[G], ABC):
         qt._max_depth = parsed["max_depth"]
         qt._next_id = parsed["next_id"]
         qt._count = parsed["count"]
-        qt._native = cls._new_native_from_bytes(core, dtype)
+        qt._native = cls._new_native_from_bytes(
+            core, dtype, preallocation_limit_bytes, disable_preallocation_limit
+        )
 
         return qt

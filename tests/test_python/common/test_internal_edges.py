@@ -110,7 +110,13 @@ class StubTree(_BaseQuadTree[tuple]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ):
         native = StubNative()
         native.from_bytes_payload = data
         return native
@@ -135,7 +141,13 @@ class StubObjTree(_BaseQuadTreeObjects[tuple, Item]):
         return self._stub_native
 
     @classmethod
-    def _new_native_from_bytes(cls, data: bytes, dtype: QuadTreeDType):
+    def _new_native_from_bytes(
+        cls,
+        data: bytes,
+        dtype: QuadTreeDType,
+        preallocation_limit_bytes: int | None = None,
+        disable_preallocation_limit: bool = False,
+    ):
         native = StubNative()
         native.from_bytes_payload = data
         return native
