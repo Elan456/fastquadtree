@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from tests.test_python.conftest import get_bounds_for_dtype
 
@@ -67,5 +69,7 @@ def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
         core=b"legacy-bincode-core",
     )
 
-    with pytest.raises(SerializationError, match=UNSUPPORTED_BINCODE_MESSAGE):
+    with pytest.raises(
+        SerializationError, match=re.escape(UNSUPPORTED_BINCODE_MESSAGE)
+    ):
         QuadTreeObjects.from_bytes(data)

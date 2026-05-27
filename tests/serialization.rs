@@ -1,4 +1,6 @@
-use fastquadtree::serialization::{NATIVE_KIND_POINT, NATIVE_KIND_RECT, NATIVE_MAGIC};
+use fastquadtree::serialization::{
+    NATIVE_FORMAT_VERSION, NATIVE_KIND_POINT, NATIVE_KIND_RECT, NATIVE_MAGIC,
+};
 use fastquadtree::{Item, Point, QuadTree, Rect, RectItem, RectQuadTree};
 
 #[test]
@@ -16,7 +18,10 @@ fn quadtree_roundtrip_bytes() {
     // Serialize
     let bytes = qt.to_bytes().expect("serialize quadtree");
     assert_eq!(&bytes[..4], NATIVE_MAGIC);
-    assert_eq!(u16::from_le_bytes([bytes[4], bytes[5]]), 1);
+    assert_eq!(
+        u16::from_le_bytes([bytes[4], bytes[5]]),
+        NATIVE_FORMAT_VERSION
+    );
     assert_eq!(bytes[6], NATIVE_KIND_POINT);
     assert_eq!(bytes[7], 0);
 
@@ -54,7 +59,10 @@ fn rectquadtree_roundtrip_bytes() {
     // Serialize
     let bytes = qt.to_bytes().expect("serialize quadtree");
     assert_eq!(&bytes[..4], NATIVE_MAGIC);
-    assert_eq!(u16::from_le_bytes([bytes[4], bytes[5]]), 1);
+    assert_eq!(
+        u16::from_le_bytes([bytes[4], bytes[5]]),
+        NATIVE_FORMAT_VERSION
+    );
     assert_eq!(bytes[6], NATIVE_KIND_RECT);
     assert_eq!(bytes[7], 0);
 

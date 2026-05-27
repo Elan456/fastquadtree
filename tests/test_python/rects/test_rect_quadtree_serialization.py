@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from tests.test_python.conftest import (
     corrupt_magic,
@@ -79,5 +81,7 @@ def test_from_bytes_rejects_legacy_bincode_container(bounds, dtype):
         core=b"legacy-bincode-core",
     )
 
-    with pytest.raises(SerializationError, match=UNSUPPORTED_BINCODE_MESSAGE):
+    with pytest.raises(
+        SerializationError, match=re.escape(UNSUPPORTED_BINCODE_MESSAGE)
+    ):
         RectQuadTree.from_bytes(data)
