@@ -38,9 +38,9 @@ def _build_tree_np(points_np: np.ndarray) -> float:
     # Direct NumPy path
     inserted = qt.insert_many_np(points_np)
     dt = now() - t0
-    assert (
-        inserted.count == points_np.shape[0]
-    ), f"Inserted {inserted} != {points_np.shape[0]}"
+    assert inserted.count == points_np.shape[0], (
+        f"Inserted {inserted} != {points_np.shape[0]}"
+    )
     return dt
 
 
@@ -49,9 +49,9 @@ def _build_tree_list(points_list: list[tuple[float, float]]) -> float:
     qt = ShimQuadTree(BOUNDS, CAPACITY, max_depth=MAX_DEPTH)
     inserted = qt.insert_many(points_list)
     dt = now() - t0
-    assert inserted.count == len(
-        points_list
-    ), f"Inserted {inserted} != {len(points_list)}"
+    assert inserted.count == len(points_list), (
+        f"Inserted {inserted} != {len(points_list)}"
+    )
     return dt
 
 
