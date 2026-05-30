@@ -295,6 +295,56 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert tuple(one_shot) == (0, 0, 10, 10)
 
 
+def test_group_exposes_rect_quadtree_object_api_for_sprites():
+    near = RectSprite((0, 0, 10, 10), "near")
+    mid = RectSprite((40, 40, 10, 10), "mid")
+    far = RectSprite((80, 80, 10, 10), "far")
+    missing = RectSprite(label="missing")
+
+    group = fpygame.Group(bounds=(0, 0, 100, 100))
+    near_id = group.insert(near)
+    group.add(mid, far)
+
+    with pytest.raises(ValueError, match=r"usable pygame\.Rect"):
+        group.insert(missing)
+
+    broken_lookup = fpygame.Group(bounds=(0, 0, 10, 10))
+    broken_lookup._find_sprite_id = lambda sprite, rect_bounds: None
+    with pytest.raises(RuntimeError, match="not found in the quadtree index"):
+        broken_lookup.insert(RectSprite((1, 1, 2, 2)))
+
+    assert group.get(near_id) is near
+    assert group.get(9999) is None
+    assert fpygame.Group().get(near_id) is None
+
+    queried_items = group.query(pygame.Rect(0, 0, 15, 15))
+    assert [item.obj for item in queried_items] == [near]
+    assert group.query_ids((0, 0, 15, 15), sync=False) == [near_id]
+    assert group.query(object()) == []
+    assert group.query((500, 500, 510, 510)) == []
+    assert fpygame.Group().query((0, 0, 1, 1)) == []
+
+    nearest = group.nearest_neighbor((42, 42))
+    assert nearest is not None
+    assert nearest.obj is mid
+    assert [item.obj for item in group.nearest_neighbors((0, 0), 2)] == [near, mid]
+
+    mid.rect.update(2, 2, 10, 10)
+    assert group.nearest_neighbor((11, 11), sync=True).obj is mid
+    assert [item.obj for item in group.nearest_neighbors((0, 0), 0)] == []
+
+    indexed_empty = fpygame.Group(bounds=(0, 0, 10, 10))
+    assert indexed_empty.nearest_neighbor((0, 0)) is None
+    assert indexed_empty.nearest_neighbors((0, 0), 1) == []
+    assert fpygame.Group().nearest_neighbors((0, 0), 1) == []
+    assert fpygame.Group().nearest_neighbors((0, 0), 1, sync=False) == []
+
+    all_items = group.get_all_items()
+    assert {item.obj for item in all_items} == {near, mid, far}
+    assert set(group.get_all_objects()) == {near, mid, far}
+    assert fpygame.Group().get_all_items() == []
+
+
 def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
     for dtype in ("i32", "i64"):
         near = RectSprite((1, 1, 2, 2))

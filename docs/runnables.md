@@ -62,7 +62,7 @@ uv run python interactive/ballpit.py
 ![Ballpit_Demo_Screenshot](https://raw.githubusercontent.com/Elan456/fastquadtree/main/assets/ballpit.png)
 
 ## 3. Pygame sprite group comparison
-- Compare `pygame.sprite.Group` with the mostly drop-in `fastquadtree.pygame.Group`
+- Compare `pygame.sprite.Group` with the quadtree-backed `fastquadtree.pygame.Group`
 - Press `G` to switch group backends while the demo is running
 - Uses the fastquadtree-backed group for automatic broadphase culling
 
