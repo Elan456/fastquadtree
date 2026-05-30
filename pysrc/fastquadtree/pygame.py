@@ -38,6 +38,7 @@ _ATOMIC_ITERABLES = (str, bytes, bytearray, memoryview)
 
 
 def _looks_like_bounds(value: Any) -> bool:
+    """Return true when ``value`` looks like a numeric bounds tuple."""
     if not isinstance(value, (list, tuple)):
         return False
     return len(value) == 4 and all(
@@ -46,19 +47,23 @@ def _looks_like_bounds(value: Any) -> bool:
 
 
 def _rect_to_bounds(rect: _pygame.Rect) -> Bounds:
+    """Convert a pygame rect to ``(left, top, right, bottom)`` bounds."""
     return (rect.left, rect.top, rect.right, rect.bottom)
 
 
 def _is_indexable_rect(rect: _pygame.Rect) -> bool:
+    """Return true when a rect has positive width and height."""
     return rect.left < rect.right and rect.top < rect.bottom
 
 
 def _sprite_rect(sprite: Any) -> _pygame.Rect | None:
+    """Return ``sprite.rect`` when it is a pygame rect."""
     rect = getattr(sprite, "rect", None)
     return rect if isinstance(rect, _pygame.Rect) else None
 
 
 def _sprite_bounds(sprite: Any) -> Bounds | None:
+    """Return indexable bounds for a sprite's rect."""
     rect = _sprite_rect(sprite)
     if rect is None or not _is_indexable_rect(rect):
         return None
@@ -66,6 +71,7 @@ def _sprite_bounds(sprite: Any) -> Bounds | None:
 
 
 def _positional_bounds(value: Any) -> Bounds | None:
+    """Return bounds from a positional bounds argument."""
     if isinstance(value, _pygame.Rect):
         return validate_bounds(_rect_to_bounds(value))
     if _looks_like_bounds(value):
@@ -74,6 +80,7 @@ def _positional_bounds(value: Any) -> Bounds | None:
 
 
 def _query_to_bounds(rect: Any) -> Bounds | None:
+    """Return validated query bounds, or ``None`` if unusable."""
     if isinstance(rect, _pygame.Rect) and _is_indexable_rect(rect):
         return _rect_to_bounds(rect)
     if _looks_like_bounds(rect):
@@ -85,12 +92,14 @@ def _query_to_bounds(rect: Any) -> Bounds | None:
 
 
 def _contains_rect(bounds: Bounds, rect: Bounds) -> bool:
+    """Return true when ``bounds`` fully contains ``rect``."""
     min_x, min_y, max_x, max_y = bounds
     left, top, right, bottom = rect
     return min_x <= left and min_y <= top and right <= max_x and bottom <= max_y
 
 
 def _intersect_bounds(left: Bounds, right: Bounds) -> Bounds | None:
+    """Return the non-empty intersection of two bounds."""
     min_x = max(left[0], right[0])
     min_y = max(left[1], right[1])
     max_x = min(left[2], right[2])
@@ -101,10 +110,12 @@ def _intersect_bounds(left: Bounds, right: Bounds) -> Bounds | None:
 
 
 def _is_integer_dtype(dtype: QuadTreeDType) -> bool:
+    """Return true when a quadtree dtype stores integer coordinates."""
     return dtype.startswith("i")
 
 
 def _pad_bounds(bounds: Bounds, dtype: QuadTreeDType = "f32") -> Bounds:
+    """Return bounds expanded with dtype-aware padding."""
     min_x, min_y, max_x, max_y = bounds
     width = max_x - min_x
     height = max_y - min_y
@@ -116,6 +127,7 @@ def _pad_bounds(bounds: Bounds, dtype: QuadTreeDType = "f32") -> Bounds:
 
 
 def _bounds_from_rects(rects: Iterable[Bounds], dtype: QuadTreeDType = "f32") -> Bounds:
+    """Return padded bounds that contain all given rect bounds."""
     rect_list = list(rects)
     if not rect_list:
         if _is_integer_dtype(dtype):
@@ -140,6 +152,7 @@ def _bounds_from_rects(rects: Iterable[Bounds], dtype: QuadTreeDType = "f32") ->
 def _expanded_bounds(
     current: Bounds | None, rect: Bounds, dtype: QuadTreeDType = "f32"
 ) -> Bounds:
+    """Return bounds expanded to contain ``rect``."""
     if current is None:
         return _bounds_from_rects([rect], dtype=dtype)
 
@@ -271,6 +284,7 @@ class Group(_pygame.sprite.Group):
         )
 
     def _new_tree(self, bounds: Bounds) -> RectQuadTreeObjects:
+        """Create a quadtree using this group's index settings."""
         return RectQuadTreeObjects(
             bounds,
             capacity=self._capacity,
@@ -376,6 +390,7 @@ class Group(_pygame.sprite.Group):
         self._sync_sprite(sprite)
 
     def _sync_sprite(self, sprite: _pygame.sprite.Sprite) -> None:
+        """Synchronize one sprite's current rect with the index."""
         rect = _sprite_rect(sprite)
         if rect is None or not _is_indexable_rect(rect):
             self._unindex_sprite(sprite)
@@ -404,6 +419,7 @@ class Group(_pygame.sprite.Group):
             self._indexed_rects[sprite] = new_bounds
 
     def _sync_many(self, sprites: Iterable[_pygame.sprite.Sprite]) -> None:
+        """Synchronize many sprites with one bounds expansion pass."""
         pending: list[tuple[_pygame.sprite.Sprite, Bounds | None, Bounds]] = []
 
         for sprite in sprites:
@@ -555,12 +571,14 @@ class Group(_pygame.sprite.Group):
         ]
 
     def _clear_index(self, *, preserve_tree: bool = False) -> None:
+        """Clear indexed sprite bookkeeping and optionally the tree."""
         self._indexed_rects.clear()
         self._sprites_without_rect.clear()
         if not preserve_tree and self._tree is not None:
             self._tree.clear()
 
     def _unindex_sprite(self, sprite: _pygame.sprite.Sprite) -> None:
+        """Remove one sprite from the quadtree index."""
         old_bounds = self._indexed_rects.pop(sprite, None)
         self._sprites_without_rect.discard(sprite)
         if old_bounds is None or self._tree is None:
@@ -571,6 +589,7 @@ class Group(_pygame.sprite.Group):
     def _index_sprite(
         self, sprite: _pygame.sprite.Sprite, rect_bounds: Bounds | None = None
     ) -> None:
+        """Insert one sprite into the quadtree index when possible."""
         rect = _sprite_rect(sprite)
         if rect is None or not _is_indexable_rect(rect):
             self._sprites_without_rect.add(sprite)
@@ -587,6 +606,7 @@ class Group(_pygame.sprite.Group):
         self._sprites_without_rect.discard(sprite)
 
     def _ensure_tree_contains(self, rect: Bounds) -> None:
+        """Ensure the tree exists and contains ``rect``."""
         if self._bounds is not None and _contains_rect(self._bounds, rect):
             if self._tree is None:
                 self._tree = self._new_tree(self._bounds)
@@ -597,6 +617,7 @@ class Group(_pygame.sprite.Group):
 
 
 def _flatten_sprites(values: Iterable[Any]) -> list[Any]:
+    """Flatten pygame sprites, groups, and nested sprite iterables."""
     flattened: list[Any] = []
     for value in values:
         if isinstance(value, _pygame.sprite.Sprite):
@@ -684,7 +705,7 @@ def spritecollide(
 
     candidates = group.query(query_rect, sync=False)
     collided_sprites = [
-        candidate for candidate in candidates if sprite.rect.colliderect(candidate.rect)
+        candidate for candidate in candidates if query_rect.colliderect(candidate.rect)
     ]
 
     if dokill:
@@ -739,7 +760,7 @@ def spritecollideany(
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
     for candidate in group.query(query_rect, sync=False):
-        if sprite.rect.colliderect(candidate.rect):
+        if query_rect.colliderect(candidate.rect):
             return candidate
     return None
 
