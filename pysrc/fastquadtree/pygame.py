@@ -466,9 +466,7 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            list[pygame.sprite.Sprite]: Sprites whose indexed rects intersect
-                ``rect``. Returns an empty list if the query rectangle cannot
-                be interpreted or does not overlap the current world bounds.
+            Sprites whose indexed rects intersect ``rect``. Returns an empty list for invalid or out-of-bounds queries.
         """
         if sync:
             self.sync()
@@ -521,8 +519,7 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            pygame.sprite.Sprite | None: Nearest indexed sprite, or ``None`` if
-                no sprites are indexed.
+            Nearest indexed sprite, or ``None`` if no sprites are indexed.
         """
         neighbors = self.nearest_neighbors(point, 1, sync=sync)
         return neighbors[0] if neighbors else None
@@ -539,7 +536,7 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            list[pygame.sprite.Sprite]: Sprites in increasing distance order.
+            Sprites in increasing distance order.
         """
         if sync:
             self.sync()
@@ -666,9 +663,7 @@ def spritecollide(
             latest sprite rect changes.
 
     Returns:
-        list[Any]: Collided sprites. When the quadtree broadphase is used,
-            result order is not deterministic and may differ from pygame group
-            iteration order.
+        Collided sprites. When the quadtree broadphase is used, result order is not deterministic and may differ from pygame group iteration order.
     """
     if not isinstance(group, Group):
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
@@ -725,9 +720,7 @@ def spritecollideany(
             latest sprite rect changes.
 
     Returns:
-        Any | None: The first collided sprite, or ``None``. When the quadtree
-            broadphase is used, "first" means first in quadtree query order,
-            not pygame group iteration order.
+        The first collided sprite, or ``None``. When the quadtree broadphase is used, "first" means first in quadtree query order.
     """
 
     if not isinstance(group, Group):
@@ -782,10 +775,7 @@ def groupcollide(
             latest sprite rect changes.
 
     Returns:
-        dict[Any, list[Any]]: Mapping from each collided sprite in ``groupa`` to
-            its collided sprites from ``groupb``. When the quadtree broadphase
-            is used, each list follows quadtree query order, not pygame group
-            iteration order.
+        Mapping from each collided sprite in ``groupa`` to its collided sprites from ``groupb``. When the quadtree broadphase is used, each list follows quadtree query order.
 
     Example:
         ```python
