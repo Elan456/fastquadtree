@@ -327,7 +327,7 @@ def test_query_rect_warns_for_3_0_deprecation():
     group = fpygame.Group(bounds=(0, 0, 100, 100))
     group.add(sprite)
 
-    with pytest.warns(DeprecationWarning, match="removed in fastquadtree 3.0"):
+    with pytest.warns(DeprecationWarning, match="breaking API cleanup"):
         assert group.query_rect(sprite.rect) == [sprite]
 
 

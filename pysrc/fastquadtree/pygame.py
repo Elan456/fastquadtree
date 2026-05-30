@@ -499,7 +499,8 @@ class Group(_pygame.sprite.Group):
         """
         warnings.warn(
             "fastquadtree.pygame.Group.query_rect() is deprecated and will be "
-            "removed in fastquadtree 3.0. Use Group.query() instead.",
+            "removed if fastquadtree 3.0 introduces breaking API cleanup. "
+            "Use Group.query() instead.",
             DeprecationWarning,
             stacklevel=2,
         )
