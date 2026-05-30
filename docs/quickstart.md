@@ -125,7 +125,7 @@ import fastquadtree.pygame as fpygame
 world_bounds = (0, 0, 2000, 2000)
 blocks = fpygame.Group(bounds=world_bounds)
 blocks.add(block_sprites)
-enemy_id = blocks.insert(enemy_sprite)  # Add one sprite and get its current index ID.
+blocks.add(enemy_sprite)
 
 # Collision helper with the same shape as pygame.sprite.spritecollide.
 hits = fpygame.spritecollide(player, blocks, dokill=False)
@@ -135,15 +135,11 @@ visible = blocks.query_rect(camera_rect, sync=False)
 for sprite in visible:
     screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
 
-# Direct spatial queries return RectItem objects with item.obj set to the sprite.
+# Direct spatial queries return sprites.
 nearest = blocks.nearest_neighbors(player.rect.center, k=5)
-for item in nearest:
-    print(item.id_, item.geom, item.obj)
+for sprite in nearest:
+    print(sprite)
 ```
-
-Current index IDs are intended for immediate lookups such as `blocks.get(id_)`.
-They can change when the group rebuilds its internal tree after bounds expansion
-or an explicit `blocks.rebuild()`.
 
 pygame is not a required dependency for core `fastquadtree`; install a
 pygame-compatible package such as `pygame-ce` only if you use this integration.

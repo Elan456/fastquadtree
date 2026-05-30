@@ -28,7 +28,6 @@ except ImportError as exc:
     ) from exc
 
 from ._common import Bounds, Point, QuadTreeDType, validate_bounds
-from ._item import RectItem
 from .rect_quadtree_objects import RectQuadTreeObjects
 
 __all__ = ["Group", "groupcollide", "spritecollide", "spritecollideany"]
@@ -175,11 +174,6 @@ class Group(_pygame.sprite.Group):
     of the world. The same index can also be queried directly with methods such
     as ``query(...)`` and ``nearest_neighbors(...)``.
 
-    ``insert(sprite)`` is available when you want to add one sprite and receive
-    its current quadtree ID. For batches, prefer pygame's normal ``add(...)``.
-    Current index IDs can change when the group rebuilds its tree, for example
-    after bounds expansion or an explicit ``rebuild()``.
-
     For stable runtime behavior, pass explicit world bounds. If ``bounds`` is
     omitted, the group infers bounds from initial sprites and expands/rebuilds
     when later sprites fall outside the current index.
@@ -201,7 +195,7 @@ class Group(_pygame.sprite.Group):
 
         enemies = fpygame.Group(bounds=(0, 0, 2000, 2000))
         enemies.add(enemy_sprites)
-        enemy_id = enemies.insert(boss)
+        enemies.add(boss)
 
         hits = fpygame.spritecollide(player, enemies, dokill=False)
         first_hit = fpygame.spritecollideany(player, enemies)
@@ -264,34 +258,6 @@ class Group(_pygame.sprite.Group):
     def indexed_count(self) -> int:
         """Number of sprites currently indexed by usable rect bounds."""
         return len(self._indexed_rects)
-
-    def insert(self, sprite: _pygame.sprite.Sprite) -> int:
-        """
-        Add one sprite and return its current quadtree ID.
-
-        The sprite must have a usable ``pygame.Rect`` in ``sprite.rect``. Use
-        ``add(...)`` when you want pygame's permissive group behavior for
-        batches or sprites that may not be spatially indexable.
-
-        Args:
-            sprite: Sprite to add and index.
-
-        Returns:
-            int: Current quadtree ID for the sprite.
-
-        Raises:
-            ValueError: If the sprite does not have a usable ``pygame.Rect``.
-            RuntimeError: If the sprite could not be found after insertion.
-        """
-        if _sprite_bounds(sprite) is None:
-            raise ValueError("sprite must have a usable pygame.Rect in sprite.rect")
-
-        self.add(sprite)
-        rect_bounds = cast(Bounds, _sprite_bounds(sprite))
-        id_ = self._find_sprite_id(sprite, rect_bounds)
-        if id_ is None:
-            raise RuntimeError("sprite was added but not found in the quadtree index")
-        return id_
 
     def copy(self) -> Group:
         """Return a new indexed group with the same sprites and index settings."""
@@ -431,12 +397,10 @@ class Group(_pygame.sprite.Group):
             self._index_sprite(sprite, rect_bounds=new_bounds)
         else:
             assert self._tree is not None
-            id_ = self._find_sprite_id(sprite, old_bounds)
-            if id_ is None:
+            if not self._tree.update_by_object(sprite, *new_bounds):
                 self._indexed_rects.pop(sprite, None)
                 self._index_sprite(sprite, rect_bounds=new_bounds)
                 return
-            self._tree.update(id_, *new_bounds)
             self._indexed_rects[sprite] = new_bounds
 
     def _sync_many(self, sprites: Iterable[_pygame.sprite.Sprite]) -> None:
@@ -480,25 +444,21 @@ class Group(_pygame.sprite.Group):
             if old_bounds is None:
                 self._index_sprite(sprite, rect_bounds=rect_bounds)
             else:
-                id_ = self._find_sprite_id(sprite, old_bounds)
-                if id_ is None:
+                assert self._tree is not None
+                if not self._tree.update_by_object(sprite, *rect_bounds):
                     self._indexed_rects.pop(sprite, None)
                     self._index_sprite(sprite, rect_bounds=rect_bounds)
                 else:
-                    assert self._tree is not None
-                    self._tree.update(id_, *rect_bounds)
                     self._indexed_rects[sprite] = rect_bounds
 
     def query(
         self, rect: _pygame.Rect | Bounds, *, sync: bool = True
-    ) -> list[RectItem]:
+    ) -> list[_pygame.sprite.Sprite]:
         """
-        Return indexed item wrappers whose sprite rects intersect ``rect``.
+        Return indexed sprites whose rects intersect ``rect``.
 
-        This is the ``RectQuadTreeObjects``-style query API for pygame sprites.
-        Each returned ``RectItem.obj`` is the sprite, and ``RectItem.geom`` is
-        the indexed rect bounds. Use ``query_rect(...)`` when you only need the
-        sprites.
+        This is a direct spatial query over the group's internal quadtree.
+        It returns pygame sprites, not quadtree IDs or item wrappers.
 
         Args:
             rect: Query rectangle. Accepts a ``pygame.Rect`` or bounds tuple
@@ -506,7 +466,9 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            list[RectItem]: Indexed items whose rects intersect ``rect``.
+            list[pygame.sprite.Sprite]: Sprites whose indexed rects intersect
+                ``rect``. Returns an empty list if the query rectangle cannot
+                be interpreted or does not overlap the current world bounds.
         """
         if sync:
             self.sync()
@@ -523,22 +485,14 @@ class Group(_pygame.sprite.Group):
             return []
 
         return [
-            item
+            cast(_pygame.sprite.Sprite, item.obj)
             for item in self._tree.query(clipped_bounds)
             if item.obj is not None and self.has_internal(item.obj)
         ]
 
-    def query_ids(self, rect: _pygame.Rect | Bounds, *, sync: bool = True) -> list[int]:
-        """
-        Return current quadtree IDs for indexed sprites intersecting ``rect``.
-
-        Current index IDs can change after tree rebuilds.
-        """
-        return [item.id_ for item in self.query(rect, sync=sync)]
-
     def query_rect(
         self, rect: _pygame.Rect | Bounds, *, sync: bool = True
-    ) -> list[Any]:
+    ) -> list[_pygame.sprite.Sprite]:
         """
         Return indexed sprites whose rects intersect ``rect``.
 
@@ -548,17 +502,19 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            list[Any]: Sprites whose indexed rects intersect ``rect``. Returns
-                an empty list if the query rectangle cannot be interpreted or
-                does not overlap the current world bounds. Queries that
-                partially extend outside the world bounds are clamped before
-                searching.
+            list[pygame.sprite.Sprite]: Sprites whose indexed rects intersect
+                ``rect``. Returns an empty list if the query rectangle cannot
+                be interpreted or does not overlap the current world bounds.
+                Queries that partially extend outside the world bounds are
+                clamped before searching.
         """
-        return [item.obj for item in self.query(rect, sync=sync)]
+        return self.query(rect, sync=sync)
 
-    def nearest_neighbor(self, point: Point, *, sync: bool = True) -> RectItem | None:
+    def nearest_neighbor(
+        self, point: Point, *, sync: bool = True
+    ) -> _pygame.sprite.Sprite | None:
         """
-        Return the nearest indexed sprite rect to ``point``.
+        Return the sprite with the nearest indexed rect to ``point``.
 
         Distance is measured like ``RectQuadTreeObjects``: Euclidean distance
         from the point to the nearest edge of each rectangle, or zero when the
@@ -569,17 +525,17 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            RectItem | None: Nearest item with ``obj`` set to the sprite, or
-                ``None`` if no sprites are indexed.
+            pygame.sprite.Sprite | None: Nearest indexed sprite, or ``None`` if
+                no sprites are indexed.
         """
         neighbors = self.nearest_neighbors(point, 1, sync=sync)
         return neighbors[0] if neighbors else None
 
     def nearest_neighbors(
         self, point: Point, k: int, *, sync: bool = True
-    ) -> list[RectItem]:
+    ) -> list[_pygame.sprite.Sprite]:
         """
-        Return the ``k`` nearest indexed sprite rects to ``point``.
+        Return sprites with the ``k`` nearest indexed rects to ``point``.
 
         Args:
             point: Query point as ``(x, y)``.
@@ -587,8 +543,7 @@ class Group(_pygame.sprite.Group):
             sync: When true, synchronize the group before querying.
 
         Returns:
-            list[RectItem]: Items in increasing distance order. Each item's
-                ``obj`` is the sprite.
+            list[pygame.sprite.Sprite]: Sprites in increasing distance order.
         """
         if sync:
             self.sync()
@@ -601,35 +556,10 @@ class Group(_pygame.sprite.Group):
             return []
 
         return [
-            item
+            cast(_pygame.sprite.Sprite, item.obj)
             for item in self._tree.nearest_neighbors(point, k)
             if item.obj is not None and self.has_internal(item.obj)
         ]
-
-    def get(self, id_: int) -> Any | None:
-        """
-        Return the sprite for a current quadtree ID, or ``None`` if not found.
-
-        Current index IDs can change after tree rebuilds.
-        """
-        if self._tree is None:
-            return None
-        obj = self._tree.get(id_)
-        return obj if obj is not None and self.has_internal(obj) else None
-
-    def get_all_items(self) -> list[RectItem]:
-        """Return all current indexed ``RectItem`` wrappers for group sprites."""
-        if self._tree is None:
-            return []
-        return [
-            item
-            for item in self._tree.get_all_items()
-            if item.obj is not None and self.has_internal(item.obj)
-        ]
-
-    def get_all_objects(self) -> list[Any]:
-        """Return all sprites currently present in the quadtree index."""
-        return [item.obj for item in self.get_all_items()]
 
     def _clear_index(self, *, preserve_tree: bool = False) -> None:
         self._indexed_rects.clear()
@@ -643,9 +573,7 @@ class Group(_pygame.sprite.Group):
         if old_bounds is None or self._tree is None:
             return
 
-        id_ = self._find_sprite_id(sprite, old_bounds)
-        if id_ is not None:
-            self._tree.delete(id_)
+        self._tree.delete_one_by_object(sprite)
 
     def _index_sprite(
         self, sprite: _pygame.sprite.Sprite, rect_bounds: Bounds | None = None
@@ -664,17 +592,6 @@ class Group(_pygame.sprite.Group):
         self._tree.insert(rect_bounds, obj=sprite)
         self._indexed_rects[sprite] = rect_bounds
         self._sprites_without_rect.discard(sprite)
-
-    def _find_sprite_id(
-        self, sprite: _pygame.sprite.Sprite, rect_bounds: Bounds
-    ) -> int | None:
-        if self._tree is None:
-            return None
-
-        for item in self._tree.query(rect_bounds):
-            if item.obj is sprite and item.geom == rect_bounds:
-                return item.id_
-        return None
 
     def _ensure_tree_contains(self, rect: Bounds) -> None:
         if self._bounds is not None and _contains_rect(self._bounds, rect):

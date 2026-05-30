@@ -295,54 +295,31 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert tuple(one_shot) == (0, 0, 10, 10)
 
 
-def test_group_exposes_rect_quadtree_object_api_for_sprites():
+def test_group_exposes_sprite_spatial_query_api():
     near = RectSprite((0, 0, 10, 10), "near")
     mid = RectSprite((40, 40, 10, 10), "mid")
     far = RectSprite((80, 80, 10, 10), "far")
-    missing = RectSprite(label="missing")
 
     group = fpygame.Group(bounds=(0, 0, 100, 100))
-    near_id = group.insert(near)
-    group.add(mid, far)
+    group.add(near, mid, far)
 
-    with pytest.raises(ValueError, match=r"usable pygame\.Rect"):
-        group.insert(missing)
-
-    broken_lookup = fpygame.Group(bounds=(0, 0, 10, 10))
-    broken_lookup._find_sprite_id = lambda sprite, rect_bounds: None
-    with pytest.raises(RuntimeError, match="not found in the quadtree index"):
-        broken_lookup.insert(RectSprite((1, 1, 2, 2)))
-
-    assert group.get(near_id) is near
-    assert group.get(9999) is None
-    assert fpygame.Group().get(near_id) is None
-
-    queried_items = group.query(pygame.Rect(0, 0, 15, 15))
-    assert [item.obj for item in queried_items] == [near]
-    assert group.query_ids((0, 0, 15, 15), sync=False) == [near_id]
+    assert group.query(pygame.Rect(0, 0, 15, 15)) == [near]
     assert group.query(object()) == []
     assert group.query((500, 500, 510, 510)) == []
     assert fpygame.Group().query((0, 0, 1, 1)) == []
 
-    nearest = group.nearest_neighbor((42, 42))
-    assert nearest is not None
-    assert nearest.obj is mid
-    assert [item.obj for item in group.nearest_neighbors((0, 0), 2)] == [near, mid]
+    assert group.nearest_neighbor((42, 42)) is mid
+    assert group.nearest_neighbors((0, 0), 2) == [near, mid]
 
     mid.rect.update(2, 2, 10, 10)
-    assert group.nearest_neighbor((11, 11), sync=True).obj is mid
-    assert [item.obj for item in group.nearest_neighbors((0, 0), 0)] == []
+    assert group.nearest_neighbor((11, 11), sync=True) is mid
+    assert group.nearest_neighbors((0, 0), 0) == []
 
     indexed_empty = fpygame.Group(bounds=(0, 0, 10, 10))
     assert indexed_empty.nearest_neighbor((0, 0)) is None
     assert indexed_empty.nearest_neighbors((0, 0), 1) == []
     assert fpygame.Group().nearest_neighbors((0, 0), 1) == []
     assert fpygame.Group().nearest_neighbors((0, 0), 1, sync=False) == []
-
-    all_items = group.get_all_items()
-    assert {item.obj for item in all_items} == {near, mid, far}
-    assert set(group.get_all_objects()) == {near, mid, far}
-    assert fpygame.Group().get_all_items() == []
 
 
 def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
@@ -592,17 +569,16 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     group._index_sprite(sprite)
     assert group.indexed_count == 1
     group._tree = None
-    assert group._find_sprite_id(sprite, (1, 1, 6, 6)) is None
     group._ensure_tree_contains((1, 1, 6, 6))
     assert group._tree is not None
-
-    other = RectSprite((1, 1, 5, 5))
-    assert group._find_sprite_id(other, (1, 1, 6, 6)) is None
 
     first_same_rect = RectSprite((4, 4, 6, 6))
     second_same_rect = RectSprite((4, 4, 6, 6))
     same_rect_group = fpygame.Group((0, 0, 20, 20), first_same_rect, second_same_rect)
-    assert same_rect_group._find_sprite_id(second_same_rect, (4, 4, 10, 10)) is not None
+    assert set(same_rect_group.query_rect((4, 4, 10, 10))) == {
+        first_same_rect,
+        second_same_rect,
+    }
 
     nested_group = pygame.sprite.Group(sprite)
     inferred_from_group = fpygame.Group(nested_group)
