@@ -494,22 +494,8 @@ class Group(_pygame.sprite.Group):
         self, rect: _pygame.Rect | Bounds, *, sync: bool = True
     ) -> list[_pygame.sprite.Sprite]:
         """
-        Return indexed sprites whose rects intersect ``rect``.
-
         This method is kept for backward compatibility with fastquadtree 2.3.0.
         For new code, prefer ``query(...)``.
-
-        Args:
-            rect: Query rectangle. Accepts a ``pygame.Rect`` or a bounds tuple
-                ``(min_x, min_y, max_x, max_y)``.
-            sync: When true, synchronize the group before querying.
-
-        Returns:
-            list[pygame.sprite.Sprite]: Sprites whose indexed rects intersect
-                ``rect``. Returns an empty list if the query rectangle cannot
-                be interpreted or does not overlap the current world bounds.
-                Queries that partially extend outside the world bounds are
-                clamped before searching.
         """
         return self.query(rect, sync=sync)
 
