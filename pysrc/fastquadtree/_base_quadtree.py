@@ -296,7 +296,8 @@ class _BaseQuadTree(Generic[G], ABC):
         """
         Return the maximum depth of the quadtree.
 
-        Useful if you constructed with max_depth=None.
+        Useful if you constructed with max_depth=None and want to inspect the
+        resolved engine default.
         """
         return self._native.get_max_depth()
 

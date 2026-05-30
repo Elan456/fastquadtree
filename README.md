@@ -143,7 +143,7 @@ See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) f
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
-* `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
+* `max_depth` — optional depth cap. If omitted, uses the [engine default](https://elan456.github.io/fastquadtree/engine_defaults/#max-depth)
 * `dtype` — data type for coordinates, e.g., `"f32"`, `"f64"`, `"i32"`, `"i64"`
 
 ### Key Methods
