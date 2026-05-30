@@ -30,7 +30,7 @@ class QuadTree(_BaseQuadTree[Point]):
         bounds: World bounds as (min_x, min_y, max_x, max_y).
         capacity: Maximum points per node before splitting.
         max_depth: Optional maximum tree depth. If omitted, uses the
-            [engine default](../engine_defaults.md#max-depth).
+            [engine default](https://elan456.github.io/fastquadtree/engine_defaults/#max-depth).
         dtype: Coordinate data type ('f32', 'f64', 'i32', 'i64'). Default: 'f32'.
 
     Performance:
