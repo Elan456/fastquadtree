@@ -496,6 +496,9 @@ class Group(_pygame.sprite.Group):
         """
         Return indexed sprites whose rects intersect ``rect``.
 
+        This method is kept for backward compatibility with fastquadtree 2.3.0.
+        For new code, prefer ``query(...)``.
+
         Args:
             rect: Query rectangle. Accepts a ``pygame.Rect`` or a bounds tuple
                 ``(min_x, min_y, max_x, max_y)``.
