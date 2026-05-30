@@ -220,7 +220,7 @@ def test_sync_ignores_sprites_that_are_not_group_members():
 
     assert external not in group
     assert group.indexed_count == 1
-    assert group.query_rect(query.rect, sync=False) == [member]
+    assert group.query(query.rect, sync=False) == [member]
     assert fpygame.spritecollide(query, group, False, sync=False) == [member]
 
 
@@ -248,31 +248,31 @@ def test_rebuild_on_update_reindexes_all_moved_sprites():
     assert group.copy()._rebuild_on_update is True
 
 
-def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
+def test_inferred_bounds_growth_set_bounds_rebuild_and_query():
     near = RectSprite((0, 0, 10, 10))
     far = RectSprite((500, 500, 10, 10))
     group = fpygame.Group([near])
 
     assert group.bounds is not None
-    assert group.query_rect((0, 0, 10, 10)) == [near]
+    assert group.query((0, 0, 10, 10)) == [near]
 
     group.add(far)
     assert group.bounds is not None
     assert group.bounds[2] > 500
-    assert group.query_rect(far.rect) == [far]
+    assert group.query(far.rect) == [far]
 
     group.set_bounds((-1000, -1000, 1000, 1000))
     assert group.bounds == (-1000, -1000, 1000, 1000)
     assert group.indexed_count == 2
 
     group.rebuild()
-    assert set(group.query_rect(pygame.Rect(-1, -1, 20, 20))) == {near}
-    assert group.query_rect((0, 0, 0, 10)) == []
+    assert set(group.query(pygame.Rect(-1, -1, 20, 20))) == {near}
+    assert group.query((0, 0, 0, 10)) == []
 
     fixed_bounds = group.bounds
-    assert group.query_rect((5000, 5000, 5010, 5010)) == []
+    assert group.query((5000, 5000, 5010, 5010)) == []
     assert group.bounds == fixed_bounds
-    assert set(group.query_rect((-2000, -2000, 5, 5))) == {near}
+    assert set(group.query((-2000, -2000, 5, 5))) == {near}
     assert group.bounds == fixed_bounds
 
     generator_sprites = [RectSprite((1, 1, 4, 4)), RectSprite((20, 20, 4, 4))]
@@ -295,6 +295,42 @@ def test_inferred_bounds_growth_set_bounds_rebuild_and_query_rect():
     assert tuple(one_shot) == (0, 0, 10, 10)
 
 
+def test_group_exposes_sprite_spatial_query_api():
+    near = RectSprite((0, 0, 10, 10), "near")
+    mid = RectSprite((40, 40, 10, 10), "mid")
+    far = RectSprite((80, 80, 10, 10), "far")
+
+    group = fpygame.Group(bounds=(0, 0, 100, 100))
+    group.add(near, mid, far)
+
+    assert group.query(pygame.Rect(0, 0, 15, 15)) == [near]
+    assert group.query(object()) == []
+    assert group.query((500, 500, 510, 510)) == []
+    assert fpygame.Group().query((0, 0, 1, 1)) == []
+
+    assert group.nearest_neighbor((42, 42)) is mid
+    assert group.nearest_neighbors((0, 0), 2) == [near, mid]
+
+    mid.rect.update(2, 2, 10, 10)
+    assert group.nearest_neighbor((11, 11), sync=True) is mid
+    assert group.nearest_neighbors((0, 0), 0) == []
+
+    indexed_empty = fpygame.Group(bounds=(0, 0, 10, 10))
+    assert indexed_empty.nearest_neighbor((0, 0)) is None
+    assert indexed_empty.nearest_neighbors((0, 0), 1) == []
+    assert fpygame.Group().nearest_neighbors((0, 0), 1) == []
+    assert fpygame.Group().nearest_neighbors((0, 0), 1, sync=False) == []
+
+
+def test_query_rect_warns_for_3_0_deprecation():
+    sprite = RectSprite((0, 0, 10, 10))
+    group = fpygame.Group(bounds=(0, 0, 100, 100))
+    group.add(sprite)
+
+    with pytest.warns(DeprecationWarning, match="breaking API cleanup"):
+        assert group.query_rect(sprite.rect) == [sprite]
+
+
 def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
     for dtype in ("i32", "i64"):
         near = RectSprite((1, 1, 2, 2))
@@ -303,7 +339,7 @@ def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
         inferred = fpygame.Group([near], dtype=dtype)
         assert inferred.bounds is not None
         assert all(isinstance(value, int) for value in inferred.bounds)
-        assert inferred.query_rect(near.rect) == [near]
+        assert inferred.query(near.rect) == [near]
 
         empty = fpygame.Group(dtype=dtype)
         empty.rebuild()
@@ -313,7 +349,7 @@ def test_integer_dtype_inferred_and_expanded_bounds_stay_integer():
         expanded.add(far)
         assert expanded.bounds is not None
         assert all(isinstance(value, int) for value in expanded.bounds)
-        assert expanded.query_rect(far.rect) == [far]
+        assert expanded.query(far.rect) == [far]
 
 
 def test_bulk_add_batches_index_rebuilds():
@@ -346,9 +382,7 @@ def test_bulk_add_batches_index_rebuilds():
     outside_group.add(outside)
     assert outside_rebuilds == 1
     assert outside_group.indexed_count == 2
-    assert set(outside_group.query_rect((190, 190, 410, 410), sync=False)) == set(
-        outside
-    )
+    assert set(outside_group.query((190, 190, 410, 410), sync=False)) == set(outside)
 
 
 def test_unusable_rects_preserve_pygame_fallback_behavior():
@@ -457,7 +491,7 @@ def test_invalid_constructor_and_query_inputs_are_handled():
     group = fpygame.Group()
     assert group.bounds is None
     assert group.indexed_count == 0
-    assert group.query_rect(object()) == []
+    assert group.query(object()) == []
 
 
 def test_internal_edge_paths_keep_public_behavior_stable():
@@ -487,16 +521,16 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     rect_bounds_group.set_bounds(pygame.Rect(-10, -10, 20, 20), rebuild=False)
     assert rect_bounds_group.bounds == (-10, -10, 10, 10)
 
-    assert fpygame.Group().query_rect(pygame.Rect(0, 0, 1, 1)) == []
-    assert no_rebuild.query_rect(sprite.rect, sync=False) == [sprite]
+    assert fpygame.Group().query(pygame.Rect(0, 0, 1, 1)) == []
+    assert no_rebuild.query(sprite.rect, sync=False) == [sprite]
 
     no_rebuild._tree.insert((50, 50, 51, 51), obj=None)
-    assert no_rebuild.query_rect((50, 50, 51, 51), sync=False) == []
+    assert no_rebuild.query((50, 50, 51, 51), sync=False) == []
 
     no_rebuild._tree.clear()
     sprite.rect.move_ip(1, 1)
     no_rebuild.sync(sprite)
-    assert no_rebuild.query_rect(sprite.rect) == [sprite]
+    assert no_rebuild.query(sprite.rect) == [sprite]
 
     no_rebuild.add(sprite)
     assert no_rebuild.indexed_count == 1
@@ -512,20 +546,20 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     outside_group = fpygame.Group((0, 0, 10, 10), outside_sync)
     outside_sync.rect.update(100, 100, 2, 2)
     outside_group.sync(outside_sync)
-    assert outside_group.query_rect(outside_sync.rect) == [outside_sync]
+    assert outside_group.query(outside_sync.rect) == [outside_sync]
 
     batch_update = RectSprite((10, 10, 2, 2))
     batch_group = fpygame.Group((0, 0, 100, 100), batch_update)
     batch_update.rect.move_ip(1, 1)
     batch_group.add(batch_update)
-    assert batch_group.query_rect(batch_update.rect, sync=False) == [batch_update]
+    assert batch_group.query(batch_update.rect, sync=False) == [batch_update]
 
     stale_batch = RectSprite((20, 20, 2, 2))
     stale_batch_group = fpygame.Group((0, 0, 100, 100), stale_batch)
     stale_batch.rect.move_ip(1, 1)
     stale_batch_group._tree.clear()
     stale_batch_group.add(stale_batch)
-    assert stale_batch_group.query_rect(stale_batch.rect, sync=False) == [stale_batch]
+    assert stale_batch_group.query(stale_batch.rect, sync=False) == [stale_batch]
 
     stale = fpygame.Group((0, 0, 10, 10), sprite)
     stale._tree.clear()
@@ -542,17 +576,16 @@ def test_internal_edge_paths_keep_public_behavior_stable():
     group._index_sprite(sprite)
     assert group.indexed_count == 1
     group._tree = None
-    assert group._find_sprite_id(sprite, (1, 1, 6, 6)) is None
     group._ensure_tree_contains((1, 1, 6, 6))
     assert group._tree is not None
-
-    other = RectSprite((1, 1, 5, 5))
-    assert group._find_sprite_id(other, (1, 1, 6, 6)) is None
 
     first_same_rect = RectSprite((4, 4, 6, 6))
     second_same_rect = RectSprite((4, 4, 6, 6))
     same_rect_group = fpygame.Group((0, 0, 20, 20), first_same_rect, second_same_rect)
-    assert same_rect_group._find_sprite_id(second_same_rect, (4, 4, 10, 10)) is not None
+    assert set(same_rect_group.query((4, 4, 10, 10))) == {
+        first_same_rect,
+        second_same_rect,
+    }
 
     nested_group = pygame.sprite.Group(sprite)
     inferred_from_group = fpygame.Group(nested_group)

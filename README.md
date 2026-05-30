@@ -32,7 +32,7 @@ Rust-optimized quadtree with a clean Python API
 - Support for [inserting bounding boxes](https://elan456.github.io/fastquadtree/api/rect_quadtree/) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
-- Mostly drop-in [pygame sprite-group integration](https://elan456.github.io/fastquadtree/api/pygame/) that adds automatic broadphase culling for faster collision detection (depending on workload)
+- Mostly drop-in [pygame sprite-group integration](https://elan456.github.io/fastquadtree/api/pygame/) that adds automatic broadphase culling plus rect queries and k-NN over sprite rects
 - Fast [serialization](https://elan456.github.io/fastquadtree/benchmark/#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
@@ -59,7 +59,7 @@ from fastquadtree.pyqtree import Index  # Drop-in pyqtree shim (~10x faster whil
 | `QuadTreeObjects` | Points | Yes | Point indexing with attached Python objects. |
 | `RectQuadTreeObjects` | Bounding boxes | Yes | Rectangle indexing with attached objects. |
 | `fastquadtree.pyqtree.Index` | Bounding boxes | Yes | pyqtree-compatible API, much faster. |
-| `fastquadtree.pygame.Group` | pygame sprites | Yes | Mostly drop-in replacement for `pygame.sprite.Group` with quadtree indexing for faster collision detection. |
+| `fastquadtree.pygame.Group` | pygame sprites | Yes | Mostly drop-in `Group` with sprite queries. |
 
 
 ## Quickstart
@@ -143,7 +143,7 @@ See the [benchmark section](https://elan456.github.io/fastquadtree/benchmark/) f
 
 * `bounds` — tuple `(min_x, min_y, max_x, max_y)` defines the 2D area covered by the quadtree
 * `capacity` — max number of points kept in a leaf before splitting
-* `max_depth` — optional depth cap. If omitted, the tree can keep splitting as needed
+* `max_depth` — optional depth cap. If omitted, uses the [engine default](https://elan456.github.io/fastquadtree/engine_defaults/#max-depth)
 * `dtype` — data type for coordinates, e.g., `"f32"`, `"f64"`, `"i32"`, `"i64"`
 
 ### Key Methods

@@ -1,7 +1,7 @@
 repos:
   # 0) Python linter and formatter: Ruff
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.15.15
     hooks:
       # Lint + autofix. If Ruff fixes something, the hook exits nonzero to force a re-run.
       - id: ruff

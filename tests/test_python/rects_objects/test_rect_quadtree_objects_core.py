@@ -115,9 +115,9 @@ def test_contains_robust(bounds, dtype):
     if dtype.startswith("i"):
         exact_int_rect = (25, 35, 45, 55)
         rqt.insert(exact_int_rect)
-        assert (
-            exact_int_rect in rqt
-        ), "Integer rectangle should be found with exact match"
+        assert exact_int_rect in rqt, (
+            "Integer rectangle should be found with exact match"
+        )
         # Off-by-one should not match
         assert (25, 35, 45, 56) not in rqt, "Off-by-one rectangle should not match"
         assert (26, 35, 45, 55) not in rqt, "Off-by-one rectangle should not match"

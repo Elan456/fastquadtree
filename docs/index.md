@@ -41,7 +41,7 @@
 - Support for [inserting bounding boxes](api/rect_quadtree.md) or points
 - Fast KNN and range queries
 - Optional object tracking for id ↔ object mapping
-- Mostly drop-in [pygame sprite-group integration](api/pygame.md) that adds automatic broadphase culling for faster collision detection (depending on workload)
+- Mostly drop-in [pygame sprite-group integration](api/pygame.md) that adds automatic broadphase culling plus rect queries and k-NN over sprite rects
 - Fast [serialization](benchmark.md#serialization-vs-rebuild) to/from bytes
 - Support for multiple data types (f32, f64, i32, i64) for coordinates
 - [100% test coverage](https://codecov.io/gh/Elan456/fastquadtree) and CI on GitHub Actions
@@ -63,5 +63,5 @@ from fastquadtree import RectQuadTree  # Bounding box handling
 from fastquadtree import QuadTreeObjects  # Point handling with object tracking
 from fastquadtree import RectQuadTreeObjects  # Bounding box handling with object tracking
 from fastquadtree.pyqtree import Index # Drop-in replacement for pyqtree (~10x faster while keeping the same API)
-from fastquadtree.pygame import Group # Mostly drop-in replacement for pygame.sprite.Group with quadtree indexing (pygame install required)
+from fastquadtree.pygame import Group # Mostly drop-in pygame Group with quadtree queries (pygame install required)
 ```

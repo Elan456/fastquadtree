@@ -103,15 +103,16 @@ Tip: Use `QuadTree` instead of `QuadTreeObjects` for max speed when you do not n
 
 ---
 
-## Pygame sprite groups
+## Pygame sprite groups and spatial queries
 
-The optional `fastquadtree.pygame` module provides a mostly drop-in
-`pygame.sprite.Group` replacement plus collision helpers shaped like pygame's
-own `spritecollide(...)` APIs. It indexes sprite `rect` bounds to give you
-automatic broadphase culling for collision queries and viewport culling.
+The optional `fastquadtree.pygame` module provides a pygame sprite group backed
+by `RectQuadTreeObjects`. It supports normal sprite-group operations, collision
+helpers shaped like pygame's own `spritecollide(...)` APIs, and direct spatial
+queries such as rectangle queries and k-nearest-neighbor search over sprite
+`rect` bounds.
 
 This is most useful when you have many static or mostly stable sprites and each
-query touches only a small part of the world. The tradeoff is tree maintenance:
+query touches only a small part of the world. The tradeoff is index maintenance:
 moving indexed sprites need `Group.update(...)` or `Group.sync(...)` so the
 index reflects their current rects. If most sprites move every frame, create the
 group with `rebuild_on_update=True` to rebuild the index after each
@@ -124,14 +125,20 @@ import fastquadtree.pygame as fpygame
 world_bounds = (0, 0, 2000, 2000)
 blocks = fpygame.Group(bounds=world_bounds)
 blocks.add(block_sprites)
+blocks.add(enemy_sprite)
 
 # Collision helper with the same shape as pygame.sprite.spritecollide.
 hits = fpygame.spritecollide(player, blocks, dokill=False)
 
 # Rectangle queries can use pygame.Rect or (min_x, min_y, max_x, max_y) bounds.
-visible = blocks.query_rect(camera_rect, sync=False)
+visible = blocks.query(camera_rect, sync=False)
 for sprite in visible:
     screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
+
+# Direct spatial queries return sprites.
+nearest = blocks.nearest_neighbors(player.rect.center, k=5)
+for sprite in nearest:
+    print(sprite)
 ```
 
 pygame is not a required dependency for core `fastquadtree`; install a
