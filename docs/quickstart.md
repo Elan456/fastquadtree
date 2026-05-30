@@ -131,7 +131,7 @@ blocks.add(enemy_sprite)
 hits = fpygame.spritecollide(player, blocks, dokill=False)
 
 # Rectangle queries can use pygame.Rect or (min_x, min_y, max_x, max_y) bounds.
-visible = blocks.query_rect(camera_rect, sync=False)
+visible = blocks.query(camera_rect, sync=False)
 for sprite in visible:
     screen.blit(sprite.image, sprite.rect.move(-camera_x, -camera_y))
 

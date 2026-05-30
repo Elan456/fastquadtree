@@ -200,7 +200,7 @@ class Group(_pygame.sprite.Group):
         hits = fpygame.spritecollide(player, enemies, dokill=False)
         first_hit = fpygame.spritecollideany(player, enemies)
 
-        visible = enemies.query_rect(camera_rect)
+        visible = enemies.query(camera_rect)
         nearest = enemies.nearest_neighbors(player.rect.center, k=5)
         ```
     """
@@ -497,6 +497,12 @@ class Group(_pygame.sprite.Group):
         This method is kept for backward compatibility with fastquadtree 2.3.0.
         For new code, prefer ``query(...)``.
         """
+        warnings.warn(
+            "fastquadtree.pygame.Group.query_rect() is deprecated and will be "
+            "removed in fastquadtree 3.0. Use Group.query() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.query(rect, sync=sync)
 
     def nearest_neighbor(
@@ -680,7 +686,7 @@ def spritecollide(
     if group._sprites_without_rect:
         return _pygame.sprite.spritecollide(sprite, group, dokill, collided)
 
-    candidates = group.query_rect(query_rect, sync=False)
+    candidates = group.query(query_rect, sync=False)
     collided_sprites = [
         candidate for candidate in candidates if sprite.rect.colliderect(candidate.rect)
     ]
@@ -738,7 +744,7 @@ def spritecollideany(
     if query_rect is None or group._sprites_without_rect:
         return _pygame.sprite.spritecollideany(sprite, group, collided)
 
-    for candidate in group.query_rect(query_rect, sync=False):
+    for candidate in group.query(query_rect, sync=False):
         if sprite.rect.colliderect(candidate.rect):
             return candidate
     return None

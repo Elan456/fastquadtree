@@ -70,7 +70,7 @@ This demo creates many static block sprites and a moving player. Player
 collision uses the normal `spritecollide(...)` flow for both backends. Viewport
 culling asks "which blocks intersect the camera rect?" The pygame backend
 answers by scanning every block, while the fastquadtree backend can answer the
-same rectangle query through `Group.query_rect(...)`.
+same rectangle query through `Group.query(...)`.
 
 The performance tradeoff is tree maintenance. The demo uses static blocks, so
 the fastquadtree group can reuse its index frame after frame. If most indexed
