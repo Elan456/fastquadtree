@@ -53,7 +53,7 @@ compatibility = "manylinux_2_28"
 # uv sync will install the "dev" group by default.
 [dependency-groups]
 dev = [  # Testing and build dependencies
-  "ruff>=0.6.0",
+  "ruff>=0.15.15",
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",
   "coverage>=7.5",
