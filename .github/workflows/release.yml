@@ -12,15 +12,15 @@ jobs:
     name: Test build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
 
@@ -45,7 +45,7 @@ jobs:
         run: cargo test
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -78,23 +78,23 @@ jobs:
             manylinux: "2_28"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # Keep Python simple here; maturin-action brings its own Python(s) for builds.
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.9"
 
       - name: Build wheels with maturin
-        uses: PyO3/maturin-action@v1
+        uses: PyO3/maturin-action@v1.51.0
         with:
           command: build
           args: ${{ matrix.maturin_args }}
           manylinux: ${{ matrix.manylinux }}
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ runner.os }}-${{ matrix.maturin_args }}
           path: dist/*
@@ -107,13 +107,13 @@ jobs:
       contents: read
       id-token: write # for Trusted Publisher (recommended)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.1.0
 
       - name: Download all dist artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: dist
