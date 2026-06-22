@@ -100,49 +100,61 @@ jobs:
           path: dist/*
 
   build_pyodide:
-    name: Build Pyodide wheel
+    name: Build Pyodide wheels
     needs: test
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: pyodide-2025
+            python_version: "3.13"
+            xbuildenv_channel: "nightly"
+            xbuildenv_version: "20260401"
+            emscripten_version: "4.0.9"
+            wheel_glob: "fastquadtree-*-cp39-abi3-pyemscripten_2025_0_wasm32.whl"
+          - label: pyodide-2026
+            python_version: "3.14"
+            xbuildenv_channel: "stable"
+            xbuildenv_version: "314.0.0"
+            emscripten_version: "5.0.3"
+            wheel_glob: "fastquadtree-*-cp39-abi3-pyemscripten_2026_0_wasm32.whl"
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
+          python-version: ${{ matrix.python_version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
 
-      - name: Install pyodide CLI
-        run: uv tool install pyodide-cli --with pyodide-build
-
       - name: Cache Pyodide cross-build environment
         uses: actions/cache@v4
         with:
-          path: ~/.cache/fastquadtree-pyodide
-          key: pyodide-xbuildenv-${{ runner.os }}-20260401-1.93.0
+          path: ~/.cache/fastquadtree-${{ matrix.label }}
+          key: pyodide-xbuildenv-${{ runner.os }}-${{ matrix.label }}-${{ matrix.xbuildenv_version }}-${{ matrix.emscripten_version }}-rust-1.93.0
 
       - name: Build Pyodide wheel
         env:
-          PYODIDE_XBUILDENV_ROOT: ~/.cache/fastquadtree-pyodide
-          PYODIDE_ENV_VERSION: "20260401"
+          PYODIDE_HOST_PYTHON: ${{ matrix.python_version }}
+          PYODIDE_XBUILDENV_ROOT: ~/.cache/fastquadtree-${{ matrix.label }}
+          PYODIDE_XBUILDENV_CHANNEL: ${{ matrix.xbuildenv_channel }}
+          PYODIDE_XBUILDENV_VERSION: ${{ matrix.xbuildenv_version }}
+          PYODIDE_EMSCRIPTEN_VERSION: ${{ matrix.emscripten_version }}
           RUST_TOOLCHAIN: "1.93.0"
           UV_CACHE_DIR: ~/.cache/uv
+          PYODIDE_EXPECTED_WHEEL_GLOB: ${{ matrix.wheel_glob }}
         run: bash scripts/build_pyodide_wheel.sh
 
       - name: Upload Pyodide dist artifact
         uses: actions/upload-artifact@v7
         with:
-          name: dist-pyodide
-          path: dist/*pyemscripten*_wasm32.whl
+          name: dist-${{ matrix.label }}
+          path: dist/${{ matrix.wheel_glob }}
 
   publish:
     name: Publish distributions to PyPI

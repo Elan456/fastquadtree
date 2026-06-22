@@ -220,3 +220,4 @@ __marimo__/
 
 # pyodide
 .pyodide*
+.venv-pyodide/
